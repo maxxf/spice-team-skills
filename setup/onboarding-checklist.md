@@ -5,7 +5,7 @@ Welcome to the Spice team plugin. This is your one-time setup. Plan ~30 minutes 
 ## Prerequisites
 
 - [ ] Claude Code installed and running on your machine
-- [ ] GitHub account created (free) — Maxx will add you as a collaborator on `maxxfreedman/spice-team-skills`
+- [ ] GitHub account created (free) — Maxx will add you as a collaborator on `maxxf/spice-team-skills`
 - [ ] Notion workspace access (you should already have this)
 - [ ] Google Drive access to Spice client folders (request from Maxx if missing)
 
@@ -14,7 +14,7 @@ Welcome to the Spice team plugin. This is your one-time setup. Plan ~30 minutes 
 In Claude Code, run:
 
 ```
-/plugin marketplace add maxxfreedman/spice-team-skills
+/plugin marketplace add maxxf/spice-team-skills
 /plugin install spice-team-skills
 ```
 
@@ -43,7 +43,7 @@ Replace your local `/Cowork/CLAUDE.md` (or wherever you have one) with:
 ```markdown
 # My Cowork Workspace
 
-@~/.claude/plugins/cache/maxxfreedman/spice-team-skills/CLAUDE.md
+@~/.claude/plugins/cache/maxxf/spice-team-skills/CLAUDE.md
 
 ## My personal context
 

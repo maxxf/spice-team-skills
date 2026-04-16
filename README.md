@@ -5,7 +5,7 @@ Private plugin for the Spice Digital team. Contains reporting, ops, campaign, me
 ## Install
 
 ```
-/plugin marketplace add maxxfreedman/spice-team-skills
+/plugin marketplace add maxxf/spice-team-skills
 /plugin install spice-team-skills
 ```
 
