@@ -93,14 +93,26 @@ for skill in "${TEAM_SKILLS[@]}"; do
     fi
 done
 
-# 5. Download latest from GitHub
+# 5. Download latest from GitHub (try zip first, fall back to git clone — some sandboxes block zip URLs)
 TMPDIR=$(mktemp -d)
 ZIP="$TMPDIR/spice-team-skills.zip"
-echo "Downloading latest spice-team-skills..."
-curl -fsSL https://github.com/maxxf/spice-team-skills/archive/refs/heads/main.zip -o "$ZIP"
-unzip -q "$ZIP" -d "$TMPDIR"
-
 EXTRACTED="$TMPDIR/spice-team-skills-main"
+
+echo "Downloading latest spice-team-skills..."
+if curl -fsSL https://github.com/maxxf/spice-team-skills/archive/refs/heads/main.zip -o "$ZIP" 2>/dev/null && [ -s "$ZIP" ]; then
+    unzip -q "$ZIP" -d "$TMPDIR"
+elif command -v git >/dev/null 2>&1; then
+    echo "  zip download blocked, falling back to git clone..."
+    git clone --depth=1 https://github.com/maxxf/spice-team-skills.git "$EXTRACTED" 2>&1 | tail -2
+else
+    echo "ERROR: Could not download via curl or git. Network restricted?"
+    exit 1
+fi
+
+if [ ! -d "$EXTRACTED/skills" ]; then
+    echo "ERROR: Downloaded source missing skills/ directory at $EXTRACTED"
+    exit 1
+fi
 
 # 6. Install each skill directory
 INSTALLED=()
