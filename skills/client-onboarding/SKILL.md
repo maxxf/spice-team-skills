@@ -327,13 +327,15 @@ The following linked views in the client page need filters applied:
 
 - Task templates by service: `references/onboarding-tasks.md`
 - Kickoff email templates: `references/kickoff-email-template.md`
-- Storefront audit skill: `/mnt/.skills/skills/storefront-audit/SKILL.md`
-- Optimized menu sheet skill: `/mnt/.skills/skills/optimized-menu-sheet/SKILL.md`
+- Payment collections playbook: `references/payment-collections.md`
 
-## Related Skills
+## Related Skills (in this plugin)
 
-- **storefront-audit**: Run 2 days after platform access confirmed to generate diagnostics report (DM clients)
-- **hero-image-review**: Run alongside storefront audit to score hero images and provide creative direction for new variants (DM clients)
-- **optimized-menu-sheet**: Build menu optimization blueprint from storefront audit findings (DM clients)
-- **onboarding-status-check**: Monitor task completion and flag overdue items across all clients
-- **client-call-prep**: Prep for kickoff call with full client context
+- **storefront-audit**: Run 2 days after platform access confirmed to generate diagnostics report (DM clients). Invoke via `@skill storefront-audit`.
+- **hero-image-review**: Run alongside storefront audit to score hero images and provide creative direction for new variants (DM clients). Invoke via `@skill hero-image-review`.
+- **onboarding-status-check**: Monitor task completion and flag overdue items across all clients. Invoke via `@skill onboarding-status-check`.
+- **client-call-prep**: Prep for kickoff call with full client context. Invoke via `@skill client-call-prep`.
+
+## Related Skills (outside this plugin — Maxx-only)
+
+- **optimized-menu-sheet**: Build menu optimization blueprint from storefront audit findings (DM clients). This skill currently lives in Maxx's local workspace, not in the team plugin. If you need a menu sheet built, ping Maxx in Slack.

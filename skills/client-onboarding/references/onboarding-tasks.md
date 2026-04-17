@@ -1,5 +1,7 @@
 # Onboarding Task Templates by Service
 
+> **Skill availability note:** This doc references several skills by name. The following are in the team plugin (`spice-team-skills`) and available to everyone: `client-call-prep`, `storefront-audit`, `hero-image-review`, `weekly-reporting`, `client-onboarding`, `onboarding-status-check`. The following are Maxx-only (not in the team plugin) — if a task calls for one, ping Maxx: `optimized-menu-sheet`, `post-sale-proposal`, `response-drafting`, `humanizer`. Generic skills like `pptx` and `xlsx` come from the Superpowers base and should work for everyone.
+
 ## Shared Tasks (Create Once Only)
 
 These tasks are common across all services. Create only ONE instance per client, regardless of how many services selected.
