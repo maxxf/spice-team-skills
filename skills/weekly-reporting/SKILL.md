@@ -24,14 +24,17 @@ Orchestrate weekly delivery marketplace reporting for Spice clients. Dispatches 
    - Search Notion for the client's project page using `notion-search` with the client name
    - Navigate to the client's Wiki database and find the "Weekly Reporting Profile" page
    - Fetch the profile page content using `notion-fetch`
-   - Extract: active platforms, DD invoicing tier, UE ads access, data quirks, location map, KPI targets, last week baseline
+   - Extract: active platforms, DD invoicing tier, UE ads access, data quirks, location map, KPI targets, last week baseline, **tracker URL from `Report Writer Notes`**
    - If no profile page exists, fall back to `references/client-registry.md` (legacy path)
 3. Look up client in `references/client-registry.md` for any data NOT in the Notion profile (store maps, tracker URL). The Notion profile is authoritative for platform config and quirks; the registry is a backup and holds static reference data.
 4. Ask for week date range (Monday-Sunday) if not provided
 5. Create a temp output directory: `OUTPUT/` in the working directory
-6. Write the fetched profile data to `OUTPUT/client_profile.json` for downstream scripts (validate_report.py uses this for KPI target soft-checks)
+6. Write the fetched profile data to `OUTPUT/client_profile.json` for downstream scripts (validate_report.py uses this for KPI target soft-checks). Include the resolved `tracker_url` field so downstream phases can reference it.
 
 ### 1b: Collect Required Files
+
+**Try Google Drive MCP first (auto-fetch). Fall back to manual upload only if Drive returns nothing.** See "Google Drive Integration" section below for the full flow and tool usage.
+
 For each platform the client is on, require these specific files:
 
 **Uber Eats (1-3 files):**
@@ -51,10 +54,10 @@ For each platform the client is on, require these specific files:
 - [ ] Settlement CSV
 
 **Tracker Exports (for WoW + 4-week rolling average):**
-- [ ] Weekly Platform Overview CSV — export the "Weekly Platform Overview" tab from the client's Google Sheet tracker as CSV
-- [ ] By Location CSV — export the "By Location" tab from the tracker as CSV
+- [ ] Weekly Platform Overview tab — pulled directly from the client's Google Sheet tracker via Drive MCP (or manual CSV export as fallback)
+- [ ] By Location tab — pulled directly from the client's Google Sheet tracker via Drive MCP (or manual CSV export as fallback)
 - [ ] Current week number (e.g., 14 for Week 14)
-- These enable WoW change and vs-4-week-avg columns in every platform and location table. **Always collect these** — the report is significantly more useful with trend context. If the reporter doesn't have the tracker exports yet, proceed without them but flag it.
+- These enable WoW change and vs-4-week-avg columns in every platform and location table. **Always collect these** — the report is significantly more useful with trend context. With the Drive integration this is automatic when the tracker URL is known. If the tracker is unreachable, proceed without them but flag it.
 
 **Operations Files (optional):**
 - [ ] DD Operations Quality CSVs
@@ -62,9 +65,70 @@ For each platform the client is on, require these specific files:
 - [ ] UE Menu Downtime files
 
 ### 1c: Validate
-- Confirm all required files are present for each active platform
-- Surface what's missing with specific file names
+- Confirm all required files are present for each active platform (whether sourced from Drive or manual upload)
+- Surface what's missing with specific file names AND say where the skill looked (Drive folder vs. waiting on manual upload)
 - Do NOT proceed to extraction until core transaction files are confirmed
+
+---
+
+## Google Drive Integration
+
+The skill auto-fetches inputs from Google Drive when the Drive MCP is available. Manual upload is the fallback, not the default.
+
+**Tools used (all `mcp__3cfdef12-aed5-469f-904c-ae7eaeff04dd__*`):**
+- `search_files` — find platform CSV exports by client/platform/date pattern
+- `read_file_content` — read Sheet tabs directly (used for trackers); also reads CSV/Doc content
+- `download_file_content` — pull binary file content if `read_file_content` doesn't return parseable text
+- `get_file_metadata` — confirm file modification time matches the reporting week
+- `list_recent_files` — used as a sanity check when `search_files` returns ambiguous matches
+- `create_file` — used in Phase 5 to optionally drop the generated `tracker_update.csv` into the client's Drive folder
+
+**Availability check:** at the start of Phase 1b, confirm Drive tools are exposed in the current session. If they're not, skip the auto-fetch path and ask for manual uploads. Do NOT block — the manual path still works.
+
+### Auto-fetch flow (per client, per week)
+
+**Step 1 — Locate the client's tracker folder:**
+1. The tracker URL is already resolved in 1a (Notion `Report Writer Notes` → `client-registry.md` fallback). Extract the file ID from the URL pattern `https://docs.google.com/spreadsheets/d/<ID>/edit`.
+2. Call `get_file_metadata` on the tracker file ID to confirm it exists and grab its parent folder ID. The platform CSVs for the same client typically live in or near that folder.
+
+**Step 2 — Fetch tracker tabs (replaces manual CSV export):**
+1. Use `read_file_content` against the tracker file ID and request the `Weekly Platform Overview` tab. Save the returned content to `OUTPUT/tracker_platform_overview.csv` in the same shape the aggregator expects (`Section, Metric, Value` columns).
+2. Repeat for the `By Location` tab → `OUTPUT/tracker_by_location.csv` (`Location, Metric, Value`).
+3. If `read_file_content` returns the entire Sheet without per-tab filtering, parse the response, isolate the two tabs by name, and write the CSVs locally.
+4. If the read fails (permissions, tab renamed, sheet structure changed), fall back to manual: ask the user to export the two tabs as CSV and upload them. Note the failure reason in `OUTPUT/drive_fetch.log` so the team can fix the underlying issue.
+
+**Step 3 — Search for the week's platform exports:**
+For each active platform, run `search_files` with the patterns below. Use the client name canonical form (the one in `client-registry.md`).
+
+| Platform | Search query examples | What we want |
+|----------|----------------------|--------------|
+| Uber Eats — Transactions | `"<Client> UE transactions"`, `"<Client> uber payments"`, `"payments_<YYYY-MM-DD>"` | The transaction/payments CSV for the reporting week |
+| Uber Eats — Ads Manager | `"<Client> UE ads"`, `"campaigns_summary_metrics_<YYYY-MM-DD>_<YYYY-MM-DD>"` | Campaign Summary by Location export |
+| Uber Eats — Offers | `"<Client> UE offers"` | Offers export (optional) |
+| DoorDash — Transactions | `"<Client> DD transactions"`, `"<Client> doordash payments"` | Transaction CSV |
+| DoorDash — Sponsored Listing | `"<Client> DD sponsored"`, `"MARKETING_SPONSORED_LISTING"` | SL CSV (optional) |
+| DoorDash — Promotions | `"<Client> DD promotion"`, `"MARKETING_PROMOTION"` | Promotion CSV (optional) |
+| Grubhub — Settlement | `"<Client> GH settlement"`, `"<Client> grubhub"` | Settlement CSV |
+
+For each match:
+1. Call `get_file_metadata` and verify the modified time falls inside or just after the reporting week (Mon-Sun + 3-day grace). Skip stale files.
+2. Verify the file extension is `.csv`.
+3. Use `read_file_content` to load the file. If the response is too large for a single read or comes back as a binary blob, use `download_file_content` and write to a local path under `OUTPUT/inputs/<platform>/<filename>`.
+4. Track the resolved local path — extraction agents in Phase 3 read from these paths.
+
+**Step 4 — Disambiguate / fall back:**
+- **Multiple matches:** If `search_files` returns more than one candidate per slot, surface the candidates with their filenames + modified times and ask the user which to use. Do not auto-pick the most recent without confirmation.
+- **No matches:** Ask the user to upload manually for that platform. Do NOT halt the run if other platforms loaded cleanly — partial fetch is fine, missing files just go through the existing manual path.
+- **Drive MCP unavailable:** Skip the entire auto-fetch flow and run the original manual collection prompt (the `1b` checklist).
+
+**Step 5 — Log what was fetched:**
+Write `OUTPUT/drive_fetch.log` listing each file resolved, its source (Drive file ID or "manual upload"), and the modified time. This makes Phase 4.5 validation failures easier to triage.
+
+### What still requires manual action
+- First-time client trackers that aren't yet in Drive (e.g., Westville)
+- Platforms where the export naming doesn't match the search patterns above (add new patterns when you encounter them and update this section)
+- Operations files (DD Quality, UE Accuracy, UE Menu Downtime) — usually ad-hoc; ask the user
+- Any platform export the team hasn't dropped into Drive yet for the week — Drive is only authoritative if the team uploads consistently
 
 ---
 
@@ -276,6 +340,26 @@ Omit `--prev-overview` and `--prev-by-location` if no prior week data available.
 Omit `--ops-quality` if no ops files were provided.
 `--validation-report` should always be present (written by Phase 4.5).
 
+### 5b: Optional — Push tracker_update.csv to Drive
+
+After the Notion update is generated and validation has passed, **optionally** push `OUTPUT/tracker_update.csv` to the client's tracker folder in Drive. This is OPTIONAL and additive — the paste-ready columns in Phase 7 remain the primary delivery mechanism so the team can keep eyeballing values before they land in the canonical sheet.
+
+**When to use:**
+- Tracker URL was successfully resolved in Phase 1a
+- Drive MCP is available and `get_file_metadata` succeeded on the tracker
+- The user has confirmed they want auto-write enabled (ask once per session, default to no)
+
+**How to write it:**
+1. Use `get_file_metadata` on the tracker file ID to grab its parent folder ID.
+2. Use `create_file` to upload `OUTPUT/tracker_update.csv` into that folder, named `<Client> Week <NN> tracker update.csv`. This drops the file next to the tracker so the team can open it side-by-side and paste, or import it as a tab.
+3. Print the Drive URL of the uploaded file in chat as confirmation.
+
+**Do NOT:**
+- Overwrite the canonical tracker tabs directly. We don't have a "write cells to tab" tool exposed and silently overwriting client trackers is a hard no — paste-ready columns + a sibling CSV is the safe path.
+- Skip the Phase 7 paste-ready output. The auto-write is supplementary, not a replacement.
+
+**On failure:** log the error to `OUTPUT/drive_fetch.log` and continue. The paste-ready columns in Phase 7 cover this case.
+
 ---
 
 ## Phase 6: Rewrite Key Highlights
@@ -340,9 +424,9 @@ Each block is a vertical list of values in the exact row order of the sheet. Sec
 
 OVERVIEW is formulas in the sheet — do NOT paste values there.
 
-**3. CSV Export** — Also write `tracker_update.csv` to the output directory as a backup/export option.
+**3. CSV Export** — Also write `tracker_update.csv` to the output directory as a backup/export option. If Phase 5b uploaded the CSV to Drive, include the Drive URL here.
 
-**4. Any Warnings** — missing files, validation flags, anomalies from `OUTPUT/validation_report.md`
+**4. Any Warnings** — missing files, validation flags, anomalies from `OUTPUT/validation_report.md`. Also surface anything from `OUTPUT/drive_fetch.log` if the Drive auto-fetch hit issues (stale files, missing matches, fallbacks to manual).
 
 ---
 
