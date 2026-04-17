@@ -9,16 +9,47 @@ Welcome to the Spice team plugin. This is your one-time setup. Plan ~30 minutes 
 - [ ] Notion workspace access (you should already have this)
 - [ ] Google Drive access to Spice client folders (request from Maxx if missing)
 
+## Step 0: Authenticate git to GitHub (REQUIRED — do this first)
+
+The plugin lives in a private GitHub repo. Without auth, the install command will fail silently or with a vague error.
+
+**One-time setup (~2 minutes):**
+
+1. Install the GitHub CLI if you don't have it:
+   - **Mac:** `brew install gh` (or download from https://cli.github.com/)
+   - **Linux:** see https://github.com/cli/cli/blob/trunk/docs/install_linux.md
+   - **Windows:** `winget install --id GitHub.cli`
+
+2. In your terminal, run:
+   ```
+   gh auth login
+   ```
+   - Choose: **github.com** → **HTTPS** → **Login with a web browser**
+   - Copy the device code shown, paste into the GitHub page that opens, click Authorize
+   - Confirm `gh auth status` shows you logged in
+
+3. Verify git can access the repo:
+   ```
+   git ls-remote https://github.com/maxxf/spice-team-skills.git
+   ```
+   If you see commit SHAs, you're good. If you see "authentication failed" or "not found," the auth didn't take — re-run `gh auth login`.
+
+**Skip this step ONLY if** you already use `gh` regularly and `gh auth status` shows you authenticated to github.com.
+
 ## Step 1: Install the plugin
 
-In Claude Code, run:
+In Claude Code, run these slash commands (type them literally in the chat input):
 
 ```
 /plugin marketplace add maxxf/spice-team-skills
 /plugin install spice-team-skills
 ```
 
+> **Note:** You do NOT need to add GitHub as an MCP connector. The plugin grabs itself from GitHub via git directly using your `gh auth` from Step 0.
+
 Verify: run `/plugin list` and confirm `spice-team-skills` appears in the installed list.
+
+If install fails with auth error → Step 0 didn't complete. Re-run `gh auth login` and retry.
 
 ## Step 2: Connect MCP servers
 
