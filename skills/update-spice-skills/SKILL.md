@@ -68,7 +68,7 @@ TEAM_SKILLS=(
     "weekly-reporting" "campaign-ops" "campaign-setup" "client-call-prep"
     "client-onboarding" "context" "gm" "hero-image-review"
     "menu-conversion-check" "onboarding-status-check" "post-client-meeting"
-    "ratings-reply" "storefront-audit" "weekly-prep"
+    "ratings-reply" "storefront-audit" "weekly-prep" "update-spice-skills"
 )
 
 # 3. Create archive folder
@@ -104,10 +104,14 @@ EXTRACTED="$TMPDIR/spice-team-skills-main"
 
 # 6. Install each skill directory
 INSTALLED=()
-for skill_dir in "$EXTRACTED/skills"/*/; do
-    skill_name=$(basename "$skill_dir")
-    cp -r "$skill_dir" "$COWORK_SKILLS/"
-    INSTALLED+=("$skill_name")
+for skill_path in "$EXTRACTED/skills"/*; do
+    if [ -d "$skill_path" ]; then
+        skill_name=$(basename "$skill_path")
+        # Remove existing directory if present (overwrite cleanly), then copy
+        rm -rf "$COWORK_SKILLS/$skill_name"
+        cp -r "$skill_path" "$COWORK_SKILLS/$skill_name"
+        INSTALLED+=("$skill_name")
+    fi
 done
 
 # 7. Cleanup
