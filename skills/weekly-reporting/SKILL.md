@@ -73,7 +73,12 @@ For each platform the client is on, require these specific files:
 
 ## Google Drive Integration
 
-The skill auto-fetches inputs from Google Drive when the Drive MCP is available. Manual upload is the fallback, not the default.
+The skill uses Google Drive MCP to auto-fetch the **client tracker** (replaces the manual export step). **Platform exports (UE/DD/GH transaction CSVs) are still manual** as of April 2026 — the team hasn't standardized uploading them to Drive yet. The skill will still try `search_files` for them, but expect the fallback (manual upload) to be the norm for platform CSVs.
+
+**What the Drive MCP saves you today:**
+- ✅ Tracker fetch (Weekly Platform Overview + By Location tabs) — works end-to-end
+- ⚠️ Platform export search — falls through to manual ~100% of the time until team starts uploading exports to Drive with consistent naming (see "Process gap to close" below)
+- ⚠️ Phase 5b auto-write — only fires if a per-client folder exists; never writes to shared-drive root
 
 **Tools used (all `mcp__3cfdef12-aed5-469f-904c-ae7eaeff04dd__*`):**
 - `search_files` — find platform CSV exports by client/platform/date pattern
