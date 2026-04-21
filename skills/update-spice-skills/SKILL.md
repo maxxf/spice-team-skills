@@ -5,17 +5,26 @@ description: Use when the user wants to install or update the Spice Team Skills 
 
 # Update Spice Skills
 
-Sync the user's local `/Cowork/Skills/` directory with the latest version of the `maxxf/spice-team-skills` plugin from GitHub.
+Sync the user's Spice team skills with the latest version from the `maxxf/spice-team-skills` plugin on GitHub.
 
 **Important:** This skill is designed for non-technical Spice teammates. Be friendly. Surface what happened. Don't ask permission for the standard archive-then-install flow — just do it and report.
 
+## Two install modes (the skill handles both)
+
+Teammates may be in one of two modes depending on how their Claude was set up:
+
+- **Mode 1: Writable Cowork folder** — skills live in `~/Desktop/Cowork/Skills/` (or similar user folder). The skill can directly download + install the latest. Ro uses this.
+- **Mode 2: Claude-managed plugin cache** — skills live in `/var/folders/.../claude-hostloop-plugins/.../skills/` or `~/.claude/plugins/cache/...`, which is read-only mid-session. The skill cannot write here — instead, it tells the user to close + reopen their session, and Claude's built-in plugin auto-updater handles it at session start. Santi uses this.
+
+The skill auto-detects which mode the user is in and routes accordingly.
+
 ## Inputs
 
-None. The skill detects the user's Cowork directory and runs.
+None. The skill detects the user's install mode and runs.
 
-## What this skill does
+## What this skill does (Mode 1: writable Cowork folder)
 
-1. **Locates the Cowork Skills folder** at `$HOME/Desktop/Cowork/Skills` (the standard path). If that doesn't exist, search common alternates: `$HOME/Cowork/Skills`, `$HOME/Documents/Cowork/Skills`. If still not found, ask the user where their Cowork lives.
+1. **Locates the Cowork Skills folder** at `$HOME/Desktop/Cowork/Skills` (the standard path). If that doesn't exist, search common alternates: `$HOME/Cowork/Skills`, `$HOME/Documents/Cowork/Skills`.
 
 2. **Archives existing skills** — moves all current `.skill` files AND any source directories matching the 14 team skill names into `/Cowork/Skills/_archive/<YYYY-MM-DD-HHMMSS>/`. Personal skills (humanizer, post-sale-proposal, content-mining, etc.) are LEFT ALONE.
 
@@ -37,31 +46,93 @@ None. The skill detects the user's Cowork directory and runs.
      ... (full list)
    ```
 
+## What this skill does (Mode 2: Claude-managed plugin cache)
+
+If no writable Cowork folder is found but the skill detects spice-team-skills in a managed plugin cache (read-only locations like `/var/folders/.../claude-hostloop-plugins/.../skills/`):
+
+1. **Detects the managed path** — searches common locations where Claude caches plugins
+2. **Reports the finding** — shows the user where their skills live and why they can't be written to mid-session
+3. **Tells the user how to update** — close the current session, open a fresh one. Claude auto-updates plugins at session start.
+4. **Exits successfully** — no manual action needed from the skill
+
+## What this skill does (Mode unknown: no skills found)
+
+If neither mode is detected, the skill reports:
+- The paths it searched
+- A request to ping #ai-things with where the skills actually live on the user's machine
+
+This prevents silent failures.
+
 ## Implementation
 
 Run the following bash sequence. Use the Bash tool. Don't ask for confirmation — just execute.
 
 ```bash
 set -e
+shopt -s nullglob 2>/dev/null || true  # handle bash/zsh empty globs gracefully
+setopt NULL_GLOB 2>/dev/null || true   # zsh equivalent
 
-# 1. Locate Cowork Skills folder
+# 1. Locate writable Cowork Skills folder (Mode 1: user-managed folder)
 COWORK_SKILLS=""
 for candidate in "$HOME/Desktop/Cowork/Skills" "$HOME/Cowork/Skills" "$HOME/Documents/Cowork/Skills"; do
-    if [ -d "$candidate" ]; then
+    if [ -d "$candidate" ] && [ -w "$candidate" ]; then
         COWORK_SKILLS="$candidate"
         break
     fi
 done
 
+# 1b. If no writable folder, check for managed-plugin cache (Mode 2: Claude-managed, read-only)
 if [ -z "$COWORK_SKILLS" ]; then
-    echo "ERROR: Could not find Cowork Skills folder. Checked:"
+    # Look for spice-team-skills in common read-only plugin paths
+    MANAGED_PATH=""
+    MANAGED_CANDIDATES=$(ls -d /var/folders/*/claude-hostloop-plugins/*/skills \
+                              "$HOME/Library/Caches/"*claude*/plugins/*/skills \
+                              "$HOME/.claude/plugins/cache/spice-team-skills/"*/*/skills \
+                              2>/dev/null)
+    if [ -n "$MANAGED_CANDIDATES" ]; then
+        while IFS= read -r match; do
+            if [ -d "$match/weekly-reporting" ]; then
+                MANAGED_PATH="$match"
+                break
+            fi
+        done <<< "$MANAGED_CANDIDATES"
+    fi
+
+    if [ -n "$MANAGED_PATH" ]; then
+        echo ""
+        echo "=== You're on Mode 2: Claude-managed plugin cache ==="
+        echo ""
+        echo "Your spice-team-skills are installed at:"
+        echo "  $MANAGED_PATH"
+        echo ""
+        echo "This location is read-only during a session — Claude's plugin system manages it."
+        echo ""
+        echo "To get the latest version:"
+        echo "  1. Close your current Cowork session"
+        echo "  2. Open a fresh one"
+        echo "  3. Claude auto-updates the plugin at session start"
+        echo ""
+        echo "No manual update command needed for your setup. The plugin system handles it."
+        exit 0
+    fi
+
+    echo "ERROR: Could not find writable Cowork Skills folder or Claude-managed plugin cache."
+    echo ""
+    echo "Checked for writable Cowork folder at:"
     echo "  $HOME/Desktop/Cowork/Skills"
     echo "  $HOME/Cowork/Skills"
     echo "  $HOME/Documents/Cowork/Skills"
+    echo ""
+    echo "Also checked for managed plugin cache at:"
+    echo "  /var/folders/.../claude-hostloop-plugins/.../skills"
+    echo "  ~/Library/Caches/.../claude.../plugins/.../skills"
+    echo "  ~/.claude/plugins/cache/spice-team-skills/.../skills"
+    echo ""
+    echo "If you installed the plugin but skills aren't at any of these paths, ping #ai-things with where they actually are."
     exit 1
 fi
 
-echo "Using: $COWORK_SKILLS"
+echo "Using Mode 1 (writable Cowork folder): $COWORK_SKILLS"
 
 # 2. Names of the 14 team skills (anything matching these gets archived)
 TEAM_SKILLS=(
