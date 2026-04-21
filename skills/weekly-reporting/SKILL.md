@@ -326,6 +326,22 @@ Omit `--profile-json` if no Notion profile was fetched in Phase 1.
 
 ## Phase 5: Generate Notion Update
 
+### 5a: Cross-reference the client's tracker Sheet (REQUIRED)
+
+Before running the generation script, **pull current and prior-week context from the client's Google Sheet tracker** via Google Drive MCP. The tracker URL is resolved in Phase 1a from the Notion profile. This ensures your Notion report's recap + insights reflect the actual tracker numbers the client sees.
+
+1. Use `mcp__3cfdef12-aed5-469f-904c-ae7eaeff04dd__get_file_metadata` on the tracker file ID to confirm access.
+2. Use `mcp__3cfdef12-aed5-469f-904c-ae7eaeff04dd__read_file_content` to fetch the tracker's relevant tabs:
+   - **Weekly Platform Overview** — current week's platform totals + last week's + 4-week rolling avg
+   - **By Location** — current week's per-location metrics + last week's
+   - **Campaign Planning** or **Notes** tab (if present) — context about what was running this week, promos, ops issues
+3. Save the fetched content to `OUTPUT/tracker_context.md` for reference during Phase 6 (Key Highlights + Location Notes annotation).
+4. If the tracker read fails (rate limit, permissions, tab renamed), log to `OUTPUT/drive_fetch.log` and proceed without it — the aggregated CSVs are the primary data source; tracker is supplementary context.
+
+**Example tracker URL format:** `https://docs.google.com/spreadsheets/d/<ID>/edit?gid=<TAB_ID>`. For goop Kitchen: `18we-M-qVdug4LRZiolfScL3emVPE0AuL4Zb9Zqn_A3A`. This should match the URL stored in the client's Notion Weekly Reporting Profile → Report Writer Notes.
+
+### 5b: Generate the Notion update
+
 ```bash
 python scripts/generate_notion_update.py \
     --overview OUTPUT/platform_overview.csv \
@@ -384,6 +400,24 @@ Read the generated markdown, find the `<!-- KEY_HIGHLIGHTS_DATA ... -->` block, 
 - `**DoorDash up 30% WoW** ($1,280, 60 orders) with ROAS at 4.6x and spend efficiency improving. Recommend increasing DD ad budget by 20% next week to test the ceiling.`
 - `**UE dragging overall ROAS down to 1.2x** with 68% of sales going back to marketing. Venice and Chicago are the worst performers. Recommend pausing Venice UE ads and reallocating to DD where efficiency is 3x better.`
 - `**Net payout at 73.1%** is healthy across the portfolio. Two locations below 60% need attention: [location] and [location].`
+
+### Additionally in Phase 6: Annotate Location Table (Tier + Notes)
+
+The location table output from `generate_notion_update.py` has blank Tier and Notes columns. Fill them in:
+
+**Tier column:**
+- Read the client's registry entry in `references/client-registry.md` for "Location Tiers" section
+- OR read the Notion Weekly Reporting Profile's "Data Quirks" or "Report Writer Notes" for tier assignments
+- Map each location to: 🔴 RED / 🟡 YELLOW / 🟢 GREEN / 🦄 UNICORN
+- If tier not found for a location, leave blank (don't guess)
+
+**Notes column (1 short line per location):**
+- WoW context: "↓12% from offers pullback" or "↑8% after menu update"
+- Ops flag: "⚠️ DD downtime 2 days" or "📉 ratings dropped"
+- Tier-specific callout: "Tier target: $8K weekly not yet hit" or "UNICORN: reduce spend 20%"
+- Keep under ~50 chars. Avoid generic "performing well" — be specific.
+
+**Cross-reference the client's tracker** (Google Sheet URL from the profile's `Report Writer Notes`) via Google Drive MCP if you need WoW context the script didn't produce. Use `read_file_content` on the tracker's "By Location" tab to compare current-week metrics to last-week's values.
 
 ---
 
@@ -542,14 +576,26 @@ WoW = change from prior week (e.g., `+5%`, `-$1,200`). vs 4wk Avg = change from 
 |--------|-----------|
 
 ### Section 6: Location Performance
-Summary table across all locations. **Max 7 columns** to keep it scannable:
 
-| Location | Orders | Net Sales | WoW | ROAS | Payout % | Flag |
-|----------|--------|-----------|-----|------|----------|------|
+**Schema (updated Apr 21, 2026):** 7 columns. Client-facing, scannable.
 
-The Flag column is a one-word tag: `⚠️ downtime`, `📉 organic`, `📊 baseline`, or blank. This lets readers instantly see which locations need attention without reading a paragraph.
+| Location | Tier | Total Sales | ROAS | Payout % | Mkt Spend % | Notes |
+|----------|------|-------------|------|----------|-------------|-------|
 
-Do NOT include per-platform breakdowns (UE Net, DD Net, GH Net) in the location table. Those are in the platform tables.
+**Column rules:**
+- **Location** — canonical name from client registry store map
+- **Tier** — 🔴 RED / 🟡 YELLOW / 🟢 GREEN / 🦄 UNICORN per client registry. Leave blank if not in registry — Phase 6 rewrite annotates manually if missing.
+- **Total Sales** — `Total Sales` from aggregate script (food subtotal ex-tax). NOT Net Sales.
+- **ROAS** — Marketing ROAS, 1 decimal, no `x` suffix
+- **Payout %** — Net Payout / Total Sales
+- **Mkt Spend %** — Total Marketing Investment / Total Sales
+- **Notes** — 1 short line of WoW context, ops flags, or tier-specific callout. Manual annotation by Claude at Phase 6.
+
+**Do NOT include:** Orders, Net Sales, Net Payout $, Ad Spend $, TMI $, AOV, CPO. Those live in the detailed platform tables (Section 5).
+
+**Sort:** rows by Total Sales descending. Last row is bolded **PORTFOLIO** total.
+
+The script (`generate_notion_update.py`) emits Location, Total Sales, ROAS, Payout %, Mkt Spend % — Tier and Notes are left blank for Phase 6 rewrite to fill.
 
 ### Section 7: Performance Flags
 5-7 consolidated flags grouped by theme. This is the strategist layer.

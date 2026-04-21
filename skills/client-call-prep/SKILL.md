@@ -22,6 +22,27 @@ Follow these steps in sequence to prepare for a client meeting:
 - Extract meeting time, attendees, and any existing agenda items
 - If multiple meetings found, ask user to clarify which one
 
+### 1.5. Check for Existing Meeting Doc (REQUIRED — do before creating anything)
+
+Before gathering context or creating new docs, search the client's Meeting Notes database in Notion to see if a doc already exists for this meeting. This prevents duplicate docs piling up.
+
+1. Navigate to the client's Notion project page → Meeting Notes database (usually labeled `👥 Meeting Notes` or similar)
+2. Use `mcp__f34fcb36-bc14-4569-bc45-beaff552d0f7__notion-search` with:
+   - `query_type: "internal"`
+   - `data_source_url`: the Meeting Notes database's data source URL (from `<data-source>` tag in the project page)
+   - Query: today's date, meeting name, or attendee + date combo
+3. Filter to results from the last 7 days
+4. **If an existing doc is found:**
+   - Read it via `notion-fetch`
+   - Classify it: is it a placeholder (auto-created from calendar), a partial prep, or a complete prep?
+   - Set the plan to **UPDATE** that doc in Step 6 rather than creating new
+   - Note the page ID for use in Step 6
+5. **If no existing doc is found:**
+   - Proceed to create new in Step 6
+6. **If multiple docs match** (e.g., duplicates): flag to user with URLs — ask which to use. Do NOT silently pick one.
+
+**Never create a duplicate meeting doc.** If in doubt, ask.
+
 ### 2. Gather Context from Recent Communications
 
 **Search the last 7 days:**
@@ -76,9 +97,13 @@ Pull the most recent 3 meetings with this client. Extract: key decisions, action
 - Platform-specific offers/promos
 - Co-funding opportunities or platform support
 
-### 6. Create Strategic Meeting Doc in Notion
+### 6. Create OR Update Strategic Meeting Doc in Notion
 
-**Location:** Client's workspace -> Meeting Notes folder
+**Decision from Step 1.5:**
+- **If an existing doc was found** — UPDATE that doc rather than creating a new one. Use `mcp__f34fcb36-bc14-4569-bc45-beaff552d0f7__notion-update-page` with `content_updates` to merge the prep content into the existing structure. Preserve any content the client may have already added (agenda items, questions). Fill in placeholders and append new sections.
+- **If no existing doc was found** — create new via `notion-create-pages` in the Meeting Notes database.
+
+**Location:** Client's workspace → Meeting Notes database
 
 **Structure:**
 

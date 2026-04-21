@@ -31,7 +31,15 @@ See `setup/onboarding-checklist.md` for the full setup process.
 
 ## Updates
 
-Skills auto-update at the start of each Claude Code session. No action required.
+- **Claude Code users:** Skills auto-update at the start of each session.
+- **Cowork users:** Say `update spice skills` in your Cowork session — the `update-spice-skills` skill pulls the latest from this repo.
+
+## Feedback
+
+Post issues, questions, or requests in **#ai-things**. Include:
+- Which skill you ran
+- What you expected
+- What happened instead
 
 ## Maintained by
 

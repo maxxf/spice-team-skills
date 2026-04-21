@@ -11,41 +11,62 @@ Finalize client meeting documentation and send a professional recap email with a
 
 Follow these steps in sequence to wrap up a client meeting:
 
-### 1. Clean Up the Meeting Doc
+### 1. Locate the Meeting Doc (do NOT create a new one)
 
-Review the current meeting doc and prepare it for client viewing:
+Search the client's Notion Meeting Notes database for the doc tied to this meeting. Find it by date + meeting name combination.
 
-**Remove or hide internal content:**
-- Internal strategic recommendations not meant for client eyes
-- Team-only discussion notes or commentary
-- Sensitive competitive analysis or pricing strategy
-- Any "INTERNAL" or "DO NOT SHARE" marked sections
+1. Navigate to the client's project page → Meeting Notes database
+2. Use `mcp__f34fcb36-bc14-4569-bc45-beaff552d0f7__notion-search` filtered to that database, searching for today's date or the meeting name
+3. Read the matching doc via `notion-fetch`
 
-**Finalize formatting:**
-- Ensure all toggle sections are properly formatted
-- Verify tables are complete and properly aligned
-- Check that all data is accurate and up-to-date
-- Fix any placeholder text like "[TBD]" or "[date]"
+**If no doc exists** — flag to the user and ask whether to create one from the transcript + weekly data before proceeding. Do NOT silently create one.
 
-**Polish content:**
-- Ensure professional tone throughout
-- Remove redundant or unclear sections
-- Verify all action item owners and due dates are correct
+**If multiple docs match** (e.g., a prep doc and a separate recap doc) — ask the user which to update. Don't merge or pick silently.
 
-### 2. Confirm Doc is Ready
+Work with the existing prep/call doc throughout the rest of this workflow.
 
-Before sending, verify the meeting doc includes:
-- Meeting agenda or objectives
-- Key discussion points or decisions
-- Action items with clear owners and due dates
-- Next steps or upcoming milestones
-- All internal notes removed or hidden
+### 2. Cross-reference the client's tracker Sheet (REQUIRED — accuracy check)
 
-### 3. Draft the Client Email
+Before finalizing the recap, verify the performance numbers in the meeting doc against the client's Google Sheet tracker. This catches stale data (e.g., a prep doc written Monday with Week 14 numbers, but the meeting discussed Week 15).
 
-Create a concise, friendly email with this structure:
+1. Get the tracker URL from the client's Notion Weekly Reporting Profile → Report Writer Notes (or from `references/client-registry.md` as fallback)
+2. Use `mcp__3cfdef12-aed5-469f-904c-ae7eaeff04dd__read_file_content` to fetch the tracker's current "Weekly Platform Overview" and "By Location" tabs
+3. Compare the numbers in the meeting doc against the tracker — if there's drift, update the doc with the correct (tracker) values before sharing with the client
 
-**Subject line:** `[Client Name] Meeting Recap - [Date]`
+**Example tracker URL for goop Kitchen:** `https://docs.google.com/spreadsheets/d/18we-M-qVdug4LRZiolfScL3emVPE0AuL4Zb9Zqn_A3A/edit`
+
+If Drive MCP is unavailable, skip this check but flag to the user that the doc hasn't been tracker-verified.
+
+### 3. Prep the Doc for Client Sharing
+
+The prep doc contains internal sections that must be stripped before sharing with the client. Walk through the doc and remove:
+
+**Strip entirely:**
+- **Agenda** section — internal pre-meeting talking points, not useful to the client after the meeting
+- **Action Items (carried-over / open from prep)** — internal tracking of prior commitments; the recap should only include action items from THIS meeting
+- **Strategic Recommendations** when marked internal, or any team-only analysis
+- **Open Questions for Discussion** — internal prep notes
+- Anything explicitly marked **"INTERNAL"** or **"DO NOT SHARE"**
+- Team-only commentary, sensitive competitive notes, pricing strategy
+
+**Keep and polish:**
+- **30-Second Brief / Executive Summary** (top of doc)
+- **Performance Snapshot** tables (Platform + Location) — tracker-verified in Step 2
+- **Meeting Recap** with decisions, context, next steps (this is the client-facing substance)
+- **NEW Action Items from this meeting** — clean, owner-tagged, due-dated
+- **Links** to the week's full weekly report
+
+**Finalize:**
+- Verify tables match the tracker (from Step 2)
+- Fix any `[TBD]` or `[date]` placeholders
+- Confirm professional tone throughout
+- Update the page title: drop any "Call Prep" prefix. Use "Meeting Recap — [Date]" or similar client-appropriate label.
+
+### 4. Draft the Client Email — PASTE IN CHAT (do NOT create a Gmail draft)
+
+Create a concise, friendly recap email. The email goes directly in the chat for the user to copy and send — **do NOT use Gmail MCP to create a draft**, because Gmail drafts can't be cleanly updated/deleted via MCP and they pile up in the user's drafts folder.
+
+**Subject line:** `[Client Name] Meeting Recap — [Date]`
 
 **Email body:**
 
@@ -57,13 +78,13 @@ Great connecting today. Here's a quick recap:
 [3-5 TLDR bullet points summarizing key takeaways, decisions, or highlights from the meeting]
 
 **Action Items:**
-- [ ] **[Owner Name]:** [Task description] -- Due: [Date]
-- [ ] **[Owner Name]:** [Task description] -- Due: [Date]
-- [ ] **[Owner Name]:** [Task description] -- Due: [Date]
+- [ ] **[Owner Name]:** [Task description] — Due: [Date]
+- [ ] **[Owner Name]:** [Task description] — Due: [Date]
+- [ ] **[Owner Name]:** [Task description] — Due: [Date]
 
 Full meeting notes: [Link to Notion doc]
 
-[Brief next step or closing - 1 sentence]
+[Brief next step or closing — 1 sentence]
 
 Best,
 [Your Name]
@@ -74,11 +95,35 @@ Best,
 - Conversational but professional
 - Action-oriented and clear
 - Use first names when appropriate
-- Keep it concise -- aim for under 150 words total
+- Keep it concise — aim for under 150 words total
 
-### 4. Share the Meeting Doc Link
+**Delivery format (paste this directly in chat as a copy-paste-ready block):**
 
-Include the Notion meeting doc URL in the email. Format it as a clean hyperlink.
+```
+To: [recipients]
+CC: [cc list, if any]
+Subject: [subject]
+
+[body]
+```
+
+The user copies this into their Gmail/client themselves. No Gmail drafts. No external sends.
+
+### 5. Confirm Doc is Share-Ready (final checklist)
+
+Before handing off to the user, verify the following:
+
+- [ ] Agenda section removed
+- [ ] Carried-over / pre-meeting Action Items section removed
+- [ ] Internal strategic / pricing / competitive notes removed
+- [ ] Performance data verified against current tracker (Step 2)
+- [ ] New action items listed with owners + due dates
+- [ ] Link to the week's full weekly report embedded in the doc
+- [ ] Page title dropped "Call Prep" prefix (now "Meeting Recap — [Date]" or similar)
+- [ ] Email draft pasted in chat (NOT created as Gmail draft)
+- [ ] Notion doc URL provided to the user
+
+Report the finalized Notion URL + the pasted email block in chat. The user sends from their own Gmail, at their discretion.
 
 ## Email Examples
 

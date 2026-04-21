@@ -225,31 +225,21 @@ def main():
         L("")
 
     # --- Location Performance ---
+    # New 7-col schema (Apr 21, 2026): Location | Tier | Total Sales | ROAS | Payout % | Mkt Spend % | Notes
+    # Tier and Notes are blank in script output — filled in Phase 6 (Key Highlights rewrite) from client registry + weekly context.
     L("## Location Performance")
     L("")
-    loc_summary_metrics = ["Total Sales", "Net Sales", "Total Orders", "AOV",
-                           "Commissions %", "Ad Spend", "Discounts (Offers)",
-                           "Total Marketing Investment",
-                           "Marketing ROAS", "Net Payout", "Net Payout %"]
+    loc_summary_metrics = ["Total Sales", "Marketing ROAS", "Net Payout %", "Marketing Spend / Sales %"]
+    # Display labels mapped: Total Sales | ROAS | Payout % | Mkt Spend %
 
-    if has_comp:
-        header = "| Location | " + " | ".join(loc_summary_metrics) + " | Sales WoW | Sales vs 4wk |"
-        sep = "|" + "|".join(["---"]*(len(loc_summary_metrics)+3)) + "|"
-        L(header); L(sep)
-        for ln in sorted(loc.keys(), key=lambda l: pv(gv(loc[l], "Total Sales")), reverse=True):
-            d = loc[ln]
-            vals = [gv(d, m) for m in loc_summary_metrics]
-            wow = gv(d, "Total Sales", "wow")
-            vs4 = gv(d, "Total Sales", "vs4")
-            L(f"| {ln} | " + " | ".join(vals) + f" | {wow} | {vs4} |")
-    else:
-        header = "| Location | " + " | ".join(loc_summary_metrics) + " |"
-        sep = "|" + "|".join(["---"]*(len(loc_summary_metrics)+1)) + "|"
-        L(header); L(sep)
-        for ln in sorted(loc.keys(), key=lambda l: pv(gv(loc[l], "Total Sales")), reverse=True):
-            d = loc[ln]
-            vals = [gv(d, m) for m in loc_summary_metrics]
-            L(f"| {ln} | " + " | ".join(vals) + " |")
+    header = "| Location | Tier | Total Sales | ROAS | Payout % | Mkt Spend % | Notes |"
+    sep = "|" + "|".join(["---"]*7) + "|"
+    L(header); L(sep)
+    for ln in sorted(loc.keys(), key=lambda l: pv(gv(loc[l], "Total Sales")), reverse=True):
+        d = loc[ln]
+        vals = [gv(d, m) for m in loc_summary_metrics]
+        # Tier (col 2) and Notes (col 7) are blank — Phase 6 fills them
+        L(f"| {ln} |  | " + " | ".join(vals) + " |  |")
     L("")
 
     # --- Operations & Quality ---
