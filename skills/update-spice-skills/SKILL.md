@@ -73,13 +73,42 @@ shopt -s nullglob 2>/dev/null || true  # handle bash/zsh empty globs gracefully
 setopt NULL_GLOB 2>/dev/null || true   # zsh equivalent
 
 # 1. Locate writable Cowork Skills folder (Mode 1: user-managed folder)
+# First check common paths, then fall back to a broader $HOME search.
 COWORK_SKILLS=""
-for candidate in "$HOME/Desktop/Cowork/Skills" "$HOME/Cowork/Skills" "$HOME/Documents/Cowork/Skills"; do
+for candidate in "$HOME/Desktop/Cowork/Skills" "$HOME/Cowork/Skills" "$HOME/Documents/Cowork/Skills" \
+                 "$HOME/Desktop/cowork/Skills" "$HOME/cowork/Skills" \
+                 "$HOME/Desktop/Cowork/skills" "$HOME/Cowork/skills" "$HOME/Documents/Cowork/skills"; do
     if [ -d "$candidate" ] && [ -w "$candidate" ]; then
         COWORK_SKILLS="$candidate"
         break
     fi
 done
+
+# 1a-fallback: broader search for any "Cowork/Skills" or "cowork/skills" dir under $HOME (3 levels deep)
+if [ -z "$COWORK_SKILLS" ]; then
+    FOUND=$(find "$HOME" -maxdepth 4 -type d \( -iname "Skills" -o -iname "skills" \) -path "*[Cc]owork*" 2>/dev/null | head -5)
+    if [ -n "$FOUND" ]; then
+        # If exactly one writable match, use it. If multiple, list them and ask user.
+        WRITABLE_MATCHES=""
+        while IFS= read -r path; do
+            if [ -w "$path" ]; then
+                WRITABLE_MATCHES="$WRITABLE_MATCHES$path"$'\n'
+            fi
+        done <<< "$FOUND"
+        COUNT=$(echo "$WRITABLE_MATCHES" | grep -c . || true)
+        if [ "$COUNT" = "1" ]; then
+            COWORK_SKILLS=$(echo "$WRITABLE_MATCHES" | head -1 | tr -d '\n')
+            echo "Found Cowork folder via broad search: $COWORK_SKILLS"
+        elif [ "$COUNT" -gt "1" ]; then
+            echo ""
+            echo "=== Multiple Cowork Skills folders found ==="
+            echo "$WRITABLE_MATCHES"
+            echo ""
+            echo "Stopping — please tell me which one to use, then re-run this skill with: 'update spice skills in <path>'"
+            exit 1
+        fi
+    fi
+fi
 
 # 1b. If no writable folder, check for managed-plugin cache (Mode 2: Claude-managed, read-only)
 if [ -z "$COWORK_SKILLS" ]; then
