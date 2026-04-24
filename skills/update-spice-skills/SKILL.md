@@ -168,7 +168,7 @@ TEAM_SKILLS=(
     "weekly-reporting" "campaign-ops" "campaign-setup" "client-call-prep"
     "client-onboarding" "context" "gm" "hero-image-review"
     "menu-conversion-check" "onboarding-status-check" "post-client-meeting"
-    "ratings-reply" "storefront-audit" "weekly-prep" "update-spice-skills"
+    "ratings-reply" "ratings-flyer" "storefront-audit" "weekly-prep" "update-spice-skills"
 )
 
 # 3. Create archive folder
