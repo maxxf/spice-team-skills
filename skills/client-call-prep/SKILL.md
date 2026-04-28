@@ -1,279 +1,177 @@
 ---
 name: client-call-prep
-description: Comprehensive client meeting preparation workflow. Use when the user wants to prepare for an upcoming client call or sync. Triggers on "prep for [client] call", "prepare for [client] meeting", "get ready for [client] sync", "review [client] context", or when user mentions preparing for any client meeting. Searches emails, Slack, Circleback transcripts, pulls performance data, tracks action items, and creates strategic meeting doc with agenda.
+description: >
+  GM-owned skill that runs before every client meeting. Pulls carryover context from
+  three required sources (client emails, Slack channel, last meeting notes + transcript),
+  QAs the ops-generated weekly report against the locked structure, finalizes a
+  locked-format agenda, publishes the client-facing meeting doc, and outputs a brief
+  for the meeting lead. Triggers on "prep for [client] call", "prepare for [client]
+  meeting", "get ready for [client] sync", "meeting prep for [client]", or any request
+  to prepare for an upcoming client touchpoint. Replaces the prior weekly-report-gm-qa
+  step — QA is now Phase 2 inside this skill.
 ---
 
 # Client Call Prep
 
-Prepare comprehensively for client meetings by gathering context from all sources, tracking action items, and creating a strategic meeting doc with current performance data.
+This skill is the GM's contract before every client meeting. It runs AFTER the ops team has finished `weekly-reporting`. It does four things in strict order:
 
-## Workflow
+1. Pulls carryover context from the three required sources
+2. QAs the ops-generated report against the locked structure
+3. Finalizes the agenda using the locked format
+4. Publishes the meeting doc and outputs the meeting lead's brief
 
-Follow these steps in sequence to prepare for a client meeting:
-
-### 1. Identify the Client and Meeting
-
-**Ask the user if not clear from context:**
-- Which client is the meeting with?
-- Is there a specific meeting today, or should I find the next scheduled one?
-
-**Auto-find meeting details:**
-- Use Google Calendar to find today's (or next) meeting with the client
-- Extract meeting time, attendees, and any existing agenda items
-- If multiple meetings found, ask user to clarify which one
-
-### 1.5. Check for Existing Meeting Doc (REQUIRED — do before creating anything)
-
-Before gathering context or creating new docs, search the client's Meeting Notes database in Notion to see if a doc already exists for this meeting. This prevents duplicate docs piling up.
-
-1. Navigate to the client's Notion project page → Meeting Notes database (usually labeled `👥 Meeting Notes` or similar)
-2. Use `mcp__f34fcb36-bc14-4569-bc45-beaff552d0f7__notion-search` with:
-   - `query_type: "internal"`
-   - `data_source_url`: the Meeting Notes database's data source URL (from `<data-source>` tag in the project page)
-   - Query: today's date, meeting name, or attendee + date combo
-3. Filter to results from the last 7 days
-4. **If an existing doc is found:**
-   - Read it via `notion-fetch`
-   - Classify it: is it a placeholder (auto-created from calendar), a partial prep, or a complete prep?
-   - Set the plan to **UPDATE** that doc in Step 6 rather than creating new
-   - Note the page ID for use in Step 6
-5. **If no existing doc is found:**
-   - Proceed to create new in Step 6
-6. **If multiple docs match** (e.g., duplicates): flag to user with URLs — ask which to use. Do NOT silently pick one.
-
-**Never create a duplicate meeting doc.** If in doubt, ask.
-
-### 2. Gather Context from Recent Communications
-
-**Search the last 7 days:**
-
-**Emails (Gmail):**
-Search for emails to/from the client. Focus on: decisions made, questions raised, issues flagged, upcoming initiatives.
-
-**Slack:**
-Search for messages in client channels and DMs. Focus on: real-time updates, quick decisions, operational issues, informal context.
-
-**Circleback Transcripts:**
-Pull the most recent 3 meetings with this client. Extract: key decisions, action items, open questions, strategic direction.
-
-### 3. Track Action Items from Previous Meetings
-
-**For each action item from previous meetings:**
-- Check status (completed, in progress, blocked, not started)
-- Note who owns it
-- Flag any overdue items
-- Prepare to discuss progress
-
-**Sources for action items:**
-- Circleback meeting notes
-- Previous meeting docs in Notion
-- Slack threads where work was discussed
-- Email confirmations or updates
-
-### 4. Pull Current Performance Data
-
-**Primary source: Google Sheets**
-- Find the client's weekly tracker spreadsheet
-- Pull week-over-week metrics
-- Calculate key changes (ROAS, CPO, sales, orders)
-
-**Fallback sources if no Google Sheet:**
-1. Delivery platform dashboards (DoorDash, Uber Eats, Grubhub)
-2. Loop or other tracking tools
-3. Notion databases with performance data
-
-**Key metrics to gather:**
-- Total sales (week-over-week)
-- Marketing-driven sales vs organic
-- ROAS and CPO by platform
-- Order volume and AOV
-- Net payout % and dollar amount
-
-### 5. Review Campaign Performance
-
-**For each active platform:**
-- Current campaigns with spend and performance
-- Campaign calendar (upcoming promotions)
-- Platform-specific offers/promos
-- Co-funding opportunities or platform support
-
-### 6. Create OR Update Strategic Meeting Doc in Notion
-
-**Decision from Step 1.5:**
-- **If an existing doc was found** — UPDATE that doc rather than creating a new one. Use `mcp__f34fcb36-bc14-4569-bc45-beaff552d0f7__notion-update-page` with `content_updates` to merge the prep content into the existing structure. Preserve any content the client may have already added (agenda items, questions). Fill in placeholders and append new sections.
-- **If no existing doc was found** — create new via `notion-create-pages` in the Meeting Notes database.
-
-**Location:** Client's workspace → Meeting Notes database
-
-**Structure:**
-
-```markdown
-# Agenda
-- [List key topics to discuss based on context gathered]
-- [Action item status review]
-- [Performance overview]
-- [Strategic priorities or decisions needed]
-- [Next steps]
-
-## Action Items
-> Carried over from last meeting -- check off completed items
-- [ ] **[Owner]:** [Task] -- Status?
-- [ ] **[Owner]:** [Task] -- Status?
-
-> New this meeting
-[To be filled during/after the meeting]
+If the ops weekly report does not yet exist in Notion, stop and surface to the user. Do not run this skill on stale data.
 
 ---
 
-## Executive Summary
-**UP:**
-- [3-5 bullets on positive trends, wins, improvements]
+## Required Inputs
 
-**DOWN:**
-- [3-5 bullets on challenges, declines, issues]
-
-**NEXT:**
-- [3-5 bullets on priorities, upcoming initiatives, decisions needed]
+Before running, confirm:
+- Client name
+- Meeting date/time (use Google Calendar to verify if not given)
+- Link to the ops-generated weekly report page in Notion
 
 ---
 
-## Sales & Marketing KPIs
-### Week [Date] vs Week [Date]
+## Phase 1: Pull Carryover Context (REQUIRED — DO NOT SKIP)
 
-[Table with key metrics and week-over-week changes]
+You MUST pull from all three sources below. Do not summarize from memory. Each source has a specific retrieval contract.
 
----
+### 1a. Last meeting — full notes + transcript
 
-## Platform Performance
+- `SearchMeetings` with client name, sorted by date desc. Take most recent.
+- `ReadMeetings` for full notes (the entire `notes` field, not just action items).
+- `GetTranscriptsForMeetings` for the full transcript. Read it.
+- Extract into the carryover pack:
+  - Open commitments (who promised what, due when)
+  - Unresolved threads — topics raised but not closed
+  - Direct quotes that signal client priorities or concerns
+  - Anything the client asked us to follow up on
 
-**DoorDash** (X% of revenue):
-- Sales: $X -> $Y (+/-Z%)
-- ROAS: X.X, CPO: $X
-- [Key insight about performance]
+### 1b. Client emails — last 14 days
 
-**Campaign Performance:**
-- [Active campaigns with spend/performance]
-- [Upcoming promotions]
-- [Platform-specific offers]
+- `SearchEmails` with `participant:` filter for every email in the client contact list, joined with OR. Time bound `after:[today minus 14 days]`.
+- Read full thread content for any thread that:
+  - Was sent by the client (not us)
+  - Contains an action item, question, or concern
+  - References a meeting, deliverable, or escalation
+- Skip auto-generated platform notifications.
 
-**Uber Eats** (X% of revenue):
-- Sales: $X -> $Y (+/-Z%)
-- ROAS: X.X, CPO: $X
-- [Key insight about performance]
+### 1c. Slack — last 14 days
 
-**Campaign Performance:**
-- [Active campaigns with spend/performance]
-- [Upcoming promotions]
-- [Platform-specific offers]
+- Look up the client's internal Slack channel ID from the client registry.
+- `slack_read_channel` with limit=100. Page back with cursor until you cover 14 days.
+- Also `slack_search_public_and_private` for client-name mentions outside the dedicated channel (DMs, ops channels, support threads).
+- Extract:
+  - Decisions made internally that affect the client
+  - Issues flagged by the team
+  - Operational concerns the client may raise on the call
 
-**Grubhub** (X% of revenue):
-- Sales: $X -> $Y (+/-Z%)
-- ROAS: X.X, CPO: $X
-- [Key insight about performance]
+### 1d. Output the Carryover Context Pack
 
-**Campaign Performance:**
-- [Active campaigns with spend/performance]
-- [Upcoming promotions]
-- [Platform-specific offers]
+Write a structured artifact (in-conversation, used by Phases 2–4):
 
----
-
-## Strategic Recommendations
-### Immediate (This Week)
-[Numbered list with owners and due dates]
-
-### Short-Term (2-4 Weeks)
-[Numbered list with owners and due dates]
-
-### 30-Day Targets
-[Bulleted list of measurable goals]
-
----
-
-## Updates from Each Platform
-[Detail any platform-specific news, changes, support offered]
-
----
-
-## Open Questions for Discussion
-[Numbered list of questions to address in the meeting]
+```yaml
+open_action_items:
+  - item: "..."
+    owner: "..."
+    age_in_meetings: 3
+    source: "meeting 4/14"
+unresolved_threads:
+  - topic: "..."
+    raised_on: "..."
+    quote: "..."
+    source: "transcript 4/14 @ 12:30"
+client_concerns_from_comms:
+  - concern: "..."
+    source: "email 4/21 from JP"
+biggest_perf_change_this_week:
+  metric: "..."
+  delta: "..."
+  source: "ops report W17"
 ```
 
-### 7. Synthesize Meeting Brief
+If any of the three sources returns nothing, flag it explicitly. Do not fill the gap with assumptions.
 
-**Create a concise summary for your own reference:**
-- Top 3 things to discuss
-- Key decisions needed
-- Critical action items to follow up on
-- Any sensitive topics or concerns
+---
 
-## Data Source Priority
+## Phase 2: QA the Ops Report
 
-When gathering performance data, follow this order:
+Read the ops-generated weekly report. Diff against the locked structure. Each item is a hard check.
 
-1. **Google Sheets** - Most common, usually has complete week-over-week data
-2. **Delivery Platform Dashboards** - For real-time or missing metrics
-3. **Loop** - If client uses Loop for tracking
-4. **Notion Databases** - For custom metrics or supplementary data
-5. **Circleback/Email** - For context on why metrics changed
+- [ ] Section block order: Week at a Glance → Agenda → Action Items → Key Highlights → Performance Flags → Platform Performance → Location Performance → Ops & Quality → Campaign Performance → QA
+- [ ] Week at a Glance is a single callout block, not a table
+- [ ] Agenda has 3–5 bullets, each formatted exactly as: `**[Topic]** — [the question or decision needed]`. Single sentence per bullet. No prose. No "highlights" disguised as agenda.
+- [ ] Every open action item from the Carryover Context Pack is either in the agenda or in "Carried Over"
+- [ ] Action items aged >2 meetings show escalation count: `*(escalated W14 → W15 → W16 → W17)*`
+- [ ] Performance flags ≤5, numbered #1–#5, every flag has Cause + Action
+- [ ] No prose analysis sections outside the locked structure. Delete "Why X hasn't improved" essays — that content belongs in the meeting lead's brief, not the client doc.
+- [ ] Voice is client-facing. No internal jargon, no "TBD," no internal questions.
+- [ ] All numbers passed the QA validation table at the bottom of the ops report
 
-## Common Client Types & Adaptations
+For each failed check, log the specific edit needed. Do not edit yet. Surface the full QA result to the user before applying changes.
 
-**Delivery Platform Clients (Restaurants):**
-- Focus on platform performance (DoorDash, Uber, Grubhub)
-- Include menu optimization notes
-- Track tier strategy for locations
-- Note operational issues affecting performance
+---
 
-**Retention/Growth Clients:**
-- Focus on retention metrics (churn, LTV, engagement)
-- Highlight campaign performance
-- Track A/B tests and experiments
+## Phase 3: Finalize the Agenda
 
-**Paid Acquisition Clients:**
-- Focus on CAC, ROAS, conversion rates
-- Platform-by-platform performance (Meta, Google, TikTok)
-- Creative performance and testing
+Rebuild the agenda from the Carryover Context Pack. Source priority:
 
-## Tips
+1. Open action items aged >1 meeting (these get top billing — escalating means we keep raising them)
+2. Unresolved threads from prior meeting transcript
+3. The single biggest WoW performance change this week
+4. Any client concern surfaced in emails or Slack in the last 14 days
 
-**Efficient context gathering:**
-- Run email, Slack, and Circleback searches in parallel
-- Start with most recent data and work backwards
-- Focus on actionable insights, not just data dumps
+Format every bullet exactly as: `**[Topic]** — [the question or decision needed]`
 
-**Action item tracking:**
-- Always check status before the meeting
-- Flag blockers or delays proactively
-- Note what's been completed to celebrate wins
+Gold-standard examples (match this voice):
+- `**AWAN conversion** — menu conversion has been 5%; we reduced prices and tested campaigns. Has this improved? Why or why not?`
+- `**Ratings flyers** — supposed to be running. How is distribution going? Have ratings counts moved?`
+- `**Venice ops** — week 4 of daily AM pauses. What's the corrective plan?`
 
-**Performance data:**
-- Lead with the "so what" -- why metrics changed
-- Compare to targets, not just previous week
-- Prepare explanations for anomalies
+Maximum 5 bullets. No section can be a "highlights" dump. No prose.
 
-**Meeting doc best practices:**
-- Create the doc before the meeting starts
-- Share link with the client at the start of the call
-- Use it as a live document during discussion
-- Update action items in real-time
+---
 
-**When to skip certain sections:**
-- No campaign performance section if client has no active campaigns
-- Simplify KPI table if limited data available
-- Skip platform sections for non-platform clients
+## Phase 4: Apply Edits and Publish
 
-## Example Usage
+- Use `notion-update-page` to apply the QA edits and the finalized agenda to the existing ops report page. Do not create a new page — the ops page is canonical.
+- Confirm the page is published and shareable.
 
-**User says:** "prep for Everytable call"
+---
 
-**Skill does:**
-1. Searches Gmail for Everytable emails (last 7 days)
-2. Searches Slack in #everytable channel (last 7 days)
-3. Pulls 3 most recent Circleback meetings
-4. Finds Everytable Google Sheet tracker
-5. Pulls week-over-week metrics
-6. Identifies action items from previous meetings
-7. Creates new meeting doc in Everytable -> Meeting Notes
-8. Populates doc with agenda, action items, performance data, campaign details
-9. Summarizes key topics for the call
+## Phase 5: Synthesize the Meeting Lead's Brief
+
+Output to chat (not Notion). Format:
+
+- **Top 3 things that matter today** — the three discussion points worth the meeting lead's prep time. Each one explains what the lead needs to know going in, the current data, and the decision on the table.
+- **Action item status** — table of every carried-over item: owner, age in meetings, current status, source.
+- **Decisions needed today** — concrete go/no-gos.
+- **Watch-outs / sensitive** — relationship dynamics, who's likely to push back, what's politically loaded, who tends to no-show.
+- **Open questions to put to the room** — direct asks for the meeting.
+- **Sources** — every link cited (Notion docs, Circleback transcript, email thread, Slack channel).
+
+---
+
+## Key Rules
+
+- Never write the agenda from memory. Always derive from the Carryover Context Pack.
+- Never invent sections. Stick to the locked structure.
+- If a required source (email, Slack, last meeting) returns nothing, flag it explicitly.
+- The client doc is for the client. The brief is for the meeting lead. Don't mix them.
+- This skill replaces any standalone weekly-report-gm-qa skill. QA is Phase 2 here.
+
+---
+
+## When to Run
+
+- Before every scheduled client meeting (weekly, biweekly, ad-hoc)
+- After ops finishes `weekly-reporting` for that week
+- Run early enough that QA edits can land before the meeting starts (target: 2+ hours before)
+
+---
+
+## When NOT to Run
+
+- If the ops weekly report doesn't exist yet — wait for it
+- If there's no client meeting and no client-facing communication scheduled — the report sits in internal Notion as data; lighter QA can run inside `weekly-reporting` itself
