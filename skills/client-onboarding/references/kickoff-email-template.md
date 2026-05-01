@@ -2,7 +2,7 @@
 
 ## Delivery Marketplaces / Multi-Service Email
 
-This email is sent by Maxx (or the salesperson) immediately after SOW signature. It introduces Cesar as Head of Client Services and hands off the relationship for onboarding.
+This email is sent by Maxx (or the salesperson) immediately after SOW signature. It introduces the Client Services Lead and hands off the relationship for onboarding.
 
 ### Variables
 
@@ -10,7 +10,8 @@ This email is sent by Maxx (or the salesperson) immediately after SOW signature.
 |----------|--------|---------|
 | `{first_name}` | Client POC first name from Notion client record | Matan |
 | `{restaurant_name}` | Client Name from Notion | Westville |
-| `{cesar_email}` | Always: cesar@spicedigital.co | cesar@spicedigital.co |
+| `{cs_lead_name}` | Client Services Lead first name | — |
+| `{cs_lead_email}` | Client Services Lead email | — |
 | `{onboarding_form_link}` | Static: https://spice-digital.notion.site/1c8d3ff018e780f5821ff8b52e709724 | — |
 | `{stripe_payment_link}` | Generated per-client in Stripe | https://buy.stripe.com/XXXX |
 | `{client_portal_link}` | Client space URL in Notion (created during onboarding) | https://www.notion.so/spice-digital/Westville-NYC-326d3ff0... |
@@ -25,7 +26,7 @@ Subject: Welcome to Spice! - {restaurant_name} Onboarding
 
 Over the next week, we will be organizing internally by assigning more Spice members to your team, gathering assets from you, and taking time to understand your business in a more comprehensive way, building on our initial calls together.
 
-In order to streamline this process, I'd like to introduce you to Cesar (copied), Spice's Head of Client Services, to coordinate the following:
+In order to streamline this process, I'd like to introduce you to {cs_lead_name} (copied), Spice's Head of Client Services, to coordinate the following:
 
 - Scheduling Kick-off call: {kickoff_date}
 - Setting up shared Slack / WhatsApp for communications
@@ -40,15 +41,15 @@ Thank you!
 
 ### Notes
 
-- CC cesar@spicedigital.co on the email
-- After this email, Cesar takes over all client communication
+- CC {cs_lead_email} on the email
+- After this email, the Client Services Lead takes over all client communication
 - Maxx's next touchpoint is the kickoff call itself (handoff moment)
 - If the client has special billing (net-15), note that in the email body near the payment link
-- For Advisory-only clients, the email is slightly different (Maxx stays as primary, no Cesar intro)
+- For Advisory-only clients, the email is slightly different (Maxx stays as primary, no Client Services intro)
 
 ## Advisory-Only Email
 
-For clients purchasing only Advisory services, Maxx remains the primary contact. No Cesar handoff.
+For clients purchasing only Advisory services, Maxx remains the primary contact. No Client Services handoff.
 
 ```
 Subject: Welcome to Spice! - {restaurant_name}

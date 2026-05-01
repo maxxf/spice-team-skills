@@ -2,11 +2,11 @@
 
 ## Overview
 
-Weekly scheduled agent that identifies payment issues across all clients and drafts follow-up emails for Cesar or finance@spicedigital.co to send.
+Weekly scheduled agent that identifies payment issues across all clients and drafts follow-up emails for the Client Services Lead or finance@spicedigital.co to send.
 
 **Schedule:** Every Monday at 9:00 AM
 **Posts to:** #spice-actions (summary) + drafts emails for review
-**Sender:** finance@spicedigital.co or Cesar (cesar@spicedigital.co)
+**Sender:** finance@spicedigital.co or the Client Services Lead
 
 ## Detection Logic
 
@@ -53,7 +53,7 @@ Here's the link to set up your subscription: {payment_link}
 Once that's done, we'll have everything we need on our end. Let us know if you run into any issues.
 
 Thanks,
-Cesar Cerda
+[Client Services Lead Name]
 Head of Client Services
 Spice Digital
 ```
@@ -70,7 +70,7 @@ The most recent charge for {restaurant_name}'s account didn't go through. Could 
 If there's an issue on our end, let us know and we'll sort it out.
 
 Thanks,
-Cesar Cerda
+[Client Services Lead Name]
 Head of Client Services
 Spice Digital
 ```
@@ -89,7 +89,7 @@ Invoice link: {invoice_url}
 We'd like to get this resolved this week. Let us know if there's anything we need to discuss.
 
 Thanks,
-Cesar Cerda
+[Client Services Lead Name]
 Head of Client Services
 Spice Digital
 ```
@@ -105,7 +105,7 @@ Quick heads up: the card on file for {restaurant_name} expires {expiry_month}/{e
 
 Takes 30 seconds. Thanks!
 
-Cesar Cerda
+[Client Services Lead Name]
 Head of Client Services
 Spice Digital
 ```
@@ -116,7 +116,7 @@ Spice Digital
 - **Second notice (1 week later):** Resend with slightly firmer tone, CC Maxx
 - **Third notice (2 weeks later):** Escalate to Maxx for direct outreach. Post to #spice-actions.
 
-Track escalation level in the Slack summary so Cesar knows which clients have been contacted before.
+Track escalation level in the Slack summary so the Client Services Lead knows which clients have been contacted before.
 
 ### Step 5: Post summary to Slack
 
