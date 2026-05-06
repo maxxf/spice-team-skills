@@ -165,7 +165,7 @@ echo "Using Mode 1 (writable Cowork folder): $COWORK_SKILLS"
 
 # 2. Names of the 14 team skills (anything matching these gets archived)
 TEAM_SKILLS=(
-    "weekly-reporting" "campaign-ops" "campaign-setup" "client-call-prep"
+    "weekly-reporting" "weekly-scorecard" "campaign-ops" "campaign-setup" "client-call-prep"
     "client-onboarding" "context" "gm" "hero-image-review"
     "menu-conversion-check" "onboarding-status-check" "post-client-meeting"
     "ratings-reply" "ratings-flyer" "storefront-audit" "weekly-prep" "update-spice-skills"
