@@ -109,7 +109,69 @@ Subject: [subject]
 
 The user copies this into their Gmail/client themselves. No Gmail drafts. No external sends.
 
-### 5. Confirm Doc is Share-Ready (final checklist)
+### 5. Post Spice-internal action items to `#int-[client]` Slack channel
+
+After the client recap is squared away, post the **Spice-team-owned action items** to the client's internal Slack channel so the team sees what landed on them and can self-track. This is internal — not for the client.
+
+**Step 5a: Identify Spice-internal owners**
+
+From the meeting doc's "NEW Action Items" section, classify each item by owner. Spice team members (always post these to `#int-[client]`):
+
+- Maxx, Tomas, Manish, Dulari, Rodrigo, Ana, Santiago, Dilli, David, Rui (and any future Spice hires)
+- "Spice", "Team", "Ops", "Design", or any Spice-role label
+- Anything tagged "internal" or where the owner is unspecified but the task is clearly Spice's
+
+Skip client-side owners (the client's contacts) — they got those items in the recap email.
+
+If zero Spice-internal action items, **skip Step 5 entirely**. Don't post an empty message.
+
+**Step 5b: Look up the client's internal channel**
+
+Use `mcp__dab362fb-680c-4394-8a3c-857a73b5017d__slack_search_channels` with query `int-[client-slug]` (e.g., `int-goop-kitchen`, `int-mbfs`). The Slack channel pattern is documented in the team CLAUDE.md.
+
+If the channel can't be found, flag to the user with the slug you tried — don't post to the wrong channel.
+
+**Step 5c: Look up Slack user IDs for each Spice owner**
+
+For proper @mentions, fetch each owner's Slack user ID via `mcp__dab362fb-680c-4394-8a3c-857a73b5017d__slack_search_users` (by first name + email domain `@spicedigital.co` if needed for disambiguation). Cache these IDs in conversation if you do multiple lookups.
+
+If a user can't be resolved, fall back to writing their name in plain text — don't fabricate a user ID.
+
+**Step 5d: Compose the Slack draft**
+
+Format:
+
+```
+:memo: action items from today's [Client Name] meeting
+
+upcoming for the team:
+• <@SLACK_USER_ID> — [task description] — due [date]
+• <@SLACK_USER_ID> — [task description] — due [date]
+• [plain name if user not resolved] — [task] — due [date]
+
+full notes: [Notion meeting doc URL]
+```
+
+**Tone rules** (match Spice internal voice):
+- Lowercase OK
+- Direct, fragments OK
+- No corporate fluff
+- One CTA per item (the task itself)
+- Always include the due date — if missing, write `due TBD` and call it out as a gap
+
+**Step 5e: Create as a Slack DRAFT (not sent)**
+
+Use `mcp__dab362fb-680c-4394-8a3c-857a73b5017d__slack_send_message_draft` with the channel ID from 5b. This creates the message as a draft in the user's Slack — they review it in the channel and hit send manually. Per safety rules, do NOT use `slack_send_message` to auto-send team comms.
+
+**Step 5f: Confirm to user**
+
+After the draft is created, tell the user:
+- Channel name + Slack URL of the draft
+- Number of action items posted
+- Owners tagged (so they can spot-check before sending)
+- Any items that fell back to plain text (because user IDs didn't resolve)
+
+### 6. Confirm Doc is Share-Ready (final checklist)
 
 Before handing off to the user, verify the following:
 
@@ -121,9 +183,16 @@ Before handing off to the user, verify the following:
 - [ ] Link to the week's full weekly report embedded in the doc
 - [ ] Page title dropped "Call Prep" prefix (now "Meeting Recap — [Date]" or similar)
 - [ ] Email draft pasted in chat (NOT created as Gmail draft)
+- [ ] Spice-internal action items posted as draft to `#int-[client]` Slack channel (Step 5) — OR confirmed there were none
 - [ ] Notion doc URL provided to the user
 
-Report the finalized Notion URL + the pasted email block in chat. The user sends from their own Gmail, at their discretion.
+Report to the user:
+- Finalized Notion meeting doc URL
+- The pasted email block (for them to copy into Gmail)
+- Slack draft URL for the `#int-[client]` action-items post (for them to review + send)
+- Any gaps (missing owner, missing due date, unresolved Slack user, etc.)
+
+The user sends both the email and the Slack post at their discretion.
 
 ## Email Examples
 
