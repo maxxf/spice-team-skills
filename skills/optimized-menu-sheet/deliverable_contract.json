@@ -1,0 +1,12 @@
+{
+  "skill": "optimized-menu-sheet",
+  "version": "1.0",
+  "params_schema": {
+    "type": "object",
+    "required": ["stores"],
+    "properties": {
+      "stores": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+      "focus": {"type": "string", "enum": ["category_consolidation", "sku_rationalization", "pricing_review"]}
+    }
+  }
+}

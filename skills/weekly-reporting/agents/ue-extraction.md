@@ -153,23 +153,39 @@ When the Ads Manager `Locations` field shows a count (e.g., "4") instead of a st
 
 ---
 
-## Step 4: Ads + Credits Netting (from Transaction CSV)
+## Step 4: Ads + Credits Netting (from Transaction CSV) — REQUIRED, DO NOT SKIP
 
-Ad/credit data lives in `Other payments description` (label) and `Other payments` (amount). These rows typically have **blank Order Status**.
+**This step is the #1 source of missed data in past runs (May 2026 incident: Dulari missed UE ad spend by skipping this step on a client where ad spend rows had blank Order Status). Do not skip. Do not assume the order-level rows already captured ad spend — they don't.**
 
-**Ad-Related Row Definition:** treat a row as ad-related if:
-- `Other payments description` contains "Ad" (case-insensitive), OR
-- `Other payments description` equals "Customer contribution"
+Ad/credit data lives in `Other payments description` (label) and `Other payments` (amount). These rows typically have **blank Order Status** and are NOT order rows.
 
-**EXCLUDE from ad spend:** $0.99 marketing fees (see Step 3 above).
+**Required process — execute literally:**
+
+1. Filter the transaction CSV to ALL rows where `Other payments description` is non-empty. Include rows with blank Order Status. Include rows with $0 in `Sales (excl. tax)`. Include rows with no Order ID.
+2. From that filtered set, identify ad-related rows:
+   - `Other payments description` contains "Ad" (case-insensitive), OR
+   - `Other payments description` equals "Customer contribution"
+3. Compute the metrics below from those ad-related rows.
+
+**EXCLUDE from ad spend:** $0.99 marketing fees (see Step 3 above — those are offer costs).
 
 **Ad Metrics (ALWAYS from transaction CSV, never from Ads Manager):**
-- **Gross Ad Spend:** sum abs(`Other payments`) where description == `"Ad Spend"`
+- **Gross Ad Spend:** sum abs(`Other payments`) where description == `"Ad Spend"` (case-insensitive match)
 - **Ad Credits / Offsets:** sum of positive `Other payments` among ad-related rows where description != `"Ad Spend"`
 - **Net Ad Spend Impact (Payout Impact):** sum of signed `Other payments` among ad-related rows (typically negative)
 - **Net Ad Spend (Cost):** abs(Net Ad Spend Impact)
 
 **IMPORTANT:** Ad Spend for the tracker/overview MUST come from transaction CSV netting, NOT from Ads Manager totals. Ads Manager reports spend using different attribution windows and may include spend from outside the Mon-Sun reporting period. The transaction CSV reflects actual charges to the merchant's account for the week.
+
+**MANDATORY output for this step (include in your final JSON's `validation.flags` array):**
+
+After computing Ad Spend, emit a flag confirming what you found:
+
+```
+"step_4_ad_spend_audit: scanned <N> rows with 'Other payments description' non-empty, found <M> 'Ad Spend' rows summing to $<total>, found <K> other ad-related rows summing to $<total>"
+```
+
+If `M == 0` AND `discounts > 0` AND `Ads Manager Access = Yes` for this client (per profile), STOP and ask the user: "Found zero 'Ad Spend' rows in the transaction CSV but client is supposed to be running ads. Did the CSV export include all relevant rows? Check the export filter or re-pull from the platform."
 
 ---
 

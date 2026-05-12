@@ -194,6 +194,27 @@ def validate_metrics(metrics, label_prefix):
                     f"(threshold: {PAYOUT_RECONCILE_PCT}%)"
                 )
 
+    # Suspicious ad_spend = 0 detection (May 2026 incident: UE ad spend missed because
+    # the extraction agent skipped Step 4's standalone Ad Spend rows).
+    # If marketing-driven sales/orders are non-zero but ad_spend is 0, that suggests
+    # offers are tracked but ad spend isn't — flag for human review.
+    if ad == 0 and mds > 0 and "uber" in label_prefix.lower():
+        warnings.append(
+            f"{label_prefix} ad_spend = $0 but marketing_driven_sales = ${mds:,.0f}. "
+            f"For UE, this can happen with offer-only attribution (Tier 1) — but it can also indicate "
+            f"missed standalone Ad Spend rows in the transaction CSV (rows with blank Order Status, "
+            f"Other payments description = 'Ad Spend'). Verify the extraction agent processed Step 4 correctly."
+        )
+
+    # Same check for DD/GH (less common pattern but possible)
+    if ad == 0 and mds > 0 and ("doordash" in label_prefix.lower() or "dd" in label_prefix.lower()):
+        warnings.append(
+            f"{label_prefix} ad_spend = $0 but marketing_driven_sales = ${mds:,.0f}. "
+            f"For DoorDash, this is expected ONLY for enterprise clients with invoiced ad spend "
+            f"(not in settlement CSV). Confirm this client is on invoiced billing — if not, "
+            f"the Sponsored Listing CSV may not have been processed."
+        )
+
     return critical, warnings
 
 
