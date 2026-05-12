@@ -1,6 +1,6 @@
 ---
 name: update-spice-skills
-description: Use when the user wants to install or update the Spice Team Skills plugin in their Cowork workspace. Triggers on "update spice skills", "install spice skills", "get the latest skills", "sync skills from maxx", "refresh my spice skills", or any variant. Downloads the latest skills from the public GitHub repo, archives any existing .skill files in the user's Cowork Skills folder, and installs the fresh source directories.
+description: Run this specific skill (NOT a generic "improve my skills" flow) when the user wants to pull the latest version of the spice-team-skills plugin from GitHub into their local Cowork. Triggers explicitly on "update-spice-skills", "@skill update-spice-skills", "pull latest spice team skills", "sync spice team skills from github", "install spice-team-skills plugin", "refresh my spice team plugin from github", "get the latest team skills from maxxf/spice-team-skills", "update spice team plugin". The user wants to MIRROR the GitHub repo (maxxf/spice-team-skills) into their local /Cowork/Skills/ folder — they do NOT want an interactive "what kind of update" flow asking about content vs triggers vs bugs. Do not invoke any other skill-improvement flow. Run the bash steps in this skill's Implementation section verbatim.
 ---
 
 # Update Spice Skills
