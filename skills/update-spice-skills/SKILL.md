@@ -165,10 +165,14 @@ echo "Using Mode 1 (writable Cowork folder): $COWORK_SKILLS"
 
 # 2. Names of the 14 team skills (anything matching these gets archived)
 TEAM_SKILLS=(
-    "weekly-reporting" "weekly-scorecard" "campaign-ops" "campaign-setup" "client-call-prep"
-    "client-onboarding" "context" "gm" "hero-image-review"
-    "menu-conversion-check" "onboarding-status-check" "post-client-meeting"
-    "ratings-reply" "ratings-flyer" "storefront-audit" "weekly-prep" "update-spice-skills"
+    "weekly-reporting" "weekly-scorecard" "campaign-ops" "campaign-setup"
+    "client-call-prep" "client-diagnostics" "client-onboarding" "context"
+    "diagnostic-action-plan" "diagnostic-campaigns" "diagnostic-menu"
+    "diagnostic-ops" "diagnostic-topline"
+    "gm" "hero-image-review" "menu-conversion-check"
+    "onboarding-status-check" "post-client-meeting"
+    "ratings-reply" "ratings-flyer" "storefront-audit"
+    "weekly-prep" "update-spice-skills"
 )
 
 # 3. Create archive folder
