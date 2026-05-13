@@ -113,7 +113,7 @@ The user copies this into their Gmail/client themselves. No Gmail drafts. No ext
 
 After the client recap is squared away, post the **Spice-team-owned action items** to the client's internal Slack channel so the team sees what landed on them and can self-track. This is internal — not for the client.
 
-**Step 5a: Identify Spice-internal owners**
+**Step 5a: Identify Spice-internal owners (NEW from this meeting)**
 
 From the meeting doc's "NEW Action Items" section, classify each item by owner. Spice team members (always post these to `#int-[client]`):
 
@@ -123,7 +123,20 @@ From the meeting doc's "NEW Action Items" section, classify each item by owner. 
 
 Skip client-side owners (the client's contacts) — they got those items in the recap email.
 
-If zero Spice-internal action items, **skip Step 5 entirely**. Don't post an empty message.
+**Step 5a-bis: Pull CARRY-OVER action items from previous meetings (still relevant)**
+
+Don't just post today's items in isolation — pull the open Spice-owned action items from the **last 3 meetings with this client** so the team sees the full active queue.
+
+1. `SearchMeetings` with the client name, sorted by date desc, limit 3 (the meeting we just processed + 2 prior)
+2. For each prior meeting (skip the current one), `ReadMeetings` and pull `actionItems`
+3. Filter to:
+   - Spice-owned (same classification logic as Step 5a)
+   - `status` is NOT "COMPLETED" / "DONE" (Circleback uses "PENDING" for open items)
+4. Tag each carry-over item with its source meeting date for context
+5. **Deduplicate against today's items** — if the same task is in this meeting AND a previous one (same wording, same owner), only show it once under "carried over" with a note that it was raised in [date] and again today
+6. **Filter out stale ones** — if an item is older than 4 weeks AND has no recent mention in transcripts/Slack/email, flag it as "stale, may already be done — verify before posting" rather than blindly including
+
+If both NEW + CARRY-OVER lists are empty, **skip Step 5 entirely**.
 
 **Step 5b: Look up the client's internal channel**
 
@@ -139,18 +152,31 @@ If a user can't be resolved, fall back to writing their name in plain text — d
 
 **Step 5d: Compose the Slack draft**
 
-Format:
+Format (omit sections that are empty — don't show empty headers):
 
 ```
 :memo: action items from today's [Client Name] meeting
 
-upcoming for the team:
+new from today:
 • <@SLACK_USER_ID> — [task description] — due [date]
 • <@SLACK_USER_ID> — [task description] — due [date]
-• [plain name if user not resolved] — [task] — due [date]
+
+carried over (still open from prior meetings):
+• <@SLACK_USER_ID> — [task description] — due [date] *(raised [meeting date], age: [Nw])*
+• <@SLACK_USER_ID> — [task description] — due [date] *(raised [meeting date], age: [Nw])*
+
+waiting on [client] side (FYI — not action items for us):
+• [client contact name] — [task]
+• [client contact name] — [task]
 
 full notes: [Notion meeting doc URL]
 ```
+
+**Section rules:**
+- `new from today` — only items from THIS meeting where the Spice owner just got tagged
+- `carried over` — Spice-owned items from prior meetings still PENDING. Include the source meeting date + age in weeks so the team sees what's been lingering. Items aged >2 meetings should escalate visually (e.g., `*(raised 4/14, age: 4w — escalating)*`).
+- `waiting on [client] side` — client-owned items so the team has full context on what's blocking us. Mark FYI, not action.
+- Drop any section that's empty. Don't show `new from today:` with no bullets underneath.
 
 **Tone rules** (match Spice internal voice):
 - Lowercase OK
