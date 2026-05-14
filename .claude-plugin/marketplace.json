@@ -9,7 +9,7 @@
     {
       "name": "spice-team-skills",
       "description": "Spice Digital team skills — reporting, ops, campaigns, meetings, onboarding",
-      "version": "1.5.1",
+      "version": "1.5.2",
       "source": "./",
       "author": {
         "name": "Maxx Freedman",

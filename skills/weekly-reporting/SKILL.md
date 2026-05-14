@@ -24,17 +24,14 @@ Orchestrate weekly delivery marketplace reporting for Spice clients. Dispatches 
    - Search Notion for the client's project page using `notion-search` with the client name
    - Navigate to the client's Wiki database and find the "Weekly Reporting Profile" page
    - Fetch the profile page content using `notion-fetch`
-   - Extract: active platforms, DD invoicing tier, UE ads access, data quirks, location map, KPI targets, last week baseline, **tracker URL from `Report Writer Notes`**
+   - Extract: active platforms, DD invoicing tier, UE ads access, data quirks, location map, KPI targets, last week baseline
    - If no profile page exists, fall back to `references/client-registry.md` (legacy path)
 3. Look up client in `references/client-registry.md` for any data NOT in the Notion profile (store maps, tracker URL). The Notion profile is authoritative for platform config and quirks; the registry is a backup and holds static reference data.
 4. Ask for week date range (Monday-Sunday) if not provided
 5. Create a temp output directory: `OUTPUT/` in the working directory
-6. Write the fetched profile data to `OUTPUT/client_profile.json` for downstream scripts (validate_report.py uses this for KPI target soft-checks). Include the resolved `tracker_url` field so downstream phases can reference it.
+6. Write the fetched profile data to `OUTPUT/client_profile.json` for downstream scripts (validate_report.py uses this for KPI target soft-checks)
 
 ### 1b: Collect Required Files
-
-**Try Google Drive MCP first (auto-fetch). Fall back to manual upload only if Drive returns nothing.** See "Google Drive Integration" section below for the full flow and tool usage.
-
 For each platform the client is on, require these specific files:
 
 **Uber Eats (1-3 files):**
@@ -54,10 +51,10 @@ For each platform the client is on, require these specific files:
 - [ ] Settlement CSV
 
 **Tracker Exports (for WoW + 4-week rolling average):**
-- [ ] Weekly Platform Overview tab — pulled directly from the client's Google Sheet tracker via Drive MCP (or manual CSV export as fallback)
-- [ ] By Location tab — pulled directly from the client's Google Sheet tracker via Drive MCP (or manual CSV export as fallback)
+- [ ] Weekly Platform Overview CSV — export the "Weekly Platform Overview" tab from the client's Google Sheet tracker as CSV
+- [ ] By Location CSV — export the "By Location" tab from the tracker as CSV
 - [ ] Current week number (e.g., 14 for Week 14)
-- These enable WoW change and vs-4-week-avg columns in every platform and location table. **Always collect these** — the report is significantly more useful with trend context. With the Drive integration this is automatic when the tracker URL is known. If the tracker is unreachable, proceed without them but flag it.
+- These enable WoW change and vs-4-week-avg columns in every platform and location table. **Always collect these** — the report is significantly more useful with trend context. If the reporter doesn't have the tracker exports yet, proceed without them but flag it.
 
 **Operations Files (optional):**
 - [ ] DD Operations Quality CSVs
@@ -65,75 +62,9 @@ For each platform the client is on, require these specific files:
 - [ ] UE Menu Downtime files
 
 ### 1c: Validate
-- Confirm all required files are present for each active platform (whether sourced from Drive or manual upload)
-- Surface what's missing with specific file names AND say where the skill looked (Drive folder vs. waiting on manual upload)
+- Confirm all required files are present for each active platform
+- Surface what's missing with specific file names
 - Do NOT proceed to extraction until core transaction files are confirmed
-
----
-
-## Google Drive Integration
-
-The skill uses Google Drive MCP to auto-fetch the **client tracker** (replaces the manual export step). **Platform exports (UE/DD/GH transaction CSVs) are still manual** as of April 2026 — the team hasn't standardized uploading them to Drive yet. The skill will still try `search_files` for them, but expect the fallback (manual upload) to be the norm for platform CSVs.
-
-**What the Drive MCP saves you today:**
-- ✅ Tracker fetch (Weekly Platform Overview + By Location tabs) — works end-to-end
-- ⚠️ Platform export search — falls through to manual ~100% of the time until team starts uploading exports to Drive with consistent naming (see "Process gap to close" below)
-- ⚠️ Phase 5b auto-write — only fires if a per-client folder exists; never writes to shared-drive root
-
-**Tools used (all `mcp__3cfdef12-aed5-469f-904c-ae7eaeff04dd__*`):**
-- `search_files` — find platform CSV exports by client/platform/date pattern
-- `read_file_content` — read Sheet tabs directly (used for trackers); also reads CSV/Doc content
-- `download_file_content` — pull binary file content if `read_file_content` doesn't return parseable text
-- `get_file_metadata` — confirm file modification time matches the reporting week
-- `list_recent_files` — used as a sanity check when `search_files` returns ambiguous matches
-- `create_file` — used in Phase 5 to optionally drop the generated `tracker_update.csv` into the client's Drive folder
-
-**Availability check:** at the start of Phase 1b, confirm Drive tools are exposed in the current session. If they're not, skip the auto-fetch path and ask for manual uploads. Do NOT block — the manual path still works.
-
-### Auto-fetch flow (per client, per week)
-
-**Step 1 — Locate the client's tracker folder:**
-1. The tracker URL is already resolved in 1a (Notion `Report Writer Notes` → `client-registry.md` fallback). Extract the file ID from the URL pattern `https://docs.google.com/spreadsheets/d/<ID>/edit`.
-2. Call `get_file_metadata` on the tracker file ID to confirm it exists and grab its parent folder ID. The platform CSVs for the same client typically live in or near that folder.
-
-**Step 2 — Fetch tracker tabs (replaces manual CSV export):**
-1. Use `read_file_content` against the tracker file ID and request the `Weekly Platform Overview` tab. Save the returned content to `OUTPUT/tracker_platform_overview.csv` in the same shape the aggregator expects (`Section, Metric, Value` columns).
-2. Repeat for the `By Location` tab → `OUTPUT/tracker_by_location.csv` (`Location, Metric, Value`).
-3. If `read_file_content` returns the entire Sheet without per-tab filtering, parse the response, isolate the two tabs by name, and write the CSVs locally.
-4. If the read fails (permissions, tab renamed, sheet structure changed), fall back to manual: ask the user to export the two tabs as CSV and upload them. Note the failure reason in `OUTPUT/drive_fetch.log` so the team can fix the underlying issue.
-
-**Step 3 — Search for the week's platform exports:**
-For each active platform, run `search_files` with the patterns below. Use the client name canonical form (the one in `client-registry.md`).
-
-| Platform | Search query examples | What we want |
-|----------|----------------------|--------------|
-| Uber Eats — Transactions | `"<Client> UE transactions"`, `"<Client> uber payments"`, `"payments_<YYYY-MM-DD>"` | The transaction/payments CSV for the reporting week |
-| Uber Eats — Ads Manager | `"<Client> UE ads"`, `"campaigns_summary_metrics_<YYYY-MM-DD>_<YYYY-MM-DD>"` | Campaign Summary by Location export |
-| Uber Eats — Offers | `"<Client> UE offers"` | Offers export (optional) |
-| DoorDash — Transactions | `"<Client> DD transactions"`, `"<Client> doordash payments"` | Transaction CSV |
-| DoorDash — Sponsored Listing | `"<Client> DD sponsored"`, `"MARKETING_SPONSORED_LISTING"` | SL CSV (optional) |
-| DoorDash — Promotions | `"<Client> DD promotion"`, `"MARKETING_PROMOTION"` | Promotion CSV (optional) |
-| Grubhub — Settlement | `"<Client> GH settlement"`, `"<Client> grubhub"` | Settlement CSV |
-
-For each match:
-1. Call `get_file_metadata` and verify the modified time falls inside or just after the reporting week (Mon-Sun + 3-day grace). Skip stale files.
-2. Verify the file extension is `.csv`.
-3. Use `read_file_content` to load the file. If the response is too large for a single read or comes back as a binary blob, use `download_file_content` and write to a local path under `OUTPUT/inputs/<platform>/<filename>`.
-4. Track the resolved local path — extraction agents in Phase 3 read from these paths.
-
-**Step 4 — Disambiguate / fall back:**
-- **Multiple matches:** If `search_files` returns more than one candidate per slot, surface the candidates with their filenames + modified times and ask the user which to use. Do not auto-pick the most recent without confirmation.
-- **No matches:** Ask the user to upload manually for that platform. Do NOT halt the run if other platforms loaded cleanly — partial fetch is fine, missing files just go through the existing manual path.
-- **Drive MCP unavailable:** Skip the entire auto-fetch flow and run the original manual collection prompt (the `1b` checklist).
-
-**Step 5 — Log what was fetched:**
-Write `OUTPUT/drive_fetch.log` listing each file resolved, its source (Drive file ID or "manual upload"), and the modified time. This makes Phase 4.5 validation failures easier to triage.
-
-### What still requires manual action
-- First-time client trackers that aren't yet in Drive (e.g., Westville)
-- Platforms where the export naming doesn't match the search patterns above (add new patterns when you encounter them and update this section)
-- Operations files (DD Quality, UE Accuracy, UE Menu Downtime) — usually ad-hoc; ask the user
-- Any platform export the team hasn't dropped into Drive yet for the week — Drive is only authoritative if the team uploads consistently
 
 ---
 
@@ -319,28 +250,60 @@ Omit `--profile-json` if no Notion profile was fetched in Phase 1.
 5. Re-run aggregation + validation until exit code = 0
 
 **If validation PASSES (exit code 0):**
-- Proceed to Phase 5
+- Proceed to Phase 4.6 (then Phase 5)
 - The `OUTPUT/validation_report.md` content will be pasted into the Notion page's QA section
 
 ---
 
+## Phase 4.6: Generate Scorecard Rows (runs after validation passes, before Notion)
+
+Auto-generate the long-format scorecard rows for the master Sheet. Replaces the manual standalone run reporters used to do separately.
+
+**`SKILL_BASE` resolves to** `/Users/maxx/Desktop/Cowork/Skills/` (the parent of this skill folder, where `weekly-scorecard/` sits as a sibling).
+
+**Soft-dependency check first.** If the scorecard skill isn't installed (rare — should be on every Spice teammate's Cowork), skip Phase 4.6 with a warning and continue to Phase 5:
+
+```bash
+SKILL_BASE="/Users/maxx/Desktop/Cowork/Skills"
+BRIDGE_SCRIPT="$SKILL_BASE/weekly-scorecard/scripts/generate_scorecard_rows.py"
+
+if [ ! -f "$BRIDGE_SCRIPT" ]; then
+  echo "⚠️  weekly-scorecard skill not installed at $SKILL_BASE/weekly-scorecard/. Skipping Phase 4.6 — Notion report and tracker paste will still ship. Flag to Santi."
+  # continue to Phase 5
+else
+  # Run the bridge
+  THRESHOLDS_CSV="$SKILL_BASE/weekly-scorecard/references/[client_slug]_thresholds.csv"
+  THRESHOLDS_FLAG=""
+  [ -f "$THRESHOLDS_CSV" ] && THRESHOLDS_FLAG="--thresholds-csv $THRESHOLDS_CSV"
+
+  python3 "$BRIDGE_SCRIPT" \
+    --platform-csv OUTPUT/platform_overview.csv \
+    --location-csv OUTPUT/by_location.csv \
+    --client [client_slug] \
+    --week-start [week_start_YYYY-MM-DD] \
+    --week-end [week_end_YYYY-MM-DD] \
+    --pulled-by [reporter_name] \
+    --active-platforms [e.g. UE,DD or UE,DD,GH — from client registry] \
+    --source-file "W[week_num] recap" \
+    $THRESHOLDS_FLAG \
+    --output OUTPUT/scorecard_rows.csv
+fi
+```
+
+**Where to find inputs:**
+- `client_slug` — from client registry (snake_case, e.g. `pret_a_manger`, `fresh_kitchen`)
+- `week_start` / `week_end` — same Mon-Sun range used in Phase 1
+- `reporter_name` — Manish or Dulari (whoever ran the skill)
+- `active_platforms` — from client registry `active_platforms` field (UE=Uber Eats, DD=DoorDash, GH=Grubhub). Pass canonical names: `Uber Eats,DoorDash,Grubhub`.
+- Per-client thresholds CSV — lives at `$SKILL_BASE/weekly-scorecard/references/[client_slug]_thresholds.csv`. If the file doesn't exist for this client yet, the existence check above omits the flag and the script falls back to portfolio defaults from the master Sheet's `thresholds_default` tab. Flag to Santi so a per-client threshold file gets created.
+
+**Output:** `OUTPUT/scorecard_rows.csv` — paste-ready rows for the master Sheet's `data` tab. Surfaced in Phase 7.
+
+**On failure (script errors):** Log the error and continue to Phase 5. The weekly Notion report and tracker paste are NOT blocked by Phase 4.6. Surface the failure under Phase 7 Warnings so Santi can investigate.
+
+---
+
 ## Phase 5: Generate Notion Update
-
-### 5a: Cross-reference the client's tracker Sheet (REQUIRED)
-
-Before running the generation script, **pull current and prior-week context from the client's Google Sheet tracker** via Google Drive MCP. The tracker URL is resolved in Phase 1a from the Notion profile. This ensures your Notion report's recap + insights reflect the actual tracker numbers the client sees.
-
-1. Use `mcp__3cfdef12-aed5-469f-904c-ae7eaeff04dd__get_file_metadata` on the tracker file ID to confirm access.
-2. Use `mcp__3cfdef12-aed5-469f-904c-ae7eaeff04dd__read_file_content` to fetch the tracker's relevant tabs:
-   - **Weekly Platform Overview** — current week's platform totals + last week's + 4-week rolling avg
-   - **By Location** — current week's per-location metrics + last week's
-   - **Campaign Planning** or **Notes** tab (if present) — context about what was running this week, promos, ops issues
-3. Save the fetched content to `OUTPUT/tracker_context.md` for reference during Phase 6 (Key Highlights + Location Notes annotation).
-4. If the tracker read fails (rate limit, permissions, tab renamed), log to `OUTPUT/drive_fetch.log` and proceed without it — the aggregated CSVs are the primary data source; tracker is supplementary context.
-
-**Example tracker URL format:** `https://docs.google.com/spreadsheets/d/<ID>/edit?gid=<TAB_ID>`. For goop Kitchen: `18we-M-qVdug4LRZiolfScL3emVPE0AuL4Zb9Zqn_A3A`. This should match the URL stored in the client's Notion Weekly Reporting Profile → Report Writer Notes.
-
-### 5b: Generate the Notion update
 
 ```bash
 python scripts/generate_notion_update.py \
@@ -361,26 +324,6 @@ Omit `--prev-overview` and `--prev-by-location` if no prior week data available.
 Omit `--ops-quality` if no ops files were provided.
 `--validation-report` should always be present (written by Phase 4.5).
 
-### 5b: Optional — Push tracker_update.csv to Drive
-
-After the Notion update is generated and validation has passed, **optionally** push `OUTPUT/tracker_update.csv` to the client's tracker folder in Drive. This is OPTIONAL and additive — the paste-ready columns in Phase 7 remain the primary delivery mechanism so the team can keep eyeballing values before they land in the canonical sheet.
-
-**When to use:**
-- Tracker URL was successfully resolved in Phase 1a
-- Drive MCP is available and `get_file_metadata` succeeded on the tracker
-- The user has confirmed they want auto-write enabled (ask once per session, default to no)
-
-**How to write it:**
-1. Use `get_file_metadata` on the tracker file ID to grab its parent folder ID.
-2. Use `create_file` to upload `OUTPUT/tracker_update.csv` into that folder, named `<Client> Week <NN> tracker update.csv`. This drops the file next to the tracker so the team can open it side-by-side and paste, or import it as a tab.
-3. Print the Drive URL of the uploaded file in chat as confirmation.
-
-**Do NOT:**
-- Overwrite the canonical tracker tabs directly. We don't have a "write cells to tab" tool exposed and silently overwriting client trackers is a hard no — paste-ready columns + a sibling CSV is the safe path.
-- Skip the Phase 7 paste-ready output. The auto-write is supplementary, not a replacement.
-
-**On failure:** log the error to `OUTPUT/drive_fetch.log` and continue. The paste-ready columns in Phase 7 cover this case.
-
 ---
 
 ## Phase 6: Rewrite Key Highlights
@@ -400,24 +343,6 @@ Read the generated markdown, find the `<!-- KEY_HIGHLIGHTS_DATA ... -->` block, 
 - `**DoorDash up 30% WoW** ($1,280, 60 orders) with ROAS at 4.6x and spend efficiency improving. Recommend increasing DD ad budget by 20% next week to test the ceiling.`
 - `**UE dragging overall ROAS down to 1.2x** with 68% of sales going back to marketing. Venice and Chicago are the worst performers. Recommend pausing Venice UE ads and reallocating to DD where efficiency is 3x better.`
 - `**Net payout at 73.1%** is healthy across the portfolio. Two locations below 60% need attention: [location] and [location].`
-
-### Additionally in Phase 6: Annotate Location Table (Tier + Notes)
-
-The location table output from `generate_notion_update.py` has blank Tier and Notes columns. Fill them in:
-
-**Tier column:**
-- Read the client's registry entry in `references/client-registry.md` for "Location Tiers" section
-- OR read the Notion Weekly Reporting Profile's "Data Quirks" or "Report Writer Notes" for tier assignments
-- Map each location to: 🔴 RED / 🟡 YELLOW / 🟢 GREEN / 🦄 UNICORN
-- If tier not found for a location, leave blank (don't guess)
-
-**Notes column (1 short line per location):**
-- WoW context: "↓12% from offers pullback" or "↑8% after menu update"
-- Ops flag: "⚠️ DD downtime 2 days" or "📉 ratings dropped"
-- Tier-specific callout: "Tier target: $8K weekly not yet hit" or "UNICORN: reduce spend 20%"
-- Keep under ~50 chars. Avoid generic "performing well" — be specific.
-
-**Cross-reference the client's tracker** (Google Sheet URL from the profile's `Report Writer Notes`) via Google Drive MCP if you need WoW context the script didn't produce. Use `read_file_content` on the tracker's "By Location" tab to compare current-week metrics to last-week's values.
 
 ---
 
@@ -463,9 +388,24 @@ Each block is a vertical list of values in the exact row order of the sheet. Sec
 
 OVERVIEW is formulas in the sheet — do NOT paste values there.
 
-**3. CSV Export** — Also write `tracker_update.csv` to the output directory as a backup/export option. If Phase 5b uploaded the CSV to Drive, include the Drive URL here.
+**3. CSV Export** — Also write `tracker_update.csv` to the output directory as a backup/export option.
 
-**4. Any Warnings** — missing files, validation flags, anomalies from `OUTPUT/validation_report.md`. Also surface anything from `OUTPUT/drive_fetch.log` if the Drive auto-fetch hit issues (stale files, missing matches, fallbacks to manual).
+**4. Any Warnings** — missing files, validation flags, anomalies from `OUTPUT/validation_report.md`. Include any Phase 4.6 failure here.
+
+**5. Scorecard Rows** — print paste instructions directly in chat:
+
+```
+### SCORECARD ROWS — paste into Spice Weekly Scorecard Master → data tab
+Open: https://docs.google.com/spreadsheets/d/1kL39_lOQYsYkUN4h1iZGqdgnkjOu1OfD1SdjI0g2Ajo
+Tab: data → scroll to first empty row → paste OUTPUT/scorecard_rows.csv (skip header if rows already exist)
+[N] rows written for [client_slug] W[week_num]
+```
+
+If `scorecard_rows.csv` was not generated (Phase 4.6 was skipped or errored), instead print:
+
+```
+⚠️ Scorecard rows not generated — [reason from Phase 4.6 stderr or "skill not installed"]. Run generate_scorecard_rows.py manually or flag to Santi.
+```
 
 ---
 
@@ -531,24 +471,13 @@ This is the exact metric order and naming for all platform tables. **Every platf
 > - Performance Flags = **5-7 max**, grouped by theme. One flag per theme, not one per location.
 > - **No "Gross Sales" row.** Tax-inclusive numbers are removed from all tables.
 
-### Section 1: Weekly Snapshot (NEW — always first after the title)
-A single callout box with 6 key numbers. This is the "glance and go" — a reader should get the week's story in 5 seconds.
-
-```
-📊 Week at a Glance
-| Net Sales | Orders | ROAS | Mkt Spend % | Payout % | WoW Trend |
-| $1,220,748 | 25,868 | 8.9 | 6% | 75% | ↓4% sales, efficiency ↑ |
-```
-
-The WoW Trend column is a 5-7 word plain-English summary of the week (e.g., "↓4% sales, efficiency ↑" or "flat volume, AOV compression" or "strong week across the board").
-
-### Section 2: Agenda
+### Section 1: Agenda
 Continues the conversation from the last client meeting.
 
-### Section 3: Action Items
+### Section 2: Action Items
 Carried over + new from this week's data. **Max 5-7 items.** Each item is one line — no sub-bullets, no context paragraphs. If it needs explanation, it goes in the flags.
 
-### Section 4: Key Highlights
+### Section 3: Key Highlights
 3-5 bullets. Each bullet follows this exact format:
 
 **Bold metric + direction** — one sentence of context. One sentence of action.
@@ -560,7 +489,7 @@ Rules:
 - Lead with the number, not the interpretation.
 - If you need more than 2 sentences, it's a flag, not a highlight.
 
-### Section 5: Platform Performance
+### Section 4: Platform Performance
 Detailed metric tables by platform. **Every platform table MUST include all 20 metrics in the standard order** (see metric order table above). If a metric is $0 or not applicable, show `$0`, `--`, or `0` — never omit the row.
 
 **When tracker exports were provided (4-week avg available), use 4 columns per platform:**
@@ -575,29 +504,17 @@ WoW = change from prior week (e.g., `+5%`, `-$1,200`). vs 4wk Avg = change from 
 | Metric | This Week |
 |--------|-----------|
 
-### Section 6: Location Performance
+### Section 5: Location Performance
+Summary table across all locations. **Max 7 columns** to keep it scannable:
 
-**Schema (updated Apr 21, 2026):** 7 columns. Client-facing, scannable.
+| Location | Orders | Net Sales | WoW | ROAS | Payout % | Flag |
+|----------|--------|-----------|-----|------|----------|------|
 
-| Location | Tier | Total Sales | ROAS | Payout % | Mkt Spend % | Notes |
-|----------|------|-------------|------|----------|-------------|-------|
+The Flag column is a one-word tag: `⚠️ downtime`, `📉 organic`, `📊 baseline`, or blank. This lets readers instantly see which locations need attention without reading a paragraph.
 
-**Column rules:**
-- **Location** — canonical name from client registry store map
-- **Tier** — 🔴 RED / 🟡 YELLOW / 🟢 GREEN / 🦄 UNICORN per client registry. Leave blank if not in registry — Phase 6 rewrite annotates manually if missing.
-- **Total Sales** — `Total Sales` from aggregate script (food subtotal ex-tax). NOT Net Sales.
-- **ROAS** — Marketing ROAS, 1 decimal, no `x` suffix
-- **Payout %** — Net Payout / Total Sales
-- **Mkt Spend %** — Total Marketing Investment / Total Sales
-- **Notes** — 1 short line of WoW context, ops flags, or tier-specific callout. Manual annotation by Claude at Phase 6.
+Do NOT include per-platform breakdowns (UE Net, DD Net, GH Net) in the location table. Those are in the platform tables.
 
-**Do NOT include:** Orders, Net Sales, Net Payout $, Ad Spend $, TMI $, AOV, CPO. Those live in the detailed platform tables (Section 5).
-
-**Sort:** rows by Total Sales descending. Last row is bolded **PORTFOLIO** total.
-
-The script (`generate_notion_update.py`) emits Location, Total Sales, ROAS, Payout %, Mkt Spend % — Tier and Notes are left blank for Phase 6 rewrite to fill.
-
-### Section 7: Performance Flags
+### Section 6: Performance Flags
 5-7 consolidated flags grouped by theme. This is the strategist layer.
 
 **Each flag is exactly:**
@@ -620,10 +537,10 @@ One sentence: what happened. One sentence: why. One sentence: what to do.
 - Things already covered in Key Highlights
 - Individual location ops detail that's in the Ops tables
 
-### Section 8: Operations & Quality
+### Section 7: Operations & Quality
 DoorDash ops tables + UE accuracy tables + menu downtime. **Data tables only** — no narrative, no RCA paragraphs. The flags section handles interpretation. This section is reference data.
 
-### Section 9: Campaign Performance
+### Section 8: Campaign Performance
 Granular campaign/ad/promo breakdown by platform.
 
 ---

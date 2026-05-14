@@ -99,8 +99,7 @@ If any of the three sources returns nothing, flag it explicitly. Do not fill the
 
 Read the ops-generated weekly report. Diff against the locked structure. Each item is a hard check.
 
-- [ ] Section block order: Week at a Glance → Agenda → Action Items → Key Highlights → Performance Flags → Platform Performance → Location Performance → Ops & Quality → Campaign Performance → QA
-- [ ] Week at a Glance is a single callout block, not a table
+- [ ] Section block order: Agenda → Action Items → Key Highlights → Performance Flags → Platform Performance → Location Performance → Ops & Quality → Campaign Performance → QA
 - [ ] Agenda has 3–5 bullets, each formatted exactly as: `**[Topic]** — [the question or decision needed]`. Single sentence per bullet. No prose. No "highlights" disguised as agenda.
 - [ ] Every open action item from the Carryover Context Pack is either in the agenda or in "Carried Over"
 - [ ] Action items aged >2 meetings show escalation count: `*(escalated W14 → W15 → W16 → W17)*`
