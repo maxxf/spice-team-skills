@@ -10,7 +10,7 @@ description: >
   checklist, creates the Drive folder for them to drop files into, waits for
   confirmation, runs the multi-skill orchestrator, uploads charts, creates
   the Notion page, returns one URL.
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Client Diagnostics
@@ -81,6 +81,16 @@ Sharing should inherit from the parent (Spice team edit access). Don't override 
 
 Then post the data-collection checklist to the user. Pull the full list from `references/data-collection-checklist.md`. Format it as actual checkboxes the user can mentally tick off, broken into platform sections. Lead with the Drive folder link so they know where to drop.
 
+Call out the **REQUIRED per-location captures explicitly** in the checklist
+you post: UE Repeat Customers, DD Frequent Customers %, GH repeat (if
+exposed), and UE conversion funnel — each per location, legible and
+machine-readable, saved under `inputs/screenshots/{reorder,funnel}/`. Tell
+the user that Re-order Rate going unscored is a data-pull failure, not an
+analysis choice, and that you'll do a legibility pre-flight on these when
+they say "done". Also remind them the source-export date stamps are
+authoritative — if a platform's picker snapped to a different range, the
+export's own dates win.
+
 Adapt the list to the client's actual platforms. If you know the client doesn't run on Grubhub (check `data_quirks` in the config), drop the GH section with a note. If unsure, ask: "Does this client run on UE / DD / GH? I'll skip whatever they don't use."
 
 End the message with: "Once everything's in the folder, just say 'done' or 'ready' and I'll take it from there. The full checklist also lives at `references/data-collection-checklist.md` if you want to print it."
@@ -92,7 +102,8 @@ Don't proceed until the user confirms. They may need a few hours.
 When they confirm, list the Drive folder contents. Validate:
 - At least the financial CSV is present per platform that's in scope
 - At least 1 screenshot is present
-- The window matches what you expect (look at file modification dates and ranges in the data; flag if exports look like they're from different windows)
+- The window matches what you expect. **Window-trust rule:** the date stamps inside the source exports are authoritative over the manifest/Slack header. If they disagree, use the export dates and note the discrepancy (it goes in the report's `data_quality_footer`).
+- The REQUIRED per-location captures (UE Repeat Customers, DD Frequent Customers %, UE conversion funnel; GH repeat if exposed) are present AND legible. Open them. Blurry / cropped / truncated = a data-pull failure — ask for a re-pull, don't proceed with Re-order silently data-pending unless the user explicitly accepts it.
 
 If something critical is missing, tell them what and offer to proceed with degraded analysis (e.g., "no UE Repeat Customer Rate, so the radar's Re-order dim will use DD-only blend; ok to proceed?"). If they say proceed, continue. If they want to fetch the missing piece, wait again.
 
@@ -136,6 +147,58 @@ Charts:
 Upload each to a new subfolder in the same Drive cycle folder: `output-charts/`. Use the Drive `create_file` MCP. After upload, set the file's permission so anyone with the link can view (Notion external image URLs need this). Capture each file's shareable URL.
 
 If Drive upload fails for any chart, fall back: tell the user, give the local paths, they drag them in manually after the page is created.
+
+### Step 7.5: Build the client HTML + PDF report (canonical, parameterized)
+
+The client-facing report is built by `references/build_report.py` — the
+**single** canonical builder. It is fully data-driven: it reads
+`findings.json` + `metrics.json` from the run dir. **Never hand-edit
+generated HTML. Never use per-client literals. Never regex-patch a report.**
+If a value is wrong, fix `findings.json`, not the HTML or the Python.
+
+```bash
+# run dir must contain findings.json, metrics.json, report_style.css,
+# assets/spice_icon.svg (copy from references/), charts/ (from Step 7-charts)
+cp references/report_style.css <run_dir>/
+mkdir -p <run_dir>/assets && cp references/assets/spice_icon.svg <run_dir>/assets/
+.venv/bin/python references/make_charts.py <run_dir>      # /10 radar, tier donut, GMV bar
+.venv/bin/python references/build_report.py <run_dir>     # → HTML
+.venv/bin/python references/export_pdf.py <run_dir>/<report>.html <run_dir>/<report>.pdf
+```
+
+The `findings.json`/`metrics.json` schema is documented in
+`references/report-data-contract.md`. Build `findings.json` from the
+sub-skill outputs; populate every required narrative field there.
+
+**Locked report rules — these regressed on a live client; do not break them:**
+
+1. **Canonical 6-slot hero (fixed order):** `90-Day Gross` · `Orders` ·
+   `Blended AOV` · `Net Payout` · `Order Completion` · `Customer Sentiment`.
+   If a metric is unavailable on a platform, render `n/a*` with a footnote
+   (`hero.na_footnote`) — **never silently drop a slot or substitute a
+   different metric.**
+2. **Required Half-2 toggle set (all present, omission is a bug):** Portfolio
+   Snapshot · **Menu & Storefront** · Ops · Brand Operational Health ·
+   Campaigns · Location Tiers · Full Action Plan · Appendix. **Menu &
+   Storefront is required**: synthesize any prior storefront audit; if
+   absent, the toggle still renders with an explicit DATA-PENDING block
+   flagging conversion funnel + re-order rate.
+3. **Window-trust rule:** source-export date stamps are authoritative over
+   manifest/Slack headers. If they disagree, use the export dates and note
+   the discrepancy in `data_quality_footer`.
+4. **Attribution rule:** ROAS / attributed-sales must be labeled
+   campaign-lifetime vs 90d-matched. Never headline attributed sales that
+   exceed window GMV without the caveat inline at point of use (radar_notes
+   + campaigns_detail).
+5. **Radar honesty:** Re-order Rate is first-class but if the data isn't
+   machine-readable it is DATA-PENDING — excluded from the overall, never
+   guessed or carried silently. Proxy-derived axes (Conversion/Traffic from
+   ad data when true funnel absent) carry an `(ad proxy)` label. Overall =
+   mean of measured axes only.
+
+Conformance is enforced by `tests/test_report_conformance.py` (both `.half`
+banners, exactly 6 canonical hero slots, `/ 10` radar title, full required
+toggle set, zero per-client literal bleed in the builder source).
 
 ### Step 8: Create the Notion page with embedded charts
 
@@ -208,6 +271,12 @@ That's the entire flow. The user typed one sentence at the start, dropped files 
 - `references/input-csv-schema.md` (the 22-column schema)
 - `references/diagnostic-input-template.csv` (empty header-only template for manual builds)
 - `references/diagnostic-framework.md` (radar bands, foundation thresholds, tier rules, pattern library, defaults for missing data)
+- `references/build_report.py` (canonical, fully parameterized client HTML report builder — reads findings.json+metrics.json, zero per-client literals)
+- `references/make_charts.py` (canonical chart module — /10 radar, performance-tier donut, GMV bar; honestly skips trend/daypart when no data)
+- `references/export_pdf.py` (HTML→PDF via Chrome headless)
+- `references/report_style.css` (Spice Design System stylesheet — restyle here, regenerate; never hand-edit per client)
+- `references/report-data-contract.md` (the findings.json/metrics.json schema the builder consumes)
+- `references/assets/spice_icon.svg` (inline brand mark)
 - `specs/2026-05-08-orchestrator-redesign.md` (architecture spec)
 
 ## Sub-skills this orchestrates

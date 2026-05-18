@@ -91,14 +91,36 @@ Drop into `notes/` (or paste links into `manifest.md`).
 | ☐ | **Location list** (canonical store names + addresses) | If not already in the client's Notion wiki, paste in `manifest.md`. Used for join validation. |
 | ☐ | **Prior diagnostics** (if any) | Notion link. Powers the "what moved since last cycle" panel. |
 
+## REQUIRED: Re-order + conversion-funnel captures (per location)
+
+These regressed to "data-pending" on a live client because they weren't
+captured legibly. They are **REQUIRED captures**, one per location, saved
+machine-readable. Re-order Rate being unscored in the diagnostic is a
+**data-pull failure, not an analysis choice.**
+
+| ☐ | Capture | Save path | Notes |
+|---|---|---|---|
+| ☐ | **UE Repeat Customers** (per location) | `inputs/screenshots/reorder/ue-<store>-repeat.png` | UE Manager → Customers → Repeat Customers, 90d, one per store. Full panel, legible. |
+| ☐ | **DD Frequent Customers %** (per store) | `inputs/screenshots/reorder/dd-<store>-frequent.png` | DD Portal → Insights → Customer Insights → Frequent customers. |
+| ☐ | **GH repeat-customer view** (if exposed) | `inputs/screenshots/reorder/gh-<store>-repeat.png` | If GH Customer Insights exposes it; else note "not available" in manifest. |
+| ☐ | **UE conversion funnel** (per location) | `inputs/screenshots/funnel/ue-<store>-funnel.png` | Impressions → storefront → menu → orders, per store. Without this, the radar's Conversion/Traffic axes are ad proxies. |
+
+**Pre-flight legibility check (do this before saying "done"):** open each
+reorder/funnel screenshot and confirm the numbers are sharp and the full
+panel is in frame. A blurry / cropped / truncated capture is a FAIL — re-pull
+it. These must be machine-readable so the next cycle actually scores Re-order
+Rate instead of carrying a data-pending flag.
+
 ## Pre-flight check before saying "done"
 
 Confirm all of the following before telling Claude the folder is ready:
 
 - [ ] Every file above exists in its subfolder (or is explicitly skipped in `manifest.md` with a reason)
 - [ ] All exports cover the **same 90-day window** (mismatched windows produce bad blends)
+- [ ] **UE Repeat Customers, DD Frequent Customers %, and UE conversion funnel are captured per location, legible and machine-readable** (the required captures above). GH repeat is optional but note if unavailable.
 - [ ] Re-order rate is sourced for at least UE OR DD (GH optional). If neither, flag as a critical gap (the diagnostic will surface "no organic moat" patterns differently)
 - [ ] Location list matches store names appearing in the platform exports (so joins work)
+- [ ] **Source-export date stamps reviewed** — if they disagree with the manifest/Slack window header, the export dates win; note the discrepancy in `manifest.md`
 - [ ] Screenshots are dated within the last 7 days (so the storefront audit reflects current state)
 
 Once everything is in place, return to the Claude session and say "done" or "files are ready". Claude will read the folder, validate completeness, and run the diagnostic.

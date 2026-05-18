@@ -38,7 +38,13 @@ The radar in Half 1 of the Notion output uses these 7 axes. Each scored 1–10. 
 - GH: repeat order rate if exposed in the GH ops report; otherwise mark as data gap.
 - **Blend:** volume-weighted average across platforms with data. Volume = orders in period. If only one platform has data, report that platform's rate and note the gap.
 
-**Overall radar score:** unweighted mean of the 7 dimensions (use weighted average if the GM specifies). Caption format: `Overall {score}/10. Weakest: {axis1}, {axis2}.`
+**Overall radar score:** unweighted mean of the **measured** dimensions only (use weighted average if the GM specifies). Caption format: `Overall {score}/10. Weakest: {axis1}, {axis2}.`
+
+### Radar honesty rules (canonical — enforced by `references/make_charts.py`)
+
+- **Re-order Rate is a first-class axis.** But if the repeat/frequent-customer data is not machine-readable this cycle, it is **DATA-PENDING**: rendered at 0 with a `(pending)` tick label and **excluded from the overall mean**. It is never guessed and never silently carried forward from a prior cycle. Re-order Rate being unscored is a **data-pull failure, not an analysis choice** — flag it loudly in the data-quality footer and the Menu & Storefront toggle.
+- **Proxy-derived axes must be labeled.** When Conversion or Traffic are derived from ad-click data because a true storefront/menu funnel was not exported, the axis label carries an explicit `(ad proxy)` suffix (e.g. `Conversion (ad proxy)`). Never present a proxy as a true funnel measurement.
+- **Overall = mean of measured axes only.** Pending/null axes are excluded from the denominator. State the count of measured axes in the radar caption notes (e.g. "Overall = mean of the 6 measured axes").
 
 ## Foundation Health Gate
 
@@ -108,11 +114,29 @@ Each sub-bucket scored Healthy / Watch / Broken:
 | All 3 Healthy | 🟢 **Green** | Scale: increase ad budget, expand to additional platforms, feature in marketing |
 | Any 1 Watch, rest Healthy | 🟡 **Yellow** | Targeted fix on the weak bucket. Maintain current spend. |
 | Any 1 Broken **or** 2+ Watch | 🔴 **Red** | **Stop campaigns at this store.** Fix the broken bucket(s) before any growth investment. |
-| Launched <60 days, insufficient data | 🆕 **New** | Awareness investment + diagnostic re-run at 60-day mark to assign permanent tier |
+| **Genuinely newly-opened store**, insufficient platform history | 🆕 **New** | Awareness investment + diagnostic re-run once a full ~90-day cycle exists, then assign a performance tier |
+
+**Tier "New" rule (canonical — corrected 2026-05-18).** "New" is reserved
+**only for genuinely newly-opened stores with insufficient platform
+history.** Agency onboarding date is NOT the criterion. The prior rule
+("New = managed <60 days") mis-labeled established, well-trafficked
+locations — that had full 90-day platform history — as if they were
+brand-new openings, which made the report read like a Spice scorecard on day
+13 of management.
+
+Correct behavior:
+- A location with full ~90-day platform history is tiered on **actual
+  performance** (Green/Yellow/Red) regardless of how long Spice has managed
+  it. That read is framed as the **pre-Spice baseline — the bar Spice is
+  here to move, NOT a Spice scorecard.** Encode the framing in
+  `tier_health.note` and the Location Tiers toggle.
+- Only stores that genuinely just opened (no normal-cycle data) are 🆕 New.
+- Any payout-share-by-tier or "N New" headline language must reflect the
+  baseline-performance read, not days-under-management.
 
 **Edge cases:**
 - **Ops Broken always wins.** A store with Broken ops is Red, regardless of Menu/Campaign scores. Money burning at a broken store is the fastest revenue leak.
-- **New trumps the others.** If launched <60 days, the store is New, even if data already looks good. Don't stamp Green on a store that hasn't seen a normal cycle.
+- **New is only for genuinely newly-opened stores.** Do NOT stamp New on an established store just because Spice onboarded it recently — tier it on its pre-Spice baseline performance instead.
 - **Single-platform stores.** If a store only has data on 1 of UE/DD/GH, score the available platform and note the limitation. Don't blend zeros.
 
 ### What this replaces

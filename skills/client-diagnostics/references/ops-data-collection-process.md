@@ -95,6 +95,13 @@ window_end:   2026-05-10
 
 If Maxx specified a different window in the request (e.g., a quarterly review aligned to the client's business cycle), use that instead and note it.
 
+**Window-trust rule:** the date stamps inside the actual source exports are
+authoritative over whatever window you wrote in the manifest or a Slack
+header. If a platform's date picker silently snapped to a different range
+(common on UE/DD), the export's own dates win. When they disagree, record
+both in `manifest.md` and flag the discrepancy — the diagnostic will state it
+in the report's data-quality footer.
+
 ---
 
 ## Step 3: Pull the files
@@ -158,6 +165,24 @@ Pull from the live public storefront, not the merchant view. You can use Claude 
 | ☐ | Active promo stack | `promo-stack.png` | Full list of what's running where, one screenshot per platform if needed |
 | ☐ | Category structure | `categories.png` | Full menu landing page showing all categories |
 | ☐ | Top 3 competitors | `comp-1.png`, `comp-2.png`, `comp-3.png` | Same cuisine, same market. Hero + first menu page each. |
+
+### 🔁 REQUIRED — Re-order + conversion funnel per location
+
+Drop in `inputs/screenshots/reorder/` and `inputs/screenshots/funnel/`.
+These are **required, per-location, machine-readable** captures. They
+regressed to "data-pending" on a live client because they were illegible.
+
+| ☐ | Capture | Filename | Notes |
+|---|---|---|---|
+| ☐ | UE Repeat Customers (per location) | `screenshots/reorder/ue-<store>-repeat.png` | UE → Customers → Repeat Customers, 90d, one per store |
+| ☐ | DD Frequent Customers % (per store) | `screenshots/reorder/dd-<store>-frequent.png` | DD → Insights → Customer Insights → Frequent customers |
+| ☐ | GH repeat-customer view (if exposed) | `screenshots/reorder/gh-<store>-repeat.png` | else write "GH repeat not available" in manifest |
+| ☐ | UE conversion funnel (per location) | `screenshots/funnel/ue-<store>-funnel.png` | Impressions → storefront → menu → orders, per store |
+
+**Legibility check:** open each one. Sharp numbers, full panel in frame, not
+cropped/truncated. Blurry = FAIL, re-pull. Re-order Rate going unscored is a
+data-pull failure, not an analysis choice — these must be legible enough for
+the next cycle to actually score the axis.
 
 ### 📋 Internal context — drop in `inputs/notes/`
 
