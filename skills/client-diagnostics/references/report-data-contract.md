@@ -35,10 +35,38 @@ Run-dir layout:
   "tiers": {"Green":1,"Yellow":1,"Red":1,"New":0,
             "by_store":{"Times Square":"Green","Las Vegas":"Red"}},
   "top15_green": [{"name":"…","gmv":61895,"tier":"Green"}],
+  "top15_green_meta": {"title":"…","subtitle":"…"},
   "trend_weekly": null,
-  "daypart": null
+  "daypart": null,
+  "funnel": {
+    "stages": ["Store views","Menu views","Added to cart","Orders"],
+    "values": [122096, 8544, 1775, 841],
+    "title": "UE Conversion Funnel — 90d blended",
+    "caption": "…optional data-supplied callout string…"
+  },
+  "storefront_audit": {
+    "listings": [["UE Times Square", 71, "Good"], ["UE Las Vegas", 49, "Poor"]],
+    "portfolio_avg": 62,
+    "title": "Storefront Audit — score / 100 (Mar 11 baseline)",
+    "subtitle": "…optional data-supplied subtitle…"
+  }
 }
 ```
+
+`top15_green_meta` (optional) supplies the bar chart title/subtitle; absent ⇒
+neutral defaults. `funnel` and `storefront_audit` are **optional** — when a
+key is absent the corresponding chart is honestly skipped (printed, never
+fabricated) exactly like `trend_weekly`/`daypart`, and the Menu & Storefront
+toggle still renders text-only.
+
+`funnel`: `stages`/`values` are parallel arrays (any length). Stage-to-stage
+drop-off % is auto-computed. `title`/`caption` optional, data-supplied — NEVER
+hardcoded in make_charts.py.
+
+`storefront_audit`: `listings` = `[name, score_0_100, grade]` rows
+(`grade ∈ Good|Fair|Poor` drives colour; a missing/unknown grade ⇒ gray).
+`portfolio_avg` optional ⇒ dashed reference line. `title`/`subtitle` optional,
+data-supplied.
 
 Radar honesty (encoded in make_charts.py): an axis with `current:null` OR
 `pending:true` is DATA-PENDING — drawn at 0 with a `(pending)` tick and
@@ -107,7 +135,7 @@ HTML string.
 | toggle | field | shape |
 |---|---|---|
 | Portfolio Snapshot | `portfolio_snapshot` | `{rows:[{platform,gross,orders,aov,eff_commission,net_pct,est_monthly,mktg_pct}],narrative}` |
-| Menu & Storefront | `menu_storefront` | `{html}` REQUIRED. Synthesize prior storefront audit; if absent builder emits explicit DATA-PENDING block (funnel + re-order). |
+| Menu & Storefront | `menu_storefront` | REQUIRED. Structured (see below) or `{html}` legacy. If field absent ⇒ builder emits explicit DATA-PENDING block (funnel + re-order). |
 | Ops | `ops_detail` | `{html}` |
 | Brand Operational Health | `brand_health_detail` | `{html}` |
 | Campaigns | `campaigns_detail` | `{html}` — attribution caveat inline at point of use (campaign-lifetime vs 90d-matched). |
@@ -116,6 +144,32 @@ HTML string.
 | Appendix | `store_tiers` + `appendix_*` | see below |
 
 `eff_commission/net_pct/mktg_pct` may be null ⇒ `n/a*` (never dropped).
+
+#### Menu & Storefront — structured shape
+The builder embeds `charts/storefront_audit.png` and `charts/funnel_ue.png`
+inline when present (visible placeholder if pending — never silent), and
+renders these optional contract fields around them:
+
+```jsonc
+"menu_storefront": {
+  "intro": "<b>Storefront baseline …</b> HTML intro paragraph.",
+  "storefront_table": {"headers": ["Listing","…","Total /100"],
+                        "rows": [["UE Times Square","…","<b>71</b>"]]},
+  "storefront_sections": [{"heading":"What the baseline says",
+                           "paras":["…"], "bullets":["<b>Strong:</b> …"]}],
+  "funnel_table": {"headers": ["Store","Store views","…"],
+                   "rows": [["Times Square","59,156","…"]]},
+  "funnel_sections": [{"heading":"…","bullets":["…"]}],
+  "sections": [{"heading":"…","bullets":["…"]}],
+  "html": "…legacy raw-HTML escape hatch (appended last) …"
+}
+```
+All keys optional; cells/bullets are HTML strings the builder emits verbatim
+(it never injects its own numbers). Order rendered: intro → storefront chart →
+storefront_table → storefront_sections → funnel chart → funnel_table →
+funnel_sections → generic sections → legacy `html`. Renders gracefully
+text-only if the chart PNGs are absent. A data-pending verification block is
+auto-appended unless the body already contains "data-pending"/"data pending".
 
 ### Appendix
 `store_tiers` list; `appendix_sort_key` (default `blended_gmv`) numeric size

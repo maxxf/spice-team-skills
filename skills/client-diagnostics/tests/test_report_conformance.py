@@ -27,6 +27,11 @@ _spec = importlib.util.spec_from_file_location(
 build_report = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(build_report)
 
+_mc_spec = importlib.util.spec_from_file_location(
+    "make_charts", REF / "make_charts.py")
+make_charts = importlib.util.module_from_spec(_mc_spec)
+_mc_spec.loader.exec_module(make_charts)
+
 CANONICAL_HERO = [
     "90-Day Gross", "Orders", "Blended AOV",
     "Net Payout", "Order Completion", "Customer Sentiment",
@@ -157,16 +162,110 @@ def test_menu_storefront_renders_when_field_absent():
     assert "data-pending" in doc.lower() or "data pending" in doc.lower()
 
 
+# Per-client tokens that must never appear in EITHER generalized source —
+# includes the funnel/storefront values proven on the live Virgil's run, so
+# the new code paths can't smuggle literals back in.
+_FORBIDDEN = [
+    "$22,239", "22,239", "$102,432", "102,432", "$44,549",
+    "Daily's", "Virgil", "Alicart",
+    "Las Vegas", "Times Square", "Upper West Side",
+    "122,096", "122096", "8,544", "8544", "5.98", "0.69%",
+    "March 11", "Mar 11", "62/100", "Dancu",
+]
+
+
 def test_no_per_client_literal_bleed_in_builder_source():
     src = (REF / "build_report.py").read_text()
-    forbidden = ["$22,239", "22,239", "$102,432", "102,432",
-                 "Daily's", "Virgil", "Las Vegas", "Times Square",
-                 "$44,549", "Alicart"]
-    for token in forbidden:
+    for token in _FORBIDDEN:
         assert token not in src, f"per-client literal in builder: {token!r}"
 
 
 def test_no_per_client_literal_bleed_in_chart_source():
     src = (REF / "make_charts.py").read_text()
-    for token in ["Daily's", "Virgil", "Las Vegas", "$22,239", "$102,432"]:
+    for token in _FORBIDDEN:
         assert token not in src, f"per-client literal in charts: {token!r}"
+
+
+# --------------------------------------------------------------------------- #
+# Funnel + storefront-audit data path (the back-ported Virgil's improvements). #
+# --------------------------------------------------------------------------- #
+
+def _fixture_with_visuals(tmp: Path) -> Path:
+    tmp = _fixture(tmp)
+    fj = json.loads((tmp / "findings.json").read_text())
+    mj = json.loads((tmp / "metrics.json").read_text())
+    mj["funnel"] = {
+        "stages": ["Store views", "Menu views", "Added to cart", "Orders"],
+        "values": [40000, 3000, 900, 500],
+        "title": "Conversion Funnel — fixture",
+        "caption": "fixture funnel callout (data-supplied)",
+    }
+    mj["storefront_audit"] = {
+        "listings": [["UE Alpha", 71, "Good"], ["DD Beta", 49, "Poor"]],
+        "portfolio_avg": 60,
+        "title": "Storefront Audit — fixture",
+        "subtitle": "fixture subtitle (data-supplied)",
+    }
+    mj["top15_green_meta"] = {"title": "Fixture GMV by Store",
+                              "subtitle": "fixture tier subtitle"}
+    fj["menu_storefront"] = {
+        "intro": "<b>Fixture storefront baseline.</b>",
+        "storefront_table": {"headers": ["Listing", "Total /100"],
+                             "rows": [["UE Alpha", "<b>71</b>"]]},
+        "storefront_sections": [{"heading": "What the baseline says",
+                                 "bullets": ["<b>Strong:</b> hero on-brand."]}],
+        "funnel_table": {"headers": ["Store", "Store views"],
+                         "rows": [["Alpha", "40,000"]]},
+        "funnel_sections": [{"heading": "Funnel read",
+                             "bullets": ["Menu friction is the lever."]}],
+    }
+    (tmp / "findings.json").write_text(json.dumps(fj))
+    (tmp / "metrics.json").write_text(json.dumps(mj))
+    return tmp
+
+
+def test_funnel_and_storefront_charts_render_and_embed():
+    """make_charts emits the two new PNGs from metrics, and the builder
+    base64-embeds them inside the Menu & Storefront toggle (no placeholder)."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = _fixture_with_visuals(Path(t))
+        made = make_charts.generate(tmp)
+        names = {p.name for p in made}
+        assert "funnel_ue.png" in names
+        assert "storefront_audit.png" in names
+        assert (tmp / "charts" / "funnel_ue.png").exists()
+        assert (tmp / "charts" / "storefront_audit.png").exists()
+        doc = build_report.build(tmp)
+    # toggle present, structured content + both charts embedded inline
+    assert "Menu &amp; Storefront" in doc
+    assert "Fixture storefront baseline." in doc
+    assert "What the baseline says" in doc
+    assert "Funnel read" in doc
+    assert "data:image/png;base64," in doc
+    assert "[chart pending: funnel_ue.png]" not in doc
+    assert "[chart pending: storefront_audit.png]" not in doc
+
+
+def test_menu_storefront_text_only_when_charts_absent():
+    """Structured menu_storefront supplied but chart PNGs not generated —
+    section must still render (text-only) with visible chart placeholders,
+    never crash, never drop the toggle."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = _fixture_with_visuals(Path(t))
+        # deliberately do NOT run make_charts
+        doc = build_report.build(tmp)
+    assert "Menu &amp; Storefront" in doc
+    assert "Fixture storefront baseline." in doc
+    assert "What the baseline says" in doc
+
+
+def test_charts_noop_when_funnel_storefront_absent():
+    """Base fixture has no funnel/storefront keys — those charts must be
+    skipped cleanly (not raised, not fabricated), like trend/daypart."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = _fixture(Path(t))
+        made = make_charts.generate(tmp)
+        names = {p.name for p in made}
+    assert "funnel_ue.png" not in names
+    assert "storefront_audit.png" not in names
+    assert "radar_7dim.png" in names

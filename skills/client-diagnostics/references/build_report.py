@@ -336,11 +336,53 @@ def portfolio_snapshot(fj: dict) -> str:
     return _toggle("📊 Portfolio Snapshot", body)
 
 
-def menu_storefront(fj: dict) -> str:
-    """REQUIRED toggle. Synthesizes any prior storefront audit and flags
-    conversion-funnel / re-order-rate gaps if absent. The contract field is
-    required; if the data team omitted the audit, the builder still renders
-    the toggle with an explicit DATA-PENDING block (never dropped)."""
+def _bullet_section(sec: dict) -> str:
+    """Render one bullet-structured detail block: optional <h3> heading,
+    optional intro paragraph(s), then a tight <ul> of HTML bullets. Every
+    string comes from findings.json — no literals here."""
+    parts = []
+    if sec.get("heading"):
+        parts.append(f'<h3>{_esc(sec["heading"])}</h3>')
+    for p in sec.get("paras", []):
+        parts.append(f'<p>{p}</p>')
+    bullets = sec.get("bullets", [])
+    if bullets:
+        lis = "".join(f"<li>{b}</li>" for b in bullets)
+        parts.append('<ul style="margin:6px 0 0;padding-left:20px;'
+                     f'line-height:1.7">{lis}</ul>')
+    return "".join(parts)
+
+
+def _data_table(tbl: dict) -> str:
+    """Generic table from {headers:[...], rows:[[...]]}. Cells are HTML
+    strings supplied by the contract — builder adds no numbers of its own."""
+    if not tbl or not tbl.get("headers"):
+        return ""
+    head = "".join(f"<th>{_esc(h)}</th>" for h in tbl["headers"])
+    body = "".join(
+        "<tr>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>"
+        for row in tbl.get("rows", [])
+    )
+    return f'<table><tr>{head}</tr>{body}</table>'
+
+
+def menu_storefront(run_dir: pathlib.Path, fj: dict) -> str:
+    """REQUIRED toggle. Renders the storefront-audit + conversion-funnel
+    visual section. Fully data-driven:
+
+      * ``menu_storefront.intro``        — HTML intro paragraph(s)
+      * ``menu_storefront.storefront_table`` / ``funnel_table``
+                                          — {headers, rows} contract tables
+      * ``menu_storefront.sections``     — list of bullet-structured blocks
+      * ``menu_storefront.html``         — escape hatch / legacy raw HTML
+                                            (appended after the structured
+                                            parts, before charts)
+
+    Charts ``storefront_audit.png`` and ``funnel_ue.png`` are embedded
+    inline when present in charts/ (img() emits a visible placeholder if a
+    chart is pending — never silently). If the whole field is omitted the
+    toggle still renders an explicit DATA-PENDING block (never dropped).
+    Renders gracefully text-only when the chart PNGs are absent."""
     ms = fj.get("menu_storefront")
     if ms is None:
         body = (
@@ -355,7 +397,41 @@ def menu_storefront(fj: dict) -> str:
             '+ DD Frequent Customers (+ GH if exposed), machine-readable.</li>'
             '</ul>')
         return _toggle("🏞️ Menu &amp; Storefront", body)
-    body = ms.get("html", "")
+
+    parts = []
+    if ms.get("intro"):
+        parts.append(f'<p>{ms["intro"]}</p>')
+
+    # Storefront-audit visual + table
+    sa_img = img(run_dir, "storefront_audit.png")
+    if "[chart pending:" not in sa_img:
+        parts.append(f'<div class="panel">{sa_img}</div>')
+    st = _data_table(ms.get("storefront_table"))
+    if st:
+        parts.append(st)
+    for sec in ms.get("storefront_sections", []):
+        parts.append(_bullet_section(sec))
+
+    # Conversion-funnel visual + table
+    fn_img = img(run_dir, "funnel_ue.png")
+    if "[chart pending:" not in fn_img:
+        parts.append(f'<div class="panel">{fn_img}</div>')
+    ft = _data_table(ms.get("funnel_table"))
+    if ft:
+        parts.append(ft)
+    for sec in ms.get("funnel_sections", []):
+        parts.append(_bullet_section(sec))
+
+    # Generic bullet sections + legacy raw-HTML escape hatch
+    for sec in ms.get("sections", []):
+        parts.append(_bullet_section(sec))
+    if ms.get("html"):
+        parts.append(ms["html"])
+
+    body = "".join(parts)
+    if not body.strip():
+        body = ('<p><b>Storefront / menu baseline supplied but empty.</b> '
+                'Populate menu_storefront in findings.json.</p>')
     if "data-pending" not in body.lower() and "data pending" not in body.lower():
         body += (
             '<h3>⚠️ Data-pending — verify each cycle</h3>'
@@ -434,7 +510,7 @@ def build(run_dir: pathlib.Path) -> str:
 
     toggles = "".join([
         portfolio_snapshot(fj),
-        menu_storefront(fj),
+        menu_storefront(run_dir, fj),
         generic_toggle(fj, "ops_detail", "⚙️ Ops — per-store cross-platform health"),
         generic_toggle(fj, "brand_health_detail",
                         "🛡️ Brand Operational Health Detail"),
