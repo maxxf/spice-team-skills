@@ -36,8 +36,24 @@ Run-dir layout:
             "by_store":{"Times Square":"Green","Las Vegas":"Red"}},
   "top15_green": [{"name":"…","gmv":61895,"tier":"Green"}],
   "top15_green_meta": {"title":"…","subtitle":"…"},
-  "trend_weekly": null,
-  "daypart": null,
+  "trend_weekly": {
+    "weeks": ["W07","W08","…"],
+    "gmv":   [4150.65, 4925.7, "…"],
+    "orders":[74, 86, "…"],
+    "title": "Weekly Trend — GMV & Orders (90d, DD+GH)",
+    "caption": "…optional data-supplied callout / source string…",
+    "source": "DD+GH per-order (UE history not pulled this cycle)"
+  },
+  "daypart": {
+    "days":  ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+    "hours": [0,1,2,"…",23],
+    "matrix": [[0,0,"…"], "…7 rows total, one per day…"],
+    "peak": {"day":"Thu","hour":18,"orders":30},
+    "weakest_day": "Tue",
+    "title": "Order Daypart — orders by day × hour (90d, DD+GH)",
+    "caption": "…optional; if omitted a peak/weakest caption is auto-built…",
+    "source": "DD+GH per-order"
+  },
   "funnel": {
     "stages": ["Store views","Menu views","Added to cart","Orders"],
     "values": [122096, 8544, 1775, 841],
@@ -54,10 +70,37 @@ Run-dir layout:
 ```
 
 `top15_green_meta` (optional) supplies the bar chart title/subtitle; absent ⇒
-neutral defaults. `funnel` and `storefront_audit` are **optional** — when a
-key is absent the corresponding chart is honestly skipped (printed, never
-fabricated) exactly like `trend_weekly`/`daypart`, and the Menu & Storefront
-toggle still renders text-only.
+neutral defaults. `funnel`, `storefront_audit`, `trend_weekly` and `daypart`
+are **optional** — when a key is absent the corresponding chart is honestly
+skipped (printed, never fabricated) and the dependent report section degrades
+to an explicit text note (never dropped, never falsely labelled "deferred"
+when the data is in fact present).
+
+`trend_weekly` — REAL weekly series. `weeks`/`gmv`/`orders` are parallel
+arrays (any equal length). **Derived upstream from the per-order DoorDash
+financial-transactions + Grubhub finance exports** (one row per order →
+bucketed to ISO week), NOT from platform-aggregated summary CSVs. Drives
+`make_charts.trend_overlay` (GMV bars + orders line on a twin axis) and the
+report's **90-Day Trend** section. `title`/`caption`/`source` optional,
+data-supplied — NEVER hardcoded in make_charts.py. When absent, 90-Day Trend
+renders `findings.trend_pending_note` (honest, no sparkline fabricated).
+**Rule: trend_weekly is derivable whenever per-order transaction exports
+exist — only set null if those exports are genuinely absent.**
+
+`daypart` — REAL day×hour order-count matrix. `matrix` is `len(days)` rows ×
+`len(hours)` cols of order counts. **Derived upstream from the same per-order
+DD/GH transaction exports** (DoorDash `Timestamp local time`; Grubhub
+`order_date` + `order_hour_of_day`). `peak` `{day,hour,orders}` ⇒ ringed
+cell + caption; `weakest_day` optional. Drives `make_charts.daypart_heatmap`
+and the report's **Daypart** section. `title`/`caption`/`source` optional,
+data-supplied. When `caption` is omitted the report auto-builds a
+peak/weakest caption from `peak`/`weakest_day`. When the whole key is absent
+the Daypart section renders `findings.daypart_pending_note`. **Same
+derivability rule as trend_weekly.**
+
+`radar_meta` / `tier_donut_meta` (both optional) supply data-driven
+title/subtitle overrides for the radar and tier-donut charts; absent ⇒
+neutral computed defaults.
 
 `funnel`: `stages`/`values` are parallel arrays (any length). Stage-to-stage
 drop-off % is auto-computed. `title`/`caption` optional, data-supplied — NEVER
@@ -124,9 +167,15 @@ omitted card skipped.
 First cycle: `{first_cycle_note:true, note?}`. Else
 `{deltas:[{name,current,prior,delta,direction}]}`.
 
-### Pending notes
-`trend_pending_note`, `daypart_pending_note` — used when
-metrics.trend_weekly / metrics.daypart absent (honest, no fabrication).
+### Trend / Daypart narrative (findings.json)
+`trend_caption` — optional override for the 90-Day Trend caption when
+metrics.trend_weekly IS present (else metrics.trend_weekly.caption/source).
+`daypart_caption` — optional override for the Daypart caption when
+metrics.daypart IS present (else an auto peak/weakest caption is built).
+`trend_pending_note`, `daypart_pending_note` — used ONLY when
+metrics.trend_weekly / metrics.daypart are absent (honest, no fabrication).
+These are derivable whenever per-order DD/GH transaction exports exist —
+they must only be left absent if those exports are genuinely missing.
 
 ### data_quality_footer
 HTML string.

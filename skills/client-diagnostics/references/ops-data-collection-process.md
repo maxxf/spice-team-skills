@@ -133,7 +133,7 @@ Work platform by platform. Use the dropdowns and clicks below verbatim. Drop eac
 
 | ☐ | File | Path in DD Portal | Notes |
 |---|---|---|---|
-| ☐ | Financial transactions | Financials → Statements → custom date 90d → Download CSV | Pick "Simplified" view |
+| ☐ | Financial transactions (PER-ORDER) | Financials → Statements → custom date 90d → Download CSV | Pick "Simplified" view. **One row per order — must include the per-order local timestamp** (`Timestamp local time`). REQUIRED: this is the source for the weekly trend chart AND daypart heatmap. A store-aggregated summary does NOT substitute. |
 | ☐ | Frequent Customers % | Insights → Customer Insights → Frequent customers → screenshot | Save as `dd-frequent-customers.png` |
 | ☐ | Sponsored Listings | Marketing → Sponsored Listings → 90d → Export | Skip if not running ads |
 | ☐ | Promos | Marketing → Promotions → All promotions → Export | |
@@ -144,6 +144,7 @@ Work platform by platform. Use the dropdowns and clicks below verbatim. Drop eac
 
 | ☐ | File | Path in GH Portal | Notes |
 |---|---|---|---|
+| ☐ | Finance / orders export (PER-ORDER) | Reports → Finance → 90d → Download CSV | **One row per order — must include `order_date` + `order_hour_of_day`** (or an order datetime). REQUIRED: blended with the DD per-order file to derive the weekly trend chart + daypart heatmap. |
 | ☐ | 90d performance export | Reports → Performance → 90d → Download CSV | |
 | ☐ | Operations report | Reports → Operations → 90d → Download | Older accounts won't have this. Note in manifest if missing. |
 | ☐ | Repeat order rate | Customer Insights tab → screenshot | Newer accounts only. Skip if not visible. |
@@ -183,6 +184,21 @@ regressed to "data-pending" on a live client because they were illegible.
 cropped/truncated. Blurry = FAIL, re-pull. Re-order Rate going unscored is a
 data-pull failure, not an analysis choice — these must be legible enough for
 the next cycle to actually score the axis.
+
+### 📈 REQUIRED — per-order exports power trend + daypart
+
+The diagnostic's **90-Day Trend** chart and **Daypart heatmap** are derived
+deterministically from the per-order DoorDash financial-transactions and
+Grubhub finance exports above (one row per order, bucketed to ISO week and
+to day×hour). They are **not** optional analyst extras.
+
+**Rule:** if the per-order DD/GH exports are in the folder, trend + daypart
+WILL be produced — do not pull a store-aggregated summary instead (it has no
+per-order timestamp and cannot be bucketed). The ONLY legitimate reason to
+defer trend/daypart is that a platform genuinely won't expose per-order data
+for this account vintage — in which case note it explicitly in
+`manifest.md` ("DD per-order export unavailable — trend/daypart UE-blind").
+"It felt like extra work" is never a valid reason to defer.
 
 ### 📋 Internal context — drop in `inputs/notes/`
 
@@ -252,6 +268,7 @@ Open `inputs/manifest.md` and complete:
 - [ ] Every required file is present (or explicitly skipped above with reason)
 - [ ] All exports cover the same 90-day window (Feb 9 to May 10)
 - [ ] Re-order rate sourced for at least UE OR DD (have both: ✅)
+- [ ] Per-order DD financial-transactions + GH finance exports present with per-order timestamps (trend + daypart derivable) — or genuinely-unavailable platforms noted explicitly above
 - [ ] Location list matches store names in the platform exports
 - [ ] Screenshots are all from today (or within last 3 days)
 ```

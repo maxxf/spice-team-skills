@@ -46,7 +46,7 @@ Drop into `dd/`.
 
 | ☐ | File | Where | Notes |
 |---|---|---|---|
-| ☐ | **Financial simplified transactions** | Financials → Statements → custom date 90d → Download CSV | "Simplified" view. One row per order. |
+| ☐ | **Financial simplified transactions (PER-ORDER)** | Financials → Statements → custom date 90d → Download CSV | "Simplified" view. **One row per order. REQUIRED** — must include the per-order local timestamp column (`Timestamp local time` / order datetime). This file is the source for the weekly **trend** chart AND the **daypart heatmap**. A store-aggregated summary export does NOT substitute. |
 | ☐ | **Frequent Customers %** | Insights → Customer Insights → Frequent customers | Screenshot if no CSV. **Required for radar's Re-order dim.** |
 | ☐ | **Sponsored Listings performance** | Marketing → Sponsored Listings → 90d → Export | ROAS, spend, attributed sales. |
 | ☐ | **Promos export** | Marketing → Promotions → All promotions → Export | Promo type, depth, dates. |
@@ -61,6 +61,7 @@ Drop into `gh/`.
 
 | ☐ | File | Where | Notes |
 |---|---|---|---|
+| ☐ | **Finance / orders export (PER-ORDER)** | Reports → Finance → 90d → Download CSV | **One row per order. REQUIRED** — must include `order_date` + `order_hour_of_day` (or an order datetime). Combined with the DD per-order file, this is the source for the weekly **trend** chart AND **daypart heatmap**. |
 | ☐ | **90d performance export** | Reports → Performance → 90d → Download CSV | Orders, sales, AOV per location. |
 | ☐ | **Operations report** | Reports → Operations → 90d → Download | If available. Older accounts may not expose this. |
 | ☐ | **Repeat order rate** | Customer Insights tab (newer accounts only) | Skip if not exposed. Mark in manifest. |
@@ -111,6 +112,26 @@ panel is in frame. A blurry / cropped / truncated capture is a FAIL — re-pull
 it. These must be machine-readable so the next cycle actually scores Re-order
 Rate instead of carrying a data-pending flag.
 
+## REQUIRED: Per-order transaction exports (trend + daypart source)
+
+The weekly **90-Day Trend** chart and the **Daypart heatmap** are NOT
+optional analyst flourishes — they are **derived deterministically from the
+per-order transaction exports** above. If those files are present, both
+charts MUST be produced. They are only legitimately deferred when the
+per-order exports are *genuinely absent* (e.g., a platform that won't expose
+per-order data for this account vintage).
+
+| ☐ | Capture | Why |
+|---|---|---|
+| ☐ | **DoorDash per-order financial transactions** w/ local timestamp | Bucketed to ISO week → weekly GMV/orders; bucketed to day×hour → daypart matrix |
+| ☐ | **Grubhub per-order finance export** w/ `order_date` + `order_hour_of_day` | Blended with DD into the same weekly + daypart series |
+
+**Rule (state this to the GM):** "Trend + daypart are derivable whenever the
+per-order DD/GH transaction exports exist. Only mark them deferred if those
+per-order files are genuinely missing — never because deriving them felt
+like extra work." A store-aggregated summary CSV does NOT substitute (it has
+no per-order timestamp to bucket).
+
 ## Pre-flight check before saying "done"
 
 Confirm all of the following before telling Claude the folder is ready:
@@ -119,6 +140,7 @@ Confirm all of the following before telling Claude the folder is ready:
 - [ ] All exports cover the **same 90-day window** (mismatched windows produce bad blends)
 - [ ] **UE Repeat Customers, DD Frequent Customers %, and UE conversion funnel are captured per location, legible and machine-readable** (the required captures above). GH repeat is optional but note if unavailable.
 - [ ] Re-order rate is sourced for at least UE OR DD (GH optional). If neither, flag as a critical gap (the diagnostic will surface "no organic moat" patterns differently)
+- [ ] **Per-order DD financial-transactions + GH finance exports are present and carry a per-order timestamp** (so weekly trend + daypart heatmap are derivable). If a per-order file is genuinely unavailable for a platform, note it explicitly in `manifest.md` — that, and only that, justifies deferring trend/daypart
 - [ ] Location list matches store names appearing in the platform exports (so joins work)
 - [ ] **Source-export date stamps reviewed** — if they disagree with the manifest/Slack window header, the export dates win; note the discrepancy in `manifest.md`
 - [ ] Screenshots are dated within the last 7 days (so the storefront audit reflects current state)

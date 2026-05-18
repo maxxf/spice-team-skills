@@ -10,7 +10,7 @@ description: >
   checklist, creates the Drive folder for them to drop files into, waits for
   confirmation, runs the multi-skill orchestrator, uploads charts, creates
   the Notion page, returns one URL.
-version: 1.3.0
+version: 1.8.0
 ---
 
 # Client Diagnostics
@@ -116,7 +116,8 @@ Mapping notes:
 - **UE conversion funnel screenshot/CSV** → menu CVR (impressions → orders) and storefront → menu CTR per store
 - **UE menu items export** → photo coverage % (count items with photo URL / total items) per store, categories_count, categories_populated
 - **UE repeat customer screenshot** → portfolio Re-order Rate (no per-store breakdown; emit at portfolio level)
-- **DD financial CSV** → topline supplement, blend with UE
+- **DD financial CSV (per-order)** → topline supplement, blend with UE. **Also bucket every order row by ISO week → `metrics.trend_weekly` (weekly GMV + orders) AND by day×hour → `metrics.daypart` (7×24 order-count matrix + peak).** This is REQUIRED whenever the per-order export exists — see the trend/daypart rule below.
+- **GH finance CSV (per-order)** → topline supplement; blend its per-order rows into the SAME `metrics.trend_weekly` + `metrics.daypart` derivation as DD (use `order_date` + `order_hour_of_day`).
 - **DD ops quality export** → rating, error_rate_pct, cancellation_pct, uptime_pct, hours_accurate per store
 - **DD sponsored listings + promos** → spend, attributed_sales, roas, promo_count_active per store
 - **GH performance export** → topline supplement, blend
@@ -161,7 +162,7 @@ If a value is wrong, fix `findings.json`, not the HTML or the Python.
 # assets/spice_icon.svg (copy from references/), charts/ (from Step 7-charts)
 cp references/report_style.css <run_dir>/
 mkdir -p <run_dir>/assets && cp references/assets/spice_icon.svg <run_dir>/assets/
-.venv/bin/python references/make_charts.py <run_dir>      # /10 radar, tier donut, GMV bar
+.venv/bin/python references/make_charts.py <run_dir>      # radar, tier donut, GMV bar, funnel, storefront audit, trend overlay, daypart heatmap (each renders iff its metrics key is present)
 .venv/bin/python references/build_report.py <run_dir>     # → HTML
 .venv/bin/python references/export_pdf.py <run_dir>/<report>.html <run_dir>/<report>.pdf
 ```
@@ -195,6 +196,19 @@ sub-skill outputs; populate every required narrative field there.
    guessed or carried silently. Proxy-derived axes (Conversion/Traffic from
    ad data when true funnel absent) carry an `(ad proxy)` label. Overall =
    mean of measured axes only.
+6. **Trend + daypart are derivable, not deferrable:** the 90-Day Trend chart
+   (`metrics.trend_weekly`) and Daypart heatmap (`metrics.daypart`) are
+   **derived deterministically from the per-order DoorDash + Grubhub
+   transaction exports** (DD `Timestamp local time`; GH
+   `order_date`/`order_hour_of_day`) — one row per order, bucketed to ISO
+   week and to day×hour. **Whenever those per-order exports exist, you MUST
+   derive and populate `trend_weekly` + `daypart` — do NOT mark them
+   "deferred".** Only leave them null if the per-order exports are genuinely
+   absent (platform won't expose per-order data for this account vintage),
+   and say so explicitly in `data_quality_footer`. A store-aggregated
+   summary CSV does not substitute (no per-order timestamp to bucket). The
+   builder renders the real charts when present and an honest text note when
+   genuinely absent — it never fabricates a sparkline or heatmap.
 
 Conformance is enforced by `tests/test_report_conformance.py` (both `.half`
 banners, exactly 6 canonical hero slots, `/ 10` radar title, full required
@@ -272,7 +286,7 @@ That's the entire flow. The user typed one sentence at the start, dropped files 
 - `references/diagnostic-input-template.csv` (empty header-only template for manual builds)
 - `references/diagnostic-framework.md` (radar bands, foundation thresholds, tier rules, pattern library, defaults for missing data)
 - `references/build_report.py` (canonical, fully parameterized client HTML report builder — reads findings.json+metrics.json, zero per-client literals)
-- `references/make_charts.py` (canonical chart module — /10 radar, performance-tier donut, GMV bar; honestly skips trend/daypart when no data)
+- `references/make_charts.py` (canonical chart module — /10 radar, performance-tier donut, GMV bar, conversion funnel, storefront audit, weekly trend overlay, daypart heatmap; all data-driven, standardized suptitle-in-margin title/subtitle pattern, honestly no-ops any chart whose metrics key is genuinely absent)
 - `references/export_pdf.py` (HTML→PDF via Chrome headless)
 - `references/report_style.css` (Spice Design System stylesheet — restyle here, regenerate; never hand-edit per client)
 - `references/report-data-contract.md` (the findings.json/metrics.json schema the builder consumes)

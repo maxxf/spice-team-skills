@@ -279,23 +279,50 @@ def what_moved_block(fj: dict) -> str:
 
 
 def trend_block(run_dir: pathlib.Path, fj: dict, mj: dict) -> str:
-    if mj.get("trend_weekly"):
+    """90-Day Trend. Renders the REAL weekly GMV/orders overlay when
+    metrics.trend_weekly is present (derived upstream from per-order DD/GH
+    transaction exports); degrades to an honest text note otherwise. The
+    chart PNG itself is emitted by make_charts.trend_overlay; img() shows a
+    visible placeholder if it is pending — never silently."""
+    tw = mj.get("trend_weekly")
+    if tw:
+        cap = fj.get("trend_caption") or tw.get("caption") or tw.get("source")
+        cap_html = (f'<div class="cap" style="margin-top:6px">{_esc(cap)}</div>'
+                    if cap else "")
         return (f'<h2>90-Day Trend</h2><div class="panel">'
-                f'{img(run_dir, "trend_overlay.png")}</div>')
+                f'{img(run_dir, "trend_overlay.png")}</div>{cap_html}')
     msg = fj.get("trend_pending_note") or (
         "No prior-period comparison available this cycle — a weekly GMV/orders "
-        "series is not derivable from the parsed exports. Held until a real "
-        "weekly series is supplied. No sparkline is fabricated.")
+        "series is not derivable from the parsed exports (no per-order DD/GH "
+        "transaction file supplied). Held until a real weekly series is "
+        "supplied. No sparkline is fabricated.")
     return (f'<h2>90-Day Trend</h2><div class="panel"><div class="cap" '
             f'style="margin:0">{_esc(msg)}</div></div>')
 
 
 def daypart_block(run_dir: pathlib.Path, fj: dict, mj: dict) -> str:
-    if mj.get("daypart"):
-        return (f'<div class="panel">{img(run_dir, "daypart_heatmap.png")}</div>')
+    """Daypart heatmap. Renders the REAL day×hour order-count heatmap when
+    metrics.daypart is present (derived upstream from per-order DD/GH
+    transaction exports) with a peak-window caption sourced from the
+    contract; degrades to an honest text note otherwise — never fabricated,
+    never falsely labelled 'deferred' when the data is in fact present."""
+    dp = mj.get("daypart")
+    if dp:
+        pk = dp.get("peak") or {}
+        cap = fj.get("daypart_caption")
+        if not cap and pk:
+            cap = (f"Peak demand: {pk.get('day')} "
+                   f"{pk.get('hour')}:00 ({pk.get('orders')} orders).")
+            if dp.get("weakest_day"):
+                cap += f" Weakest day: {dp['weakest_day']}."
+        cap_html = (f'<div class="cap" style="margin-top:6px">{_esc(cap)}</div>'
+                    if cap else "")
+        return (f'<div class="panel">{img(run_dir, "daypart_heatmap.png")}'
+                f'</div>{cap_html}')
     msg = fj.get("daypart_pending_note") or (
         "Daypart heatmap deferred — per-order timestamp matrix not in this "
-        "cycle's parsed set. No heatmap is fabricated here.")
+        "cycle's parsed set (no per-order DD/GH transaction file with local "
+        "timestamps supplied). No heatmap is fabricated here.")
     return (f'<div class="daypart">📅 <strong>Daypart heatmap deferred</strong>'
             f' — {_esc(msg)}</div>')
 

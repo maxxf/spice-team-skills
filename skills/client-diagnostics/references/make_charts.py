@@ -3,7 +3,7 @@
 ONE chart module. Reads ``metrics.json`` from a run directory and writes
 PNGs into ``<run_dir>/charts/`` that ``build_report.py`` base64-inlines.
 
-Canonical charts:
+Canonical charts (always attempted):
   - radar_7dim.png       0-10 scale, target ring, overall = mean of MEASURED
                          axes only. A pending axis (current is None / has
                          "pending": true) renders at 0 with a "(pending)"
@@ -14,25 +14,38 @@ Canonical charts:
                          when metrics.tiers.by_store is absent.
   - top15_green_bar.png  stores ranked by the supplied size metric
                          (gmv or payout), with the tier badge rendered
-                         inside each bar end ("Blended 90-Day GMV by Store").
+                         inside each bar end.
 
-Optional charts (rendered only when their metrics key is present; no-op
-cleanly when absent, exactly like trend/daypart):
-  - funnel_ue.png        stepped conversion funnel from metrics.funnel
-                         (stages/values), with stage-to-stage drop-off %.
-  - storefront_audit.png score/100 bar from metrics.storefront_audit
+Optional charts (rendered ONLY when their metrics key is present; every
+one no-ops cleanly + honestly when its key is absent — nothing fabricated):
+  - funnel_ue.png        from metrics.funnel (stages/values) — left-aligned
+                         bars, counts/% OUTSIDE bars (survives big dynamic
+                         range), stage-to-stage drop-off %.
+  - storefront_audit.png score/100 bars from metrics.storefront_audit
                          (listings + portfolio_avg), coloured by grade.
+  - trend_overlay.png    from metrics.trend_weekly — REAL weekly GMV bars +
+                         orders line (twin axis). Derived upstream from
+                         per-order DD/GH transaction exports.
+  - daypart_heatmap.png  from metrics.daypart — REAL 7×24 order-count imshow
+                         heatmap, peak cell ringed. Derived upstream from
+                         per-order DD/GH transaction exports.
 
-Deliberately skipped when the data isn't real (printed honestly, never
-fabricated):
-  - trend_overlay.png    when metrics.trend_weekly is absent
-  - daypart_heatmap.png  when metrics.daypart is absent
-  - funnel_ue.png        when metrics.funnel is absent
-  - storefront_audit.png when metrics.storefront_audit is absent
+trend_overlay + daypart_heatmap are DERIVABLE whenever per-order
+transaction exports exist (DoorDash financial transactions with a local
+timestamp; Grubhub finance with order date + hour). They are only skipped
+when the per-order series is genuinely absent — never marked "deferred"
+when the source data is present.
 
-Every caption / callout string is sourced from metrics.json — there are
-ZERO per-client literals in this module (enforced by
-tests/test_report_conformance.py).
+Title / subtitle convention — STANDARDIZED across EVERY chart fn so the
+title↔subtitle collision bug (hit 3× on the live run) cannot recur:
+  * title  → ``fig.suptitle(text, x=0.02, ha="left", y=0.97)``
+  * subtitle → ``fig.text(0.02, <margin_y>, text)``
+  * room reserved via ``fig.subplots_adjust(top=...)``
+NEVER ``ax.set_title`` + ``ax.text(transAxes, y≈1.0x)`` (that overlaps).
+
+Every caption / callout / title string is sourced from metrics.json — there
+are ZERO per-client literals in this module (enforced by
+tests/test_report_conformance.py::test_no_per_client_literal_bleed_in_chart_source).
 
 Usage:
     python make_charts.py [RUN_DIR]
@@ -82,6 +95,21 @@ plt.rcParams.update({
 })
 
 
+# --------------------------------------------------------------------------- #
+# Shared title/subtitle helper — the ONE place the title pattern lives.        #
+# Title in the figure margin via suptitle; subtitle via fig.text just below.   #
+# Never ax.set_title + ax.text(transAxes) (that's the collision bug).          #
+# --------------------------------------------------------------------------- #
+
+def _titles(fig, title: str, subtitle: str = "",
+            *, title_y: float = 0.97, sub_y: float = 0.885) -> None:
+    if title:
+        fig.suptitle(title, x=0.02, ha="left", y=title_y, fontsize=14,
+                     fontweight="bold", color=SPICE["charcoal"])
+    if subtitle:
+        fig.text(0.02, sub_y, subtitle, fontsize=9.5, color=SPICE["gray"])
+
+
 def radar_7dim(m: dict, charts: Path) -> Path:
     radar = m["radar"]
     labels = list(radar.keys())
@@ -96,8 +124,10 @@ def radar_7dim(m: dict, charts: Path) -> Path:
     n = len(labels)
     ang = np.linspace(0, 2 * np.pi, n, endpoint=False).tolist()
     cur_c, tgt_c, ang_c = current + [current[0]], target + [target[0]], ang + [ang[0]]
+    overall = round(sum(measured) / len(measured), 1) if measured else 0.0
 
-    fig = plt.figure(figsize=(6.5, 6.5))
+    fig = plt.figure(figsize=(6.5, 6.8))
+    fig.subplots_adjust(top=0.84)
     ax = fig.add_subplot(111, polar=True)
     ax.fill(ang_c, tgt_c, color=SPICE["green"], alpha=0.18, label="Target")
     ax.plot(ang_c, tgt_c, color=SPICE["green"], lw=1.5, ls="--")
@@ -118,10 +148,11 @@ def radar_7dim(m: dict, charts: Path) -> Path:
     ax.set_theta_direction(-1)
     ax.spines["polar"].set_color(SPICE["gray"])
     ax.grid(color=SPICE["gray"], alpha=0.3)
-    overall = round(sum(measured) / len(measured), 1) if measured else 0.0
-    ax.set_title(f"Brand Health  ·  Overall {overall}/10", pad=24,
-                 color=SPICE["charcoal"], fontsize=14)
     ax.legend(loc="upper right", bbox_to_anchor=(1.25, 1.10), frameon=False)
+    cfg = m.get("radar_meta", {})
+    _titles(fig,
+            cfg.get("title", f"Brand Health  ·  Overall {overall}/10"),
+            cfg.get("subtitle", ""), title_y=0.965, sub_y=0.905)
     out = charts / "radar_7dim.png"
     fig.savefig(out)
     plt.close(fig)
@@ -131,7 +162,9 @@ def radar_7dim(m: dict, charts: Path) -> Path:
 def tier_donut(m: dict, charts: Path) -> Path:
     t = m.get("tiers", {})
     by_store = list(t.get("by_store", {}).items())
-    fig, ax = plt.subplots(figsize=(5.4, 5))
+    cfg = m.get("tier_donut_meta", {})
+    fig, ax = plt.subplots(figsize=(5.4, 5.2))
+    fig.subplots_adjust(top=0.80)
     if by_store:
         total = len(by_store)
         wedges, _ = ax.pie(
@@ -160,8 +193,8 @@ def tier_donut(m: dict, charts: Path) -> Path:
             fontsize=28, fontweight="bold", color=SPICE["charcoal"])
     ax.text(0, -0.18, "stores", ha="center", va="center",
             fontsize=11, color=SPICE["gray"])
-    ax.set_title("Baseline Location Tiers (pre-Spice)",
-                 color=SPICE["charcoal"], pad=18)
+    _titles(fig, cfg.get("title", "Baseline Location Tiers (pre-Spice)"),
+            cfg.get("subtitle", ""), title_y=0.965, sub_y=0.905)
     out = charts / "tier_donut.png"
     fig.savefig(out)
     plt.close(fig)
@@ -170,9 +203,8 @@ def tier_donut(m: dict, charts: Path) -> Path:
 
 def top15_green_bar(m: dict, charts: Path) -> "Path | None":
     """Stores ranked by the supplied size metric. Each bar carries its own
-    tier badge inside the bar end — no separate legend, no 'underlying tier'
-    language. Title/subtitle are metrics-driven (fall back to neutral
-    defaults); there are no per-client literals here."""
+    tier badge inside the bar end — no separate legend. Title/subtitle are
+    metrics-driven (neutral defaults); no per-client literals."""
     stores = m.get("top15_green", [])
     if not stores:
         return None
@@ -189,8 +221,9 @@ def top15_green_bar(m: dict, charts: Path) -> "Path | None":
     colors = [TIER_COLOR.get(t, SPICE["gray"]) for t in tiers]
     vmax = max(vals) if vals else 1
 
-    fig, ax = plt.subplots(figsize=(8.4, 0.95 * len(stores) + 1.6))
-    bars = ax.barh(names, vals, color=colors, height=0.62,
+    fig, ax = plt.subplots(figsize=(9.0, 0.95 * len(stores) + 2.0))
+    fig.subplots_adjust(left=0.22, right=0.96, top=0.78, bottom=0.10)
+    bars = ax.barh(names, vals, color=colors, height=0.58,
                    edgecolor="none", zorder=3)
     ax.bar_label(bars, labels=[f"${v:,.0f}" for v in vals], padding=10,
                  fontsize=12, fontweight="bold", color=SPICE["charcoal"])
@@ -205,52 +238,55 @@ def top15_green_bar(m: dict, charts: Path) -> "Path | None":
     ax.set_yticklabels(names, fontsize=12, color=SPICE["charcoal"])
     for sp in ax.spines.values():
         sp.set_visible(False)
-    ax.set_xlim(0, vmax * 1.18)
+    ax.set_xlim(0, vmax * 1.20)
     ax.set_ylim(-0.6, len(stores) - 0.4)
-    ax.set_title(title, loc="left", color=SPICE["charcoal"], fontsize=14,
-                 fontweight="bold", pad=14)
-    ax.text(0, 1.02, subtitle, transform=ax.transAxes, fontsize=10,
-            color=SPICE["gray"])
-    fig.tight_layout()
+    _titles(fig, title, subtitle, title_y=0.97, sub_y=0.88)
     out = charts / "top15_green_bar.png"
-    fig.savefig(out, bbox_inches="tight")
+    fig.savefig(out)
     plt.close(fig)
     return out
 
 
 def funnel_ue(m: dict, charts: Path) -> "Path | None":
-    """Stepped conversion funnel from metrics.funnel. Stage-to-stage
-    conversion % auto-computed. An optional metrics.funnel.caption string
-    (data-supplied, never hardcoded) renders below the funnel. No-ops
-    cleanly when metrics.funnel is absent."""
+    """Conversion funnel from metrics.funnel. Left-aligned bars; stage
+    labels are y-ticks and counts/percentages sit OUTSIDE the bars so a
+    large dynamic range (e.g. a 100×+ collapse) stays readable.
+    Stage-to-stage conversion % auto-computed. Optional data-supplied
+    metrics.funnel.title/caption. No-ops cleanly when absent."""
     f = m.get("funnel")
     if not f or not f.get("stages") or not f.get("values"):
         return None
     stages, vals = f["stages"], f["values"]
+    vmax = vals[0] or 1
     title = f.get("title", "Conversion Funnel — 90d blended")
     caption = f.get("caption", "")
-    vmax = vals[0] or 1
+    n = len(stages)
     band = ["#FDBA74", "#FB923C", SPICE["orange"], SPICE["red"]]
-    fig, ax = plt.subplots(figsize=(8.6, 4.8))
-    for i, (s, v) in enumerate(zip(stages, vals)):
-        w = (v / vmax) if vmax else 0
-        ax.barh(len(stages) - 1 - i, w, height=0.62, left=(1 - w) / 2,
-                color=band[i % len(band)], edgecolor="none", zorder=3)
-        ax.text(0.5, len(stages) - 1 - i, f"{s}   {v:,}",
-                ha="center", va="center", color="white",
-                fontsize=12, fontweight="bold", zorder=4)
+    fig, ax = plt.subplots(figsize=(9.2, 4.8))
+    fig.subplots_adjust(left=0.20, right=0.96, top=0.82, bottom=0.22)
+    ys = list(range(n))[::-1]  # stage 0 at top
+    for i, (s, v, y) in enumerate(zip(stages, vals, ys)):
+        ax.barh(y, v, height=0.58, color=band[i % len(band)],
+                edgecolor="none", zorder=3)
+        pct_of_top = v / vmax * 100
+        ax.text(vmax * 1.01, y, f"{v:,}   ({pct_of_top:.1f}% of top)",
+                ha="left", va="center", fontsize=11,
+                fontweight="bold", color=SPICE["charcoal"], zorder=4)
         if i and vals[i - 1]:
-            rate = vals[i] / vals[i - 1] * 100
-            ax.text(1.02, len(stages) - 1 - i + 0.5, f"↓ {rate:.1f}%",
-                    ha="left", va="center", fontsize=10, color=SPICE["gray"])
-    ax.set_xlim(-0.05, 1.18)
-    ax.set_ylim(-0.5, len(stages) - 0.4)
-    ax.axis("off")
-    ax.set_title(title, loc="left", color=SPICE["charcoal"],
-                 fontsize=14, pad=12)
-    if caption:
-        ax.text(-0.05, -0.42, caption, transform=ax.transAxes,
-                fontsize=9.5, color=SPICE["gray"], wrap=True)
+            step = vals[i] / vals[i - 1] * 100
+            ax.text(-vmax * 0.02, y + 0.5, f"↓ {step:.1f}%",
+                    ha="right", va="center", fontsize=9.5,
+                    color=SPICE["gray"])
+    ax.set_yticks(ys)
+    ax.set_yticklabels(stages, fontsize=11, fontweight="bold",
+                       color=SPICE["charcoal"])
+    ax.set_xlim(0, vmax * 1.34)
+    ax.set_xticks([])
+    ax.tick_params(axis="y", length=0)
+    for sp in ("top", "right", "bottom"):
+        ax.spines[sp].set_visible(False)
+    ax.spines["left"].set_color(SPICE["gray"])
+    _titles(fig, title, caption, title_y=0.97, sub_y=0.06)
     out = charts / "funnel_ue.png"
     fig.savefig(out)
     plt.close(fig)
@@ -259,13 +295,13 @@ def funnel_ue(m: dict, charts: Path) -> "Path | None":
 
 def storefront_audit(m: dict, charts: Path) -> "Path | None":
     """Listings scored /100 from metrics.storefront_audit, coloured by
-    grade, with a portfolio-average reference line. Subtitle is
-    data-supplied (no per-client literals). No-ops cleanly when
-    metrics.storefront_audit is absent."""
+    grade, with a portfolio-average reference marker labelled at the
+    x-axis (no title collision). Subtitle is data-supplied. No-ops
+    cleanly when absent."""
     sa = m.get("storefront_audit")
     if not sa or not sa.get("listings"):
         return None
-    rows = sorted(sa["listings"], key=lambda r: r[1])  # worst at bottom-up
+    rows = sorted(sa["listings"], key=lambda r: r[1])  # worst at bottom
     names = [r[0] for r in rows]
     scores = [r[1] for r in rows]
     grade_c = {"Good": SPICE["green"], "Fair": SPICE["yellow"],
@@ -275,29 +311,102 @@ def storefront_audit(m: dict, charts: Path) -> "Path | None":
     title = sa.get("title", "Storefront Audit — score / 100")
     subtitle = sa.get("subtitle",
                        "Green = Good · Amber = Fair · Red = Poor")
-    fig, ax = plt.subplots(figsize=(8.6, max(3.2, 0.7 * len(names) + 1.6)))
-    bars = ax.barh(names, scores, color=colors, height=0.6, zorder=3)
+    fig, ax = plt.subplots(figsize=(9.2, max(3.4, 0.7 * len(names) + 1.8)))
+    fig.subplots_adjust(left=0.24, right=0.96, top=0.80, bottom=0.18)
+    bars = ax.barh(names, scores, color=colors, height=0.58, zorder=3)
     ax.bar_label(
         bars,
-        labels=[f"{s}  ·  {r[2] if len(r) > 2 else ''}"
+        labels=[f"  {s} · {r[2] if len(r) > 2 else ''}"
                 for s, r in zip(scores, rows)],
-        padding=8, fontsize=11, fontweight="bold", color=SPICE["charcoal"])
+        padding=4, fontsize=11, fontweight="bold", color=SPICE["charcoal"])
     avg = sa.get("portfolio_avg")
     if avg is not None:
         ax.axvline(avg, color=SPICE["charcoal"], ls="--", lw=1.2, zorder=2)
-        ax.text(avg + 0.6, len(names) - 0.35, f"portfolio avg {avg}",
-                fontsize=9.5, color=SPICE["charcoal"])
-    ax.set_xlim(0, 100)
+        ax.annotate(f"portfolio avg {avg}", xy=(avg, -0.7),
+                    xytext=(avg, -0.95), ha="center", fontsize=9.5,
+                    color=SPICE["charcoal"], annotation_clip=False)
+    ax.set_xlim(0, 105)
     ax.set_xticks([0, 25, 50, 75, 100])
     ax.tick_params(axis="y", length=0)
+    ax.set_ylim(-0.6, len(names) - 0.4)
     for sp in ("top", "right", "left"):
         ax.spines[sp].set_visible(False)
-    ax.set_title(title, loc="left", color=SPICE["charcoal"],
-                 fontsize=14, pad=12)
-    ax.text(0, 1.04, subtitle, transform=ax.transAxes,
-            fontsize=9.5, color=SPICE["gray"])
+    _titles(fig, title, subtitle, title_y=0.97, sub_y=0.88)
     out = charts / "storefront_audit.png"
-    fig.savefig(out, bbox_inches="tight")
+    fig.savefig(out)
+    plt.close(fig)
+    return out
+
+
+def trend_overlay(m: dict, charts: Path) -> "Path | None":
+    """REAL weekly GMV (bars) + orders (line, twin axis) across the window.
+    Derived upstream from per-order DD/GH transaction exports. Every label
+    string is data-supplied (metrics.trend_weekly). No-ops cleanly when the
+    weekly series is absent — never fabricated."""
+    t = m.get("trend_weekly")
+    if not t or not t.get("weeks") or not t.get("gmv") or not t.get("orders"):
+        return None
+    weeks, gmv, orders = t["weeks"], t["gmv"], t["orders"]
+    x = np.arange(len(weeks))
+    fig, ax1 = plt.subplots(figsize=(9.2, 4.6))
+    fig.subplots_adjust(left=0.10, right=0.90, top=0.80, bottom=0.18)
+    ax1.bar(x, gmv, color=SPICE["orange"], width=0.62, zorder=3,
+            label="Weekly GMV")
+    ax1.set_ylabel("GMV ($)", color=SPICE["charcoal"])
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(weeks, fontsize=9, color=SPICE["charcoal"])
+    ax1.set_ylim(0, (max(gmv) or 1) * 1.25)
+    for sp in ("top", "right"):
+        ax1.spines[sp].set_visible(False)
+    ax2 = ax1.twinx()
+    ax2.plot(x, orders, color=SPICE["charcoal"], lw=2, marker="o",
+             ms=4, zorder=4, label="Orders")
+    ax2.set_ylabel("Orders", color=SPICE["charcoal"])
+    ax2.set_ylim(0, (max(orders) or 1) * 1.35)
+    ax2.spines["top"].set_visible(False)
+    title = t.get("title", "Weekly Trend — GMV & Orders")
+    subtitle = t.get("caption") or t.get("source", "")
+    _titles(fig, title, subtitle, title_y=0.97, sub_y=0.05)
+    out = charts / "trend_overlay.png"
+    fig.savefig(out)
+    plt.close(fig)
+    return out
+
+
+def daypart_heatmap(m: dict, charts: Path) -> "Path | None":
+    """REAL day×hour order-count heatmap with the peak cell ringed. Derived
+    upstream from per-order DD/GH transaction exports. Caption is built from
+    data-supplied metrics.daypart fields only. No-ops cleanly when the
+    matrix is absent — never fabricated."""
+    d = m.get("daypart")
+    if not d or not d.get("matrix") or not d.get("days") or not d.get("hours"):
+        return None
+    days, hours, mat = d["days"], d["hours"], np.array(d["matrix"])
+    fig, ax = plt.subplots(figsize=(10.2, 4.4))
+    fig.subplots_adjust(left=0.08, right=0.99, top=0.80, bottom=0.18)
+    im = ax.imshow(mat, aspect="auto", cmap="YlOrRd")
+    ax.set_xticks(range(len(hours)))
+    ax.set_xticklabels([f"{h}" for h in hours], fontsize=8)
+    ax.set_yticks(range(len(days)))
+    ax.set_yticklabels(days, fontsize=10, fontweight="bold")
+    ax.set_xlabel("Hour of day (store-local)", color=SPICE["charcoal"])
+    pk = d.get("peak")
+    if pk and pk.get("hour") in hours and pk.get("day") in days:
+        pj, pi = hours.index(pk["hour"]), days.index(pk["day"])
+        ax.add_patch(plt.Rectangle((pj - 0.5, pi - 0.5), 1, 1, fill=False,
+                     edgecolor=SPICE["charcoal"], lw=2.2, zorder=5))
+    cb = fig.colorbar(im, ax=ax, fraction=0.025, pad=0.01)
+    cb.ax.tick_params(labelsize=8)
+    title = d.get("title", "Order Daypart — orders by day × hour")
+    cap = d.get("caption") or d.get("source", "")
+    if pk and not d.get("caption"):
+        cap = (f"{cap} Peak: {pk.get('day')} {pk.get('hour')}:00 "
+               f"({pk.get('orders')} orders).").strip()
+    if d.get("weakest_day") and not d.get("caption"):
+        cap += f" Weakest day: {d['weakest_day']}."
+    _titles(fig, title, cap, title_y=0.97, sub_y=0.04)
+    out = charts / "daypart_heatmap.png"
+    fig.savefig(out)
     plt.close(fig)
     return out
 
@@ -307,15 +416,19 @@ def generate(run_dir: Path) -> list[Path]:
     charts = run_dir / "charts"
     charts.mkdir(exist_ok=True)
     made = [radar_7dim(m, charts), tier_donut(m, charts)]
-    for fn in (top15_green_bar, funnel_ue, storefront_audit):
+    optional = (top15_green_bar, funnel_ue, storefront_audit,
+                trend_overlay, daypart_heatmap)
+    for fn in optional:
         p = fn(m, charts)
         if p:
             made.append(p)
     skipped = []
     if not m.get("trend_weekly"):
-        skipped.append("trend_overlay.png (no weekly series in parsed data)")
+        skipped.append("trend_overlay.png (no per-order weekly series "
+                        "in parsed data)")
     if not m.get("daypart"):
-        skipped.append("daypart_heatmap.png (no hour×day matrix in parsed data)")
+        skipped.append("daypart_heatmap.png (no per-order hour×day matrix "
+                        "in parsed data)")
     if not m.get("funnel"):
         skipped.append("funnel_ue.png (no conversion funnel in parsed data)")
     if not m.get("storefront_audit"):
