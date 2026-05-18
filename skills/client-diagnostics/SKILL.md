@@ -210,6 +210,21 @@ sub-skill outputs; populate every required narrative field there.
    summary CSV does not substitute (no per-order timestamp to bucket). The
    builder renders the real charts when present and an honest text note when
    genuinely absent — it never fabricates a sparkline or heatmap.
+7. **Deliverable model — PDF is the deliverable, Notion is the index:** the
+   visual **PDF** (all charts, deterministic, from `export_pdf.py`) is the
+   canonical deliverable and the client-facing artifact (walkthroughs present
+   the PDF, never raw HTML or the Notion page). The **Notion page is a thin,
+   searchable record** = exec summary + the key tables + a **prominent link
+   to the PDF** in the client's Drive Diagnostics folder. **Do NOT prescribe
+   manually rebuilding charts into Notion** — the integration can't embed
+   local PNGs and per-cycle manual chart-dropping is exactly the drift this
+   skill exists to prevent. Final hand-off step: drop the PDF into the
+   client's Drive `…/3. Diagnostics/<cycle>/` folder (a ~10-second file move;
+   automated upload is not reliable — the Drive tool can't take a multi-MB
+   inline upload), then paste that Drive link into the Notion record and the
+   `#int-[client]` Slack thread. Share links via the **workspace-slug Notion
+   URL or the client-portal navigation path**, never the integration's bare
+   `notion.so/<id>` deep link (it 404s for human viewers).
 
 Conformance is enforced by `tests/test_report_conformance.py` (both `.half`
 banners, exactly 6 canonical hero slots, `/ 10` radar title, full required
