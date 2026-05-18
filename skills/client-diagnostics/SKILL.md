@@ -129,7 +129,8 @@ Save the unified CSV to the Drive folder as `inputs/unified-input.csv` so it liv
 ### Step 6: Run the orchestrator
 
 ```bash
-cd /Users/maxx/Desktop/Cowork/Skills/client-diagnostics
+# Run from the client-diagnostics skill directory (wherever the plugin is installed)
+cd "$(dirname "$(find ~ -name SKILL.md -path '*client-diagnostics*' 2>/dev/null | head -1)")"
 .venv/bin/python scripts/run_diagnostic.py --client <slug> --inputs-dir /tmp/diagnostic-runs/<slug>/<timestamp>/inputs
 ```
 
