@@ -227,6 +227,75 @@ field, desc. Optional `appendix_columns:[{label,field,tier?,kind?}]`
 net_payout/cancel_rate single-platform). No columns ⇒ schema-agnostic
 Store/Tier/<sort-key>. `appendix_note` = caption.
 
+### deck (optional — client-deck-only narrative)
+Consumed ONLY by `references/build_deck.js` (the Spice-branded client .pptx).
+The report ignores it. Every slide that has a report equivalent reads the
+SAME shared field (`hero.slots`, `radar_weakest`, `radar_notes`, `fro`,
+`foundation_gate`, `portfolio_snapshot`, `action_plan`, `data_quality_footer`,
+etc.). The `deck` object only supplies the few slides that are deck-specific
+(title chrome, the headline-finding stat slide, the 3-lane action plan, the
+closing "what we need" slide). All keys optional; an absent key ⇒ that slide
+(or element) is skipped gracefully — never fabricated.
+
+```jsonc
+"deck": {
+  "title_kicker": "Spice Digital · Delivery Marketplace Diagnostic",
+  "baseline_note": "All data is the pre-Spice baseline — the bar we beat.",
+  "sixty_second_title": "Portfolio at a glance — 90 days, all platforms",
+  "radar_title": "6.9 / 10 — all axes measured",      // else "<overall> / 10"
+  "foundation_gate_title": "…",                         // gate slide H1
+  "foundation_gate_rows": [{"label":"DoorDash","detail":"Cancellation high"}],
+  "foundation_gate_rule": "No spend until cleared.",    // else foundation_gate.rule
+  "headline_finding": {                                  // omit ⇒ slide skipped
+    "title": "Ads buy low-intent traffic",
+    "stat": "0.69%", "stat_sub": "blended store-to-order conversion",
+    "bullets": ["…", "…"]
+  },
+  "action_lanes": [                                      // ≤3 lanes; else falls
+    {"lane": "This week", "items": ["…", "…"]},          //   back to
+    {"lane": "Week 2",    "items": ["…"]},               //   action_plan.this_week
+    {"lane": "30 days",   "items": ["…"]}
+  ],
+  "daypart_bullets": ["…optional extra bullets on the trend/daypart slide…"],
+  "closing": {
+    "kicker": "What we need from you", "title": "To move fast",
+    "bullets": ["Close onboarding blockers", "Sign-off to proceed"]
+  }
+}
+```
+
+`foundation_gate.rows` (`[{label,detail}]`) and `foundation_gate.rule` (a
+string) are also read by the deck's Foundation Gate slide when present — they
+are optional additions to the existing `foundation_gate` object (the report
+only uses `foundation_gate.triggered`, unchanged). The Foundation Gate slide
+renders ONLY when `foundation_gate.triggered` is true.
+
+## Deck generator (references/build_deck.js)
+
+A second canonical builder, alongside `build_report.py`, that produces the
+**Spice-branded client .pptx deck** (the client-shared deliverable).
+
+- **Inputs:** `findings.json` + `metrics.json` (the SAME run-dir contract the
+  report consumes — the deck adds no parallel data source), `charts/*.png`
+  from the run dir, and the Spice Design System colour tokens **parsed at
+  build time from `report_style.css` `:root`** (`--spice`, `--ink-*`,
+  `--cream`, `--ok`/`--warn`/`--err`, …) — never hardcoded, so deck and
+  report share one palette source and can't drift. Brand wordmarks are
+  self-contained in `references/assets/` (no Cowork path dependency).
+- **Output:** `<run_dir>/<client-slug>-deck.pptx` (slug from
+  `findings.client_slug` else slugified `client`).
+- **Data-driven, zero literals:** identical discipline to build_report.py —
+  every client name / number / line of prose comes from the JSON contract.
+  Enforced by `tests/test_report_conformance.py` (the banned-token list
+  covers `build_deck.js` too).
+- **Graceful chart degradation:** any `charts/*.png` that is absent is
+  skipped (no broken image, no crash); the dependent slide element or whole
+  slide is omitted. The Foundation-Gate, Headline-Finding,
+  Foothold/Risk/Opportunity, economics, trend/daypart and action-plan slides
+  each render only when their backing contract data is present.
+- **Dependency:** Node + `pptxgenjs` (`npm install pptxgenjs` in the run
+  dir, like other per-run deps).
+
 ## Window-trust rule (process)
 Source-export date stamps are authoritative over manifest/Slack headers. If
 they disagree, use export dates and state the discrepancy in

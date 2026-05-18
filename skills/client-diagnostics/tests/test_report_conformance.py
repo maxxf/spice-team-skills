@@ -18,7 +18,10 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import shutil
+import subprocess
 import tempfile
+import zipfile
 from pathlib import Path
 
 REF = Path(__file__).resolve().parents[1] / "references"
@@ -346,3 +349,126 @@ def test_trend_and_daypart_degrade_gracefully_when_absent():
     assert "Daypart heatmap deferred" in doc
     assert "not derivable" in doc or "not in this" in doc.lower() \
         or "not derivable from the parsed exports" in doc
+
+
+# --------------------------------------------------------------------------- #
+# Client DECK conformance (references/build_deck.js).                          #
+# The deck is the client-shared deliverable; the HTML report is the creator's #
+# working artifact. Same zero-literal discipline as the report builder.       #
+# --------------------------------------------------------------------------- #
+
+DECK_JS = REF / "build_deck.js"
+
+# Literals proven on the live Virgil's / Daily's runs that must never be
+# baked into the generalized deck source (extends _FORBIDDEN with the
+# reference deck's hardcoded prose/people the generalized port must NOT carry).
+_DECK_FORBIDDEN = _FORBIDDEN + [
+    "Virgil's BBQ", "virgils-bbq", "Alicart",
+    "Rodrigo", "Ana", "Manish", "Dancu",
+    "Feb 9 to May 10", "Thursday 6 PM", "13-week",
+    "$46,978", "$24,398", "$31,055", "16.4%", "28.1%", "19.7%",
+    "5.61%", "7.69%", "Times Square · Upper West Side",
+]
+
+
+def test_no_per_client_literal_bleed_in_deck_source():
+    """ALWAYS runs (no pptxgenjs needed) — the deck builder source must be
+    100% data-driven, exactly like build_report.py / make_charts.py."""
+    src = DECK_JS.read_text()
+    for token in _DECK_FORBIDDEN:
+        assert token not in src, f"per-client literal in deck builder: {token!r}"
+
+
+def _node_and_pptx(run_dir: Path) -> bool:
+    """True iff `node` is on PATH and pptxgenjs is installable/resolvable for
+    a build in run_dir. We install into references/node_modules once (the
+    SKILL workflow installs into the run dir; either location resolves)."""
+    if shutil.which("node") is None:
+        return None  # node unavailable -> skip build-exec tests
+    if (REF / "node_modules" / "pptxgenjs").exists():
+        return True
+    try:
+        subprocess.run(["npm", "install", "pptxgenjs"], cwd=REF,
+                        check=True, capture_output=True, timeout=180)
+        return (REF / "node_modules" / "pptxgenjs").exists()
+    except Exception:
+        return None
+
+
+def _deck_fixture(tmp: Path, with_charts: bool) -> Path:
+    """Reuse the report fixture, add the deck-only narrative + (optionally)
+    stub chart PNGs so we exercise both the present and absent paths."""
+    tmp = _fixture(tmp)
+    fj = json.loads((tmp / "findings.json").read_text())
+    fj["client_slug"] = "fixture-co"
+    fj["foundation_gate"] = {"triggered": True, "rule": "No spend until cleared.",
+                             "rows": [{"label": "DoorDash", "detail": "Cancel high"}]}
+    fj["portfolio_snapshot"] = {
+        "rows": [{"platform": "DoorDash", "gross": 30000, "eff_commission": "16%"}],
+        "narrative": "Single platform.",
+    }
+    fj["deck"] = {
+        "title_kicker": "Spice Digital · Delivery Marketplace Diagnostic",
+        "headline_finding": {"title": "Headline", "stat": "0.7%",
+                             "stat_sub": "conversion", "bullets": ["a", "b"]},
+        "action_lanes": [{"lane": "This week", "items": ["x"]},
+                         {"lane": "Week 2", "items": ["y"]}],
+        "closing": {"kicker": "What we need", "title": "To move fast",
+                    "bullets": ["sign off"]},
+    }
+    (tmp / "findings.json").write_text(json.dumps(fj))
+    shutil.copy(REF / "report_style.css", tmp / "report_style.css")
+    if with_charts:
+        (tmp / "charts").mkdir(exist_ok=True)
+        for n in ("radar_7dim.png", "top15_green_bar.png",
+                  "trend_overlay.png", "daypart_heatmap.png"):
+            (tmp / "charts" / n).write_bytes(b"\x89PNG\r\n\x1a\n")
+    return tmp
+
+
+def _slide_count(pptx: Path) -> int:
+    with zipfile.ZipFile(pptx) as z:
+        return len([n for n in z.namelist()
+                    if re.match(r"ppt/slides/slide\d+\.xml$", n)])
+
+
+def test_deck_builds_valid_pptx_and_embeds_charts():
+    """Build a deck from a fixture WITH chart PNGs: must produce a valid
+    .pptx (zip with the expected slide count) and embed the chart media."""
+    with tempfile.TemporaryDirectory() as t:
+        ok = _node_and_pptx(Path(t))
+        if not ok:
+            import pytest
+            pytest.skip("node/pptxgenjs unavailable in this venv")
+        tmp = _deck_fixture(Path(t), with_charts=True)
+        r = subprocess.run(["node", str(DECK_JS), str(tmp)],
+                            capture_output=True, text=True, timeout=120)
+        assert r.returncode == 0, r.stderr
+        out = tmp / "fixture-co-deck.pptx"
+        assert out.exists(), "deck .pptx not written"
+        assert zipfile.is_zipfile(out), "deck is not a valid pptx zip"
+        # 10 slides when all charts present (title, 60s, radar, gate,
+        # headline, FRO, economics, trend/daypart, action, closing)
+        assert _slide_count(out) == 10, _slide_count(out)
+        with zipfile.ZipFile(out) as z:
+            media = [n for n in z.namelist() if n.startswith("ppt/media/")]
+        assert media, "no chart/logo media embedded"
+
+
+def test_deck_degrades_when_charts_absent():
+    """Same fixture but NO chart PNGs: deck must still build a valid pptx
+    with fewer slides (the chart-only trend/daypart slide is dropped) and
+    must NOT crash on the missing images."""
+    with tempfile.TemporaryDirectory() as t:
+        ok = _node_and_pptx(Path(t))
+        if not ok:
+            import pytest
+            pytest.skip("node/pptxgenjs unavailable in this venv")
+        tmp = _deck_fixture(Path(t), with_charts=False)
+        r = subprocess.run(["node", str(DECK_JS), str(tmp)],
+                            capture_output=True, text=True, timeout=120)
+        assert r.returncode == 0, r.stderr
+        out = tmp / "fixture-co-deck.pptx"
+        assert zipfile.is_zipfile(out)
+        # trend/daypart slide requires >=1 chart -> dropped when none present
+        assert _slide_count(out) == 9, _slide_count(out)

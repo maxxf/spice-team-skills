@@ -10,7 +10,7 @@ description: >
   checklist, creates the Drive folder for them to drop files into, waits for
   confirmation, runs the multi-skill orchestrator, uploads charts, creates
   the Notion page, returns one URL.
-version: 1.8.0
+version: 1.9.0
 ---
 
 # Client Diagnostics
@@ -172,6 +172,34 @@ The `findings.json`/`metrics.json` schema is documented in
 `references/report-data-contract.md`. Build `findings.json` from the
 sub-skill outputs; populate every required narrative field there.
 
+### Step 7.6: Build the Spice-branded client deck (.pptx)
+
+The **client-shared deliverable** is a Spice-branded PowerPoint deck built by
+`references/build_deck.js` — the **single** canonical deck builder. It is
+fully data-driven: it reads the SAME `findings.json` + `metrics.json` the
+report consumes, embeds whichever `charts/*.png` exist in the run dir, and
+sources its colour palette by **parsing the Spice Design System tokens out of
+`report_style.css`** (so the deck and HTML report can never drift). **Zero
+per-client literals — never hand-edit the generated .pptx, never hardcode a
+client name/number in build_deck.js.** Deck-only narrative (title kicker,
+headline-finding slide, action lanes, closing asks) lives under the optional
+`deck` object in findings.json — see `references/report-data-contract.md`.
+
+Node dependency: `pptxgenjs`. Install it once in the run dir (same pattern as
+other per-run deps):
+
+```bash
+# run dir already has findings.json, metrics.json, report_style.css, charts/
+cd <run_dir> && npm install pptxgenjs
+node "$(dirname "$(find ~ -name SKILL.md -path '*client-diagnostics*' 2>/dev/null | head -1)")/references/build_deck.js" <run_dir>
+# → <run_dir>/<client-slug>-deck.pptx
+```
+
+Charts degrade gracefully: any chart PNG that is absent is skipped (no broken
+image, no crash) and its slide element is omitted. The deck builder is
+self-contained — the Spice wordmarks live in `references/assets/` (no Cowork
+path dependency).
+
 **Locked report rules — these regressed on a live client; do not break them:**
 
 1. **Canonical 6-slot hero (fixed order):** `90-Day Gross` · `Orders` ·
@@ -210,25 +238,45 @@ sub-skill outputs; populate every required narrative field there.
    summary CSV does not substitute (no per-order timestamp to bucket). The
    builder renders the real charts when present and an honest text note when
    genuinely absent — it never fabricates a sparkline or heatmap.
-7. **Deliverable model — PDF is the deliverable, Notion is the index:** the
-   visual **PDF** (all charts, deterministic, from `export_pdf.py`) is the
-   canonical deliverable and the client-facing artifact (walkthroughs present
-   the PDF, never raw HTML or the Notion page). The **Notion page is a thin,
-   searchable record** = exec summary + the key tables + a **prominent link
-   to the PDF** in the client's Drive Diagnostics folder. **Do NOT prescribe
-   manually rebuilding charts into Notion** — the integration can't embed
-   local PNGs and per-cycle manual chart-dropping is exactly the drift this
-   skill exists to prevent. Final hand-off step: drop the PDF into the
-   client's Drive `…/3. Diagnostics/<cycle>/` folder (a ~10-second file move;
-   automated upload is not reliable — the Drive tool can't take a multi-MB
-   inline upload), then paste that Drive link into the Notion record and the
-   `#int-[client]` Slack thread. Share links via the **workspace-slug Notion
-   URL or the client-portal navigation path**, never the integration's bare
-   `notion.so/<id>` deep link (it 404s for human viewers).
+7. **Deliverable model — three artifacts, explicit roles:**
+   - **HTML report = the creator's working / presentation artifact.** The
+     GM / Strategy Lead drives the internal review and the live client
+     walkthrough *from the HTML report* (it is self-contained, all charts
+     base64-inlined, opens in any browser). It is NOT sent to the client as
+     the deliverable — it is the analyst's cockpit.
+   - **Spice-branded PPTX deck = the client-shared deliverable.** Built by
+     `references/build_deck.js` (Step 7.6), filed in the client's Drive
+     `…/3. Diagnostics/<cycle>/` folder. It opens and is editable in Google
+     Slides on the web, so the client can review/annotate it. This is the
+     artifact you put in the client's hands.
+   - **Full PDF = the analyst detail / permanent record.** The deterministic
+     visual PDF (all charts, from `export_pdf.py`) is the complete-depth
+     archival copy; it also lands in the same Drive Diagnostics folder
+     alongside the deck for anyone who wants the full report without a
+     browser.
+   - **Notion page = the thin, searchable index.** Exec summary + the key
+     tables + **prominent links to the deck and the PDF** in Drive. **Do NOT
+     prescribe manually rebuilding charts into Notion** — the integration
+     can't embed local PNGs and per-cycle manual chart-dropping is exactly
+     the drift this skill exists to prevent. Notion links the artifacts; it
+     is not itself the deliverable.
+
+   Final hand-off: drop both the **deck (.pptx)** and the **PDF** into the
+   client's Drive `…/3. Diagnostics/<cycle>/` folder (a ~10-second file move
+   each; automated upload is not reliable — the Drive tool can't take a
+   multi-MB inline upload), then paste those Drive links into the Notion
+   record and the `#int-[client]` Slack thread, calling out the deck as the
+   client-facing deliverable and the PDF as the full record. Share Notion
+   links via the **workspace-slug Notion URL or the client-portal navigation
+   path**, never the integration's bare `notion.so/<id>` deep link (it 404s
+   for human viewers).
 
 Conformance is enforced by `tests/test_report_conformance.py` (both `.half`
 banners, exactly 6 canonical hero slots, `/ 10` radar title, full required
-toggle set, zero per-client literal bleed in the builder source).
+toggle set, zero per-client literal bleed in the report builder source AND in
+`references/build_deck.js`, and — when pptxgenjs is installable — a valid
+.pptx with the expected slide count that embeds charts when present and
+degrades when absent).
 
 ### Step 8: Create the Notion page with embedded charts
 
@@ -302,11 +350,13 @@ That's the entire flow. The user typed one sentence at the start, dropped files 
 - `references/diagnostic-input-template.csv` (empty header-only template for manual builds)
 - `references/diagnostic-framework.md` (radar bands, foundation thresholds, tier rules, pattern library, defaults for missing data)
 - `references/build_report.py` (canonical, fully parameterized client HTML report builder — reads findings.json+metrics.json, zero per-client literals)
+- `references/build_deck.js` (canonical, fully data-driven Spice-branded client deck builder — reads the SAME findings.json+metrics.json+charts, parses palette tokens from report_style.css, zero per-client literals; needs `npm install pptxgenjs` in the run dir)
 - `references/make_charts.py` (canonical chart module — /10 radar, performance-tier donut, GMV bar, conversion funnel, storefront audit, weekly trend overlay, daypart heatmap; all data-driven, standardized suptitle-in-margin title/subtitle pattern, honestly no-ops any chart whose metrics key is genuinely absent)
 - `references/export_pdf.py` (HTML→PDF via Chrome headless)
 - `references/report_style.css` (Spice Design System stylesheet — restyle here, regenerate; never hand-edit per client)
 - `references/report-data-contract.md` (the findings.json/metrics.json schema the builder consumes)
-- `references/assets/spice_icon.svg` (inline brand mark)
+- `references/assets/spice_icon.svg` (inline brand mark for the HTML report)
+- `references/assets/spice_wordmark_cream_on_orange_square.png` + `spice_wordmark_red.png` (deck logos — self-contained, no Cowork dependency)
 - `specs/2026-05-08-orchestrator-redesign.md` (architecture spec)
 
 ## Sub-skills this orchestrates
