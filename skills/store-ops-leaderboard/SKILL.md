@@ -250,6 +250,112 @@ Before this skill gets productized for all clients (slot 3 of umbrella plan), Sa
 
 Goal: status distribution reads sensibly across all 4. Inactive detection catches actual closures, no false positives. Velocity thresholds map to portfolio reality. Delivery time data captured to calibrate thresholds for slot 3.
 
+### Rule 6: Canonical column layout (codified 2026-05-20)
+
+**Every client's leaderboard MUST use this column order.** Skills describe rules; layout must be enforced for cross-client comparability. Pilot showed goop and Everytable Sheets with different shapes because each was built independently. From v1.0 forward, all client Sheets follow this canonical layout:
+
+| # | Column | Source | Notes |
+|---|---|---|---|
+| 1 | Rank | computed | Sort by Score desc; Inactive stores not ranked |
+| 2 | Δ Rank | vs prior period | ▲ N / ▼ N / — |
+| 3 | Status | computed (Rule 1) | Drives action; appears early for scannability |
+| 4 | Store | from Stores tab | |
+| 5 | ID | from Stores tab | Optional, only if client uses store codes (CA001, etc) |
+| 6 | Platforms | from config `active_platforms` | UE / DD / GH or subset |
+| 7 | Score | computed (Rule 6 formula) | Composite |
+| 8 | Δ Score | vs prior period | ▲ X.X / ▼ X.X / — |
+| 9 | Fulfillment % | computed | Orders − Cancels − Errors / Orders |
+| 10 | Cancel % | computed | Cancels / Orders |
+| 11 | Error % | computed | Errors / Orders |
+| 12 | Velocity / wk | computed (Rule 3) | (UE 5★ + DD Loved + GH 4+5★) / weeks |
+| 13 | Δ Velocity | vs prior period | ▲ X.X / ▼ X.X / — |
+| 14 | Avg Del (min) | from ops exports | Capture-only first month |
+| 15 | Orders | aggregate this period | All platforms combined |
+| 16 | Orders prior | aggregate prior period | For Inactive detection |
+| 17 | MoM Δ | this − prior | Raw count |
+| 18-N | UE 5★, DD Loved, GH 4+5★ | per-platform positive rating counts | Optional detail, hide by default unless GM expanding view |
+
+Below the ranked table, two separate sections (with headers and visual divider):
+- **🚫 INACTIVE — Confirm operational status with client.** Stores caught by Rule 2. Show only: Store, ID, Status, Current Orders, Prior Orders, MoM Δ, action ("confirm closure/pause with GM").
+- **🆕 NEW LAUNCH — Pre-steady-state. Score shown for reference only.** Stores marked new (per config `new_stores` roster). Show all standard columns but mark Score as informational.
+
+Delta arrows use ▲ / ▼ glyphs (not raw + / -) for visual scannability.
+
+### Per-client calibration (slot 3 lesson, captured 2026-05-20)
+
+**Target velocity is NOT universal. Each client's `target_velocity_per_week` in `clients/<slug>.json` must be calibrated against portfolio volume.**
+
+Evidence from pilot:
+- goop Kitchen (~5,000-13,000 orders/store/month): velocity 30-80+/wk per store. Target of 10/wk easy to clear; 30/wk would be more meaningful threshold.
+- Everytable (~100-300 orders/store/month): velocity 0.2-4.2/wk per store. Target of 10/wk impossible to clear. Realistic target ~3-5/wk.
+
+Calibration heuristic: set `target_velocity_per_week` at the 60th percentile of the client's current portfolio distribution, so ~40% of stores need to lift to hit Healthy. Re-calibrate annually or when portfolio composition changes materially.
+
+Status threshold bands shift proportionally:
+- 🟢 Healthy: ≥ target
+- 🟡 Watch: 20-100% of target
+- 🔴 Broken: < 20% of target
+
+OR (simpler, recommended): keep absolute bands (5 / 2-5 / <2) and accept that low-volume portfolios will skew Watch/Broken until volume grows. Maxx's call on which is right.
+
+### Rule 7: Optional per-client extension columns (codified 2026-05-20)
+
+**Default behavior:** every client gets exactly the canonical column layout from Rule 6. Nothing more, nothing less. Cross-client comparability stays intact.
+
+**Override:** if a client requests additional data points (specific KPIs they want to see in their leaderboard), append them after the canonical columns via the per-client config. Don't insert into the middle; don't remove canonical columns.
+
+Per-client config pattern (`clients/<slug>.json`):
+
+```json
+{
+  "client_slug": "everytable",
+  "client_display_name": "Everytable",
+  "target_velocity_per_week": 4,
+  "active_platforms": ["UE", "DD", "GH"],
+  "closed_stores": ["CA062"],
+  "new_stores": [],
+  "additional_columns": [
+    {
+      "name": "Market Segment",
+      "source": "stores_tab.market_segment",
+      "position": "after_canonical",
+      "format": "text"
+    },
+    {
+      "name": "Opening Date",
+      "source": "stores_tab.opened_at",
+      "position": "after_canonical",
+      "format": "date"
+    },
+    {
+      "name": "Avg Ticket",
+      "source": "computed: gross_sales / orders",
+      "position": "after_canonical",
+      "format": "currency"
+    }
+  ]
+}
+```
+
+**Rules for additional_columns:**
+1. Position is always `after_canonical` (after column N from Rule 6). No insertion in the middle.
+2. Format is one of: `text`, `number`, `currency`, `pct`, `date`, `status_emoji`.
+3. Source is either a static lookup (from Stores tab) or a computed expression on the existing data.
+4. Additional columns are INFORMATIONAL ONLY. They don't feed Status calculation, don't affect Score, don't change ranking. The action signal stays from the canonical metrics.
+5. Document the addition in the client's Notion portal so the team knows why this client has the extra column. Avoid silent customization that drifts over time.
+
+**When to push back on a client request:**
+- They want to remove a canonical column. Don't. The whole point of v1.0 is shared schema.
+- They want to change a Status threshold to make their stores look better. Don't. Status is honest, not flattering.
+- They want a column that's actually a separate report (e.g., full campaign analytics). Don't bloat the leaderboard. Suggest a sibling Sheet or section.
+
+**When to say yes:**
+- Genuinely useful operational context that helps the GM at-a-glance (Market Segment, Store Age, Franchise/Corporate flag)
+- A client-specific KPI they track for their own reporting that should match the leaderboard period
+- A flag that the GM uses for prioritization (Priority Tier, Geo Cluster)
+
+If a client requests something niche, default to "yes if it's just a column, no if it would change scoring or status." Per-client config keeps the customization explicit and auditable.
+
 ---
 
 ## Phase 5: Report
