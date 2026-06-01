@@ -1,0 +1,16 @@
+{
+  "client_slug": "dailys",
+  "client_display_name": "Daily's",
+  "notion": {
+    "parent_page_id": null,
+    "_comment": "FILL-IN: Maxx provides Notion target per client onboarding"
+  },
+  "brand": {
+    "color_primary": null,
+    "voice_notes": null
+  },
+  "thresholds_override": {
+    "_comment": "Optional: override defaults from diagnostic-framework.md. Omit to use Spice defaults."
+  },
+  "data_quirks": []
+}

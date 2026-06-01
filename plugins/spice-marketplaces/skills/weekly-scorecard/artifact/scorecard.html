@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Spice Weekly Scorecard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --bg-secondary: #f7f7f5;
+    --bg-warning: #faeeda;
+    --bg-success: #eaf3de;
+    --bg-danger: #fcebeb;
+    --text-primary: #1a1a1a;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #888780;
+    --text-success: #3b6d11;
+    --text-warning: #854f0b;
+    --text-danger: #a32d2d;
+    --border-tertiary: rgba(0,0,0,0.10);
+    --border-secondary: rgba(0,0,0,0.20);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .container { max-width: 760px; margin: 0 auto; padding: 1.5rem; }
+  .header-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1rem; gap: 12px; flex-wrap: wrap;
+  }
+  .meta-text { font-size: 13px; color: var(--text-secondary); }
+  .controls { display: flex; gap: 8px; align-items: center; }
+  select {
+    font-size: 12px; padding: 4px 8px;
+    border: 0.5px solid var(--border-secondary);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .headline {
+    display: flex; align-items: baseline; gap: 16px; margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .headline-value { font-size: 32px; font-weight: 500; }
+  .headline-delta { font-size: 14px; font-weight: 500; }
+  .headline-spark { margin-left: auto; }
+  .headline-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 1.5rem; }
+  .section-header {
+    display: flex; align-items: baseline; gap: 8px; margin: 1.75rem 0 0.5rem;
+  }
+  .section-label {
+    font-size: 13px; font-weight: 500; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .section-question { font-size: 12px; color: var(--text-tertiary); font-style: italic; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 10px 0; vertical-align: middle; }
+  tr { border-bottom: 0.5px solid var(--border-tertiary); }
+  tr:last-child { border-bottom: none; }
+  .metric-label { width: 38%; }
+  .metric-value { font-weight: 500; width: 18%; }
+  .metric-delta { width: 14%; }
+  .metric-spark { width: 22%; }
+  .metric-status { width: 8%; text-align: right; }
+  .platform-tag {
+    color: var(--text-tertiary); font-size: 12px;
+    background: var(--bg-secondary); padding: 1px 6px; border-radius: 4px;
+    margin-left: 6px;
+  }
+  .status-dot {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  }
+  .metric-parent {
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .metric-parent:hover {
+    background: var(--bg-secondary);
+  }
+  .disclosure {
+    display: inline-block;
+    width: 10px; color: var(--text-tertiary);
+    margin-right: 6px; font-size: 10px;
+    transition: transform 0.15s ease;
+    transform-origin: center;
+  }
+  .disclosure.expanded {
+    transform: rotate(90deg);
+  }
+  .disclosure-spacer {
+    display: inline-block; width: 16px;
+  }
+  .platform-row td {
+    padding: 6px 0 6px 24px;
+    background: var(--bg-secondary);
+    font-size: 13px;
+  }
+  .platform-row td:first-child {
+    padding-left: 32px;
+  }
+  .platform-row .metric-label {
+    color: var(--text-secondary);
+  }
+  .grid-section {
+    font-size: 13px; font-weight: 500; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.04em; margin: 2rem 0 0.75rem;
+  }
+  .loc-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+  }
+  .loc-card {
+    background: var(--bg-secondary); border-radius: var(--radius-md);
+    padding: 10px 12px; position: relative;
+  }
+  .loc-name { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; padding-right: 14px; }
+  .loc-value { font-size: 16px; font-weight: 500; }
+  .loc-roas { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .loc-dot {
+    position: absolute; top: 10px; right: 10px;
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  }
+  .signal-box {
+    margin-top: 2rem; padding: 14px 16px;
+    background: var(--bg-warning); border-radius: var(--radius-md);
+  }
+  .signal-label {
+    font-size: 12px; font-weight: 500; color: var(--text-warning);
+    text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;
+  }
+  .signal-text {
+    font-size: 14px; color: var(--text-warning); outline: none; line-height: 1.6;
+  }
+  .signal-text:focus {
+    background: rgba(255,255,255,0.4); border-radius: 4px;
+    padding: 2px 4px; margin: -2px -4px;
+  }
+  .loading { padding: 3rem 1rem; text-align: center; color: var(--text-secondary); }
+  .error { padding: 2rem 1rem; color: var(--text-danger); }
+  .footer-note {
+    margin-top: 2rem; padding-top: 1rem;
+    border-top: 0.5px solid var(--border-tertiary);
+    font-size: 11px; color: var(--text-tertiary);
+  }
+  .reload-btn, .ai-btn {
+    background: var(--bg);
+    border: 0.5px solid var(--border-secondary);
+    border-radius: var(--radius-md);
+    padding: 4px 10px; font-size: 12px; cursor: pointer;
+    color: var(--text-primary);
+  }
+  .reload-btn:hover, .ai-btn:hover { background: var(--bg-secondary); }
+  .ai-btn {
+    background: var(--text-warning);
+    color: white;
+    border-color: var(--text-warning);
+  }
+  .ai-btn:hover { opacity: 0.9; background: var(--text-warning); }
+  .ai-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .signal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px; gap: 8px;
+  }
+  .save-status {
+    font-size: 11px; color: var(--text-tertiary);
+    margin-top: 6px; font-style: italic;
+  }
+  .save-status.success { color: var(--text-success); }
+  .save-status.error { color: var(--text-danger); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div id="root">
+    <div class="loading">Loading scorecard data from master Sheet…</div>
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '1kL39_lOQYsYkUN4h1iZGqdgnkjOu1OfD1SdjI0g2Ajo';
+const SIGNALS_DATA_SOURCE_ID = '20be78e7-56f7-40b9-8028-ff889b160395';
+
+const CLIENT_DISPLAY_NAMES = {
+  fresh_kitchen: 'Fresh Kitchen',
+  goop_kitchen: 'goop Kitchen',
+  everytable: 'Everytable',
+  bds: 'Brooklyn Dumpling Shop',
+  capriottis: "Capriotti's",
+  pret: 'PRET',
+  ahipoki: 'Ahipoki',
+  mbfs: 'My Big Fat Shawarma',
+  teleferic: 'Teleferic',
+  abbys_bagels: "Abby's Bagels",
+  awan: 'Awan',
+  dayglow: 'Dayglow',
+  bowld_kitchen: 'Bowld Kitchen',
+  cals_corner: "Cal's Corner",
+  ambiyan: 'Ambiyan Kitchen',
+  counter_service: 'Counter Service',
+  temaki_to_go: 'Temaki To Go',
+  gertie: 'Gertie',
+  moltn: 'Moltn',
+  menya_ultra: 'Menya Ultra',
+  health_nut: 'Health Nut'
+};
+
+function clientDisplay(slug) {
+  return CLIENT_DISPLAY_NAMES[slug] || slug.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+const METRIC_META = {
+  total_sales:        { label: 'Total Sales',         section: 'money',     unit: 'currency',  format: 'currency0' },
+  net_payout:         { label: 'Net Payout',          section: 'money',     unit: 'currency',  format: 'currency0' },
+  net_payout_pct:     { label: 'Net Payout %',        section: 'money',     unit: 'percent',   format: 'percent1' },
+  organic_sales_pct:  { label: 'Organic Sales %',     section: 'money',     unit: 'percent',   format: 'percent1' },
+  aov:                { label: 'AOV',                 section: 'money',     unit: 'currency',  format: 'currency2' },
+  marketing_spend_pct:{ label: 'Marketing Spend %',   section: 'efficiency',unit: 'percent',   format: 'percent1' },
+  marketing_spend:    { label: 'Marketing Spend',     section: 'efficiency',unit: 'currency',  format: 'currency0' },
+  roas:               { label: 'ROAS',                section: 'efficiency',unit: 'ratio',     format: 'roas' },
+  order_count:        { label: 'Orders',              section: 'efficiency',unit: 'integer',   format: 'integer' },
+  order_completion_rate:{ label: 'Order Completion %',section: 'operations',unit: 'percent',   format: 'percent1' },
+  error_rate:         { label: 'Error Rate',          section: 'operations',unit: 'percent',   format: 'percent2' },
+  cancel_rate:        { label: 'Cancel Rate',         section: 'operations',unit: 'percent',   format: 'percent2' },
+  downtime_hours:     { label: 'Downtime (hrs)',      section: 'operations',unit: 'decimal',   format: 'decimal1' },
+  avg_rating:         { label: 'Avg Rating',          section: 'reputation',unit: 'decimal',   format: 'decimal2' },
+  ratings_velocity:   { label: 'Ratings Velocity',    section: 'reputation',unit: 'integer',   format: 'integer_per_week' },
+  storefront_views:   { label: 'Storefront Views',    section: 'discoverability',unit: 'integer', format: 'integer' },
+  menu_conversion:    { label: 'Menu Conversion',     section: 'discoverability',unit: 'percent', format: 'percent1' }
+};
+
+const SECTIONS = [
+  { id: 'money',           label: 'Money',           question: 'Did we make money?' },
+  { id: 'efficiency',      label: 'Efficiency',      question: 'Was the spend efficient?' },
+  { id: 'operations',      label: 'Operations',      question: 'Did operations stay clean?' },
+  { id: 'reputation',      label: 'Reputation',      question: 'Are customers happy?' },
+  { id: 'discoverability', label: 'Discoverability', question: 'Will next week be better?' }
+];
+
+const STATUS_COLORS = {
+  green:  { dot: '#3b6d11', text: '#3b6d11' },
+  yellow: { dot: '#854f0b', text: '#854f0b' },
+  red:    { dot: '#a32d2d', text: '#a32d2d' },
+  gray:   { dot: '#b4b2a9', text: '#888780' }
+};
+
+function fmt(v, format) {
+  if (v === null || v === undefined || v === '' || isNaN(v)) return '—';
+  const n = parseFloat(v);
+  switch (format) {
+    case 'currency0': return '$' + Math.round(n).toLocaleString();
+    case 'currency2': return '$' + n.toFixed(2);
+    case 'percent1': return n.toFixed(1) + '%';
+    case 'percent2': return n.toFixed(2) + '%';
+    case 'decimal1': return n.toFixed(1);
+    case 'decimal2': return n.toFixed(2);
+    case 'roas': return n.toFixed(1) + 'x';
+    case 'integer': return Math.round(n).toLocaleString();
+    case 'integer_per_week': return Math.round(n).toLocaleString() + '/wk';
+    default: return n.toString();
+  }
+}
+
+function fmtDelta(curr, prior, unit) {
+  if (prior === null || prior === undefined || isNaN(prior) || prior === 0) {
+    return { text: '—', color: '#888780', arrow: '' };
+  }
+  const c = parseFloat(curr), p = parseFloat(prior);
+  if (unit === 'percent' || unit === 'ratio') {
+    const diff = c - p;
+    const sign = diff > 0 ? '+' : '';
+    const arrow = diff > 0.05 ? '▲' : (diff < -0.05 ? '▼' : '–');
+    let color = '#5f5e5a';
+    if (Math.abs(diff) > 0.05) {
+      color = diff > 0 ? '#3b6d11' : '#a32d2d';
+    }
+    const suffix = unit === 'ratio' ? 'x' : 'pp';
+    return { text: sign + diff.toFixed(1) + suffix, color: color, arrow: arrow };
+  } else {
+    const pct = ((c - p) / p) * 100;
+    const sign = pct > 0 ? '+' : '';
+    const arrow = pct > 0.5 ? '▲' : (pct < -0.5 ? '▼' : '–');
+    let color = '#5f5e5a';
+    if (Math.abs(pct) > 0.5) {
+      color = pct > 0 ? '#3b6d11' : '#a32d2d';
+    }
+    return { text: sign + pct.toFixed(1) + '%', color: color, arrow: arrow };
+  }
+}
+
+function parseMarkdownTable(md) {
+  const lines = md.split('\n').filter(l => l.trim().startsWith('|'));
+  if (lines.length < 3) return [];
+  const headers = lines[0].split('|').slice(1, -1).map(h => h.trim().replace(/\\_/g, '_'));
+  const rows = [];
+  for (let i = 2; i < lines.length; i++) {
+    const cells = lines[i].split('|').slice(1, -1).map(c => c.trim().replace(/\\_/g, '_'));
+    if (cells.length !== headers.length) continue;
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = cells[idx]; });
+    rows.push(row);
+  }
+  return rows;
+}
+
+function buildSparkline(values, color, w, h) {
+  w = w || 100; h = h || 20;
+  if (!values || values.length < 2) return '';
+  const pad = 2;
+  const min = Math.min.apply(null, values);
+  const max = Math.max.apply(null, values);
+  const range = (max - min) || 1;
+  const points = values.map((v, i) => {
+    const x = pad + (i * (w - 2 * pad)) / (values.length - 1);
+    const y = h - pad - ((v - min) / range) * (h - 2 * pad);
+    return Math.round(x) + ',' + Math.round(y);
+  }).join(' ');
+  return '<svg width="' + w + '" height="' + h + '"><polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.2"/></svg>';
+}
+
+let allRows = [];
+let currentClient = localStorage.getItem('scorecard_last_client') || 'fresh_kitchen';
+let currentWeekEnd = null;
+let expandedMetrics = new Set();
+
+async function loadData() {
+  try {
+    const res = await window.cowork.callMcpTool('mcp__3cfdef12-aed5-469f-904c-ae7eaeff04dd__read_file_content', { fileId: SHEET_ID });
+    let txt = '';
+    if (typeof res === 'string') {
+      txt = res;
+    } else if (res && res.fileContent) {
+      txt = res.fileContent;
+    } else if (res && res.content) {
+      if (Array.isArray(res.content)) {
+        for (const c of res.content) if (c.text) txt += c.text;
+      } else if (res.content.text) {
+        txt = res.content.text;
+      }
+    }
+    if (!txt) {
+      try { txt = JSON.stringify(res); } catch (e) { txt = String(res); }
+    }
+    let md = '';
+    try {
+      const parsed = JSON.parse(txt);
+      md = parsed.fileContent || txt;
+    } catch (e) {
+      md = txt;
+    }
+    allRows = parseMarkdownTable(md);
+    if (allRows.length === 0) throw new Error('No rows parsed from sheet. Got: ' + md.slice(0, 200));
+    // Validate currentClient exists in data; fall back if not
+    const availableClients = Array.from(new Set(allRows.map(r => r.client_slug)));
+    if (!availableClients.includes(currentClient)) {
+      currentClient = availableClients[0] || 'fresh_kitchen';
+    }
+    const weeks = Array.from(new Set(allRows.filter(r => r.client_slug === currentClient).map(r => r.week_end))).sort().reverse();
+    currentWeekEnd = weeks[0];
+    render();
+    loadSignal();
+  } catch (e) {
+    document.getElementById('root').innerHTML = '<div class="error">Error loading data: ' + e.message + '<br><br>Sheet ID: ' + SHEET_ID + '</div>';
+    console.error(e);
+  }
+}
+
+function getRows(metric, platform, location) {
+  return allRows.filter(r =>
+    r.client_slug === currentClient &&
+    r.metric === metric &&
+    r.platform === (platform || 'ALL') &&
+    r.location === (location || 'ALL')
+  );
+}
+
+function getCurrentRow(metric, platform, location) {
+  return getRows(metric, platform, location).find(r => r.week_end === currentWeekEnd);
+}
+
+function getSparklineSeries(metric, platform, location) {
+  const rows = getRows(metric, platform, location)
+    .sort((a, b) => a.week_end.localeCompare(b.week_end));
+  return rows.map(r => parseFloat(r.value)).filter(v => !isNaN(v));
+}
+
+function renderMetricRowInner(metric, platform, location, isChild, hasChildren, isExpanded) {
+  const meta = METRIC_META[metric];
+  if (!meta) return '';
+  const row = getCurrentRow(metric, platform, location);
+  if (!row) return '';
+  const value = parseFloat(row.value);
+  const prior = parseFloat(row.prior_value);
+  const status = (row.status || 'gray').toLowerCase();
+  const sc = STATUS_COLORS[status] || STATUS_COLORS.gray;
+  const delta = fmtDelta(value, prior, meta.unit);
+  const series = getSparklineSeries(metric, platform, location);
+  let sparkColor = '#5f5e5a';
+  if (status === 'red') sparkColor = STATUS_COLORS.red.text;
+  else if (status === 'yellow') sparkColor = STATUS_COLORS.yellow.text;
+  else if (status === 'green') sparkColor = STATUS_COLORS.green.text;
+
+  let labelHtml = '';
+  if (isChild) {
+    labelHtml = '<span class="platform-tag">' + platform + '</span>';
+  } else {
+    if (hasChildren) {
+      labelHtml = '<span class="disclosure' + (isExpanded ? ' expanded' : '') + '">▶</span>' + meta.label;
+    } else {
+      labelHtml = '<span class="disclosure-spacer"></span>' + meta.label;
+    }
+  }
+
+  const rowClass = isChild ? 'platform-row' : (hasChildren ? 'metric-parent' : '');
+  const dataAttr = (!isChild && hasChildren) ? ' data-metric="' + metric + '"' : '';
+
+  return '<tr class="' + rowClass + '"' + dataAttr + '>' +
+    '<td class="metric-label">' + labelHtml + '</td>' +
+    '<td class="metric-value">' + fmt(value, meta.format) + '</td>' +
+    '<td class="metric-delta" style="color: ' + delta.color + ';">' + delta.arrow + ' ' + delta.text + '</td>' +
+    '<td class="metric-spark">' + buildSparkline(series, sparkColor) + '</td>' +
+    '<td class="metric-status"><span class="status-dot" title="' + status + '" style="background: ' + sc.dot + ';"></span></td>' +
+    '</tr>';
+}
+
+function renderMetricGroup(metric) {
+  const allRow = getCurrentRow(metric, 'ALL', 'ALL');
+  const ueRow = getCurrentRow(metric, 'Uber Eats', 'ALL');
+  const ddRow = getCurrentRow(metric, 'DoorDash', 'ALL');
+  const ghRow = getCurrentRow(metric, 'Grubhub', 'ALL');
+
+  const children = [];
+  if (ueRow) children.push({ platform: 'Uber Eats', location: 'ALL' });
+  if (ddRow) children.push({ platform: 'DoorDash', location: 'ALL' });
+  if (ghRow) children.push({ platform: 'Grubhub', location: 'ALL' });
+
+  // Determine the parent: prefer ALL, fall back to first available platform
+  let parentPlatform = 'ALL';
+  let parentLocation = 'ALL';
+  if (!allRow) {
+    if (ueRow) { parentPlatform = 'Uber Eats'; }
+    else if (ddRow) { parentPlatform = 'DoorDash'; }
+    else if (ghRow) { parentPlatform = 'Grubhub'; }
+    else return '';
+    // If only one platform exists, it IS the metric. No children.
+    const hasOtherPlatforms = children.filter(c => c.platform !== parentPlatform).length > 0;
+    if (!hasOtherPlatforms) {
+      return renderMetricRowInner(metric, parentPlatform, parentLocation, false, false, false);
+    }
+  }
+
+  // If we have ALL row, children are the platform rows. If no ALL row, children are the non-parent platforms.
+  const childList = allRow
+    ? children
+    : children.filter(c => c.platform !== parentPlatform);
+
+  const hasChildren = childList.length > 1; // only show disclosure if there's a real breakout
+  const isExpanded = expandedMetrics.has(metric);
+
+  let html = renderMetricRowInner(metric, parentPlatform, parentLocation, false, hasChildren, isExpanded);
+
+  if (hasChildren && isExpanded) {
+    childList.forEach(c => {
+      html += renderMetricRowInner(metric, c.platform, c.location, true, false, false);
+    });
+  }
+
+  return html;
+}
+
+function getMetricsForSection(sectionId) {
+  const out = [];
+  Object.keys(METRIC_META).forEach(m => {
+    if (METRIC_META[m].section !== sectionId) return;
+    // Only include metric if at least one variant exists
+    const hasAny =
+      getCurrentRow(m, 'ALL', 'ALL') ||
+      getCurrentRow(m, 'Uber Eats', 'ALL') ||
+      getCurrentRow(m, 'DoorDash', 'ALL') ||
+      getCurrentRow(m, 'Grubhub', 'ALL');
+    if (hasAny) out.push(m);
+  });
+  return out;
+}
+
+function buildHeadline() {
+  const row = getCurrentRow('total_sales', 'ALL', 'ALL');
+  if (!row) return '';
+  const value = parseFloat(row.value);
+  const prior = parseFloat(row.prior_value);
+  const delta = fmtDelta(value, prior, 'currency');
+  const series = getSparklineSeries('total_sales', 'ALL', 'ALL');
+  const status = (row.status || 'gray').toLowerCase();
+  let sparkColor = '#5f5e5a';
+  if (status === 'red') sparkColor = STATUS_COLORS.red.text;
+  else if (status === 'yellow') sparkColor = STATUS_COLORS.yellow.text;
+  else if (status === 'green') sparkColor = STATUS_COLORS.green.text;
+  return '<div class="headline">' +
+    '<div class="headline-value">' + fmt(value, 'currency0') + '</div>' +
+    '<div class="headline-delta" style="color: ' + delta.color + ';">' + delta.arrow + ' ' + delta.text + '</div>' +
+    '<div class="headline-spark">' + buildSparkline(series, sparkColor, 160, 32) + '</div>' +
+    '</div>' +
+    '<div class="headline-sub">Total sales across UE + DD (Fresh Kitchen does not run Grubhub)</div>';
+}
+
+function buildLocationGrid() {
+  const locRows = allRows.filter(r =>
+    r.client_slug === currentClient &&
+    r.week_end === currentWeekEnd &&
+    r.metric === 'total_sales' &&
+    r.location !== 'ALL'
+  ).sort((a, b) => parseFloat(b.value) - parseFloat(a.value));
+  if (locRows.length === 0) return '';
+  let html = '<div class="grid-section">Per-location performance</div>';
+  html += '<div class="loc-grid">';
+  locRows.forEach(r => {
+    const status = (r.status || 'gray').toLowerCase();
+    const sc = STATUS_COLORS[status] || STATUS_COLORS.gray;
+    const roasRow = allRows.find(x =>
+      x.client_slug === currentClient &&
+      x.week_end === currentWeekEnd &&
+      x.metric === 'roas' &&
+      x.location === r.location
+    );
+    const roasText = roasRow ? roasRow.value + 'x ROAS' : '';
+    html += '<div class="loc-card">' +
+      '<div class="loc-name">' + r.location + '</div>' +
+      '<div class="loc-value">' + fmt(parseFloat(r.value), 'currency0') + '</div>' +
+      '<div class="loc-roas">' + roasText + '</div>' +
+      '<span class="loc-dot" style="background: ' + sc.dot + ';"></span>' +
+    '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function signalTitle(client, weekEnd) {
+  return 'Signal — ' + client + ' — ' + weekEnd;
+}
+
+function getCachedSignal() {
+  const key = 'signal_' + currentClient + '_' + currentWeekEnd;
+  return localStorage.getItem(key) || '';
+}
+
+function setCachedSignal(text) {
+  const key = 'signal_' + currentClient + '_' + currentWeekEnd;
+  localStorage.setItem(key, text);
+}
+
+async function fetchSignalFromNotion(client, weekEnd) {
+  try {
+    const title = signalTitle(client, weekEnd);
+    const searchRes = await window.cowork.callMcpTool('mcp__f34fcb36-bc14-4569-bc45-beaff552d0f7__notion-search', {
+      query: title,
+      query_type: 'internal'
+    });
+    let txt = '';
+    if (typeof searchRes === 'string') txt = searchRes;
+    else if (searchRes && searchRes.fileContent) txt = searchRes.fileContent;
+    else if (searchRes && searchRes.content) {
+      if (Array.isArray(searchRes.content)) {
+        for (const c of searchRes.content) if (c.text) txt += c.text;
+      } else if (searchRes.content.text) txt = searchRes.content.text;
+    } else txt = JSON.stringify(searchRes);
+
+    let parsed;
+    try { parsed = JSON.parse(txt); } catch (e) { parsed = null; }
+    const results = parsed && parsed.results ? parsed.results : [];
+    const match = results.find(r => r.title === title);
+    if (!match) return null;
+
+    const fetchRes = await window.cowork.callMcpTool('mcp__f34fcb36-bc14-4569-bc45-beaff552d0f7__notion-fetch', {
+      id: match.id
+    });
+    let ftxt = '';
+    if (typeof fetchRes === 'string') ftxt = fetchRes;
+    else if (fetchRes && fetchRes.text) ftxt = fetchRes.text;
+    else if (fetchRes && fetchRes.content) {
+      if (Array.isArray(fetchRes.content)) {
+        for (const c of fetchRes.content) if (c.text) ftxt += c.text;
+      } else if (fetchRes.content.text) ftxt = fetchRes.content.text;
+    } else ftxt = JSON.stringify(fetchRes);
+
+    const propsMatch = ftxt.match(/<properties>\s*([\s\S]*?)\s*<\/properties>/);
+    if (propsMatch) {
+      try {
+        const props = JSON.parse(propsMatch[1]);
+        if (props.Signal) return { text: props.Signal, pageId: match.id };
+      } catch (e) {}
+    }
+    return { text: '', pageId: match.id };
+  } catch (e) {
+    console.warn('Notion fetch failed', e);
+    return null;
+  }
+}
+
+let currentSignalPageId = null;
+
+async function saveSignalToNotion(text) {
+  setCachedSignal(text);
+  const status = document.getElementById('save-status');
+  if (status) { status.textContent = 'Saving to Notion…'; status.className = 'save-status'; }
+  try {
+    const title = signalTitle(currentClient, currentWeekEnd);
+    const startRow = allRows.find(r => r.client_slug === currentClient && r.week_end === currentWeekEnd);
+    const weekStart = startRow ? startRow.week_start : '';
+
+    const statusMix = computeStatusMix();
+
+    if (currentSignalPageId) {
+      await window.cowork.callMcpTool('mcp__f34fcb36-bc14-4569-bc45-beaff552d0f7__notion-update-page', {
+        page_id: currentSignalPageId,
+        command: 'update_properties',
+        properties: { 'Signal': text, 'Status Mix': statusMix }
+      });
+    } else {
+      const props = {
+        'Title': title,
+        'Client Slug': currentClient,
+        'Signal': text,
+        'Status Mix': statusMix,
+        'date:Week End:start': currentWeekEnd,
+        'date:Week End:is_datetime': 0
+      };
+      if (weekStart) {
+        props['date:Week Start:start'] = weekStart;
+        props['date:Week Start:is_datetime'] = 0;
+      }
+      const res = await window.cowork.callMcpTool('mcp__f34fcb36-bc14-4569-bc45-beaff552d0f7__notion-create-pages', {
+        parent: { type: 'data_source_id', data_source_id: SIGNALS_DATA_SOURCE_ID },
+        pages: [{ properties: props, content: text }]
+      });
+      let rtxt = '';
+      if (typeof res === 'string') rtxt = res;
+      else if (res && res.text) rtxt = res.text;
+      else if (res && res.content) {
+        if (Array.isArray(res.content)) {
+          for (const c of res.content) if (c.text) rtxt += c.text;
+        } else if (res.content.text) rtxt = res.content.text;
+      } else rtxt = JSON.stringify(res);
+      const idMatch = rtxt.match(/[a-f0-9]{8}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{4}-?[a-f0-9]{12}/);
+      if (idMatch) currentSignalPageId = idMatch[0];
+    }
+    if (status) { status.textContent = 'Saved to Notion'; status.className = 'save-status success'; }
+    setTimeout(() => { if (status) { status.textContent = ''; status.className = 'save-status'; } }, 3000);
+  } catch (e) {
+    console.error('Notion save failed', e);
+    if (status) { status.textContent = 'Saved locally only — Notion sync failed'; status.className = 'save-status error'; }
+  }
+}
+
+function computeStatusMix() {
+  const rows = allRows.filter(r =>
+    r.client_slug === currentClient &&
+    r.week_end === currentWeekEnd &&
+    r.platform === 'ALL' &&
+    r.location === 'ALL'
+  );
+  let g = 0, y = 0, r = 0;
+  rows.forEach(row => {
+    const s = (row.status || '').toLowerCase();
+    if (s === 'green') g++;
+    else if (s === 'yellow') y++;
+    else if (s === 'red') r++;
+  });
+  return r + ' red, ' + y + ' yellow, ' + g + ' green';
+}
+
+async function loadSignal() {
+  const cached = getCachedSignal();
+  if (cached) {
+    const sig = document.getElementById('signal-text');
+    if (sig) sig.innerText = cached;
+  }
+  const result = await fetchSignalFromNotion(currentClient, currentWeekEnd);
+  if (result) {
+    currentSignalPageId = result.pageId;
+    if (result.text) {
+      setCachedSignal(result.text);
+      const sig = document.getElementById('signal-text');
+      if (sig && sig.innerText !== result.text) sig.innerText = result.text;
+    }
+  } else {
+    currentSignalPageId = null;
+  }
+}
+
+async function draftSignalWithAI() {
+  const btn = document.getElementById('ai-draft-btn');
+  const sig = document.getElementById('signal-text');
+  const status = document.getElementById('save-status');
+  if (!sig) return;
+  if (btn) { btn.disabled = true; btn.innerText = 'Drafting…'; }
+  if (status) { status.textContent = 'Drafting with AI…'; status.className = 'save-status'; }
+  try {
+    const allRow = getCurrentRow('total_sales', 'ALL', 'ALL');
+    const weekStart = allRow ? allRow.week_start : '';
+    const summary = {
+      client: clientDisplay(currentClient),
+      week: weekStart + ' to ' + currentWeekEnd,
+      headline_sales: allRow ? allRow.value : '',
+      headline_prior: allRow ? allRow.prior_value : '',
+      red_metrics: [],
+      yellow_metrics: [],
+      green_movers: [],
+      location_winners: [],
+      location_strugglers: []
+    };
+    allRows.filter(r =>
+      r.client_slug === currentClient &&
+      r.week_end === currentWeekEnd &&
+      r.location === 'ALL'
+    ).forEach(r => {
+      const meta = METRIC_META[r.metric];
+      if (!meta) return;
+      const entry = {
+        metric: meta.label,
+        platform: r.platform,
+        value: r.value,
+        prior: r.prior_value,
+        notes: r.notes || ''
+      };
+      const s = (r.status || '').toLowerCase();
+      if (s === 'red') summary.red_metrics.push(entry);
+      else if (s === 'yellow') summary.yellow_metrics.push(entry);
+    });
+
+    const locRows = allRows.filter(r =>
+      r.client_slug === currentClient &&
+      r.week_end === currentWeekEnd &&
+      r.metric === 'roas' &&
+      r.location !== 'ALL'
+    ).sort((a, b) => parseFloat(b.value) - parseFloat(a.value));
+    summary.location_winners = locRows.slice(0, 3).map(r => ({ location: r.location, roas: r.value }));
+    summary.location_strugglers = locRows.slice(-3).reverse().map(r => ({ location: r.location, roas: r.value, notes: r.notes }));
+
+    const prompt = "You are a delivery marketplace ops analyst at Spice Digital. Write a Signal callout for this client's weekly scorecard.\n\nFormat: 2 short paragraphs, plain prose, no bullets, no headers, no emdashes. First paragraph: what happened this week (1-2 standout patterns from the data). Second paragraph: action for next week (specific moves the GM should make). Voice: direct, specific, do the math for the reader. Banned: 'genuinely', 'leverage', 'unlock', 'navigate', 'foster', 'robust', 'seamless'. Max 5 sentences total.";
+
+    const aiText = await window.cowork.askClaude(prompt, [summary]);
+    let draft = '';
+    if (typeof aiText === 'string') draft = aiText;
+    else if (aiText && aiText.text) draft = aiText.text;
+    else if (aiText && aiText.content) {
+      if (Array.isArray(aiText.content)) {
+        for (const c of aiText.content) if (c.text) draft += c.text;
+      } else if (aiText.content.text) draft = aiText.content.text;
+    } else draft = JSON.stringify(aiText);
+
+    sig.innerText = draft.trim();
+    saveSignalToNotion(draft.trim());
+  } catch (e) {
+    console.error('AI draft failed', e);
+    if (status) { status.textContent = 'AI draft failed: ' + e.message; status.className = 'save-status error'; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerText = 'Draft with AI'; }
+  }
+}
+
+function buildSignal() {
+  return '<div class="signal-box">' +
+    '<div class="signal-header">' +
+      '<div class="signal-label">This week\'s signal</div>' +
+      '<button class="ai-btn" id="ai-draft-btn">Draft with AI</button>' +
+    '</div>' +
+    '<div class="signal-text" id="signal-text" contenteditable="true">' + (getCachedSignal() || 'Click "Draft with AI" to generate a starting point, or write the GM read of the week here.') + '</div>' +
+    '<div class="save-status" id="save-status"></div>' +
+  '</div>';
+}
+
+function buildClientSelector() {
+  const clients = Array.from(new Set(allRows.map(r => r.client_slug))).sort();
+  let opts = '';
+  clients.forEach(c => {
+    const sel = c === currentClient ? ' selected' : '';
+    opts += '<option value="' + c + '"' + sel + '>' + clientDisplay(c) + '</option>';
+  });
+  return '<select id="client-select">' + opts + '</select>';
+}
+
+function buildWeekSelector() {
+  const weeks = Array.from(new Set(allRows.filter(r => r.client_slug === currentClient).map(r => r.week_end))).sort().reverse();
+  let opts = '';
+  weeks.forEach(w => {
+    const startRow = allRows.find(r => r.client_slug === currentClient && r.week_end === w);
+    const startDate = startRow ? startRow.week_start : '';
+    const sel = w === currentWeekEnd ? ' selected' : '';
+    opts += '<option value="' + w + '"' + sel + '>' + startDate + ' to ' + w + '</option>';
+  });
+  return '<select id="week-select">' + opts + '</select>';
+}
+
+function render() {
+  const startRow = allRows.find(r => r.client_slug === currentClient && r.week_end === currentWeekEnd);
+  const dateRange = startRow ? startRow.week_start + ' to ' + currentWeekEnd : currentWeekEnd;
+
+  let html = '<div class="header-row">';
+  html += '<div class="meta-text">' + clientDisplay(currentClient) + ' / Week of ' + dateRange + '</div>';
+  html += '<div class="controls">' + buildClientSelector() + buildWeekSelector() + '<button class="reload-btn" id="reload-btn">Reload</button></div>';
+  html += '</div>';
+
+  html += buildHeadline();
+
+  SECTIONS.forEach(sec => {
+    const metrics = getMetricsForSection(sec.id);
+    if (metrics.length === 0) return;
+    html += '<div class="section-header">';
+    html += '<div class="section-label">' + sec.label + '</div>';
+    html += '<div class="section-question">' + sec.question + '</div>';
+    html += '</div>';
+    html += '<table>';
+    metrics.forEach(m => { html += renderMetricGroup(m); });
+    html += '</table>';
+  });
+
+  html += buildLocationGrid();
+  html += buildSignal();
+  html += '<div class="footer-note">Data: <a href="https://docs.google.com/spreadsheets/d/' + SHEET_ID + '" target="_blank">Spice Weekly Scorecard Master</a> · Pivots client-side from long-format CSV. Edit the Signal box to capture the GM\'s read of the week.</div>';
+
+  document.getElementById('root').innerHTML = html;
+
+  const clientSel = document.getElementById('client-select');
+  if (clientSel) {
+    clientSel.addEventListener('change', (e) => {
+      currentClient = e.target.value;
+      localStorage.setItem('scorecard_last_client', currentClient);
+      const weeks = Array.from(new Set(allRows.filter(r => r.client_slug === currentClient).map(r => r.week_end))).sort().reverse();
+      currentWeekEnd = weeks[0] || null;
+      currentSignalPageId = null;
+      expandedMetrics.clear();
+      render();
+      loadSignal();
+    });
+  }
+  const sel = document.getElementById('week-select');
+  if (sel) {
+    sel.addEventListener('change', (e) => {
+      currentWeekEnd = e.target.value;
+      currentSignalPageId = null;
+      render();
+      loadSignal();
+    });
+  }
+  const sig = document.getElementById('signal-text');
+  if (sig) {
+    sig.addEventListener('blur', () => saveSignalToNotion(sig.innerText.trim()));
+  }
+  const aiBtn = document.getElementById('ai-draft-btn');
+  if (aiBtn) {
+    aiBtn.addEventListener('click', () => draftSignalWithAI());
+  }
+  const reload = document.getElementById('reload-btn');
+  if (reload) {
+    reload.addEventListener('click', () => {
+      document.getElementById('root').innerHTML = '<div class="loading">Reloading…</div>';
+      loadData();
+    });
+  }
+  document.querySelectorAll('.metric-parent').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const m = tr.getAttribute('data-metric');
+      if (!m) return;
+      if (expandedMetrics.has(m)) expandedMetrics.delete(m);
+      else expandedMetrics.add(m);
+      render();
+    });
+  });
+}
+
+loadData();
+</script>
+</body>
+</html>

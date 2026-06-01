@@ -1,0 +1,20 @@
+{
+  "name": "spice-retention",
+  "version": "0.2.0",
+  "description": "Retention service operations for Spice Digital (MBFS, HealthNut, Ahipoki) across Thanx, Toast, Klaviyo, and SMS. Briefs, reports, meeting prep, health checks, flow design, and the Ahipoki Klaviyo migration. Uses Klaviyo + Figma + Google Drive + Notion + Slack MCPs where available, falls back to Chrome navigation for Thanx and Toast.",
+  "author": {
+    "name": "Spice Digital",
+    "email": "maxx@spicedigital.co"
+  },
+  "homepage": "https://spicedigital.co",
+  "keywords": [
+    "retention",
+    "email-marketing",
+    "loyalty",
+    "thanx",
+    "toast",
+    "klaviyo",
+    "sms",
+    "restaurants"
+  ]
+}

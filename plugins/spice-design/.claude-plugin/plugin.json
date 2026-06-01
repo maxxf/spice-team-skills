@@ -1,0 +1,19 @@
+{
+  "name": "spice-design",
+  "version": "0.1.0",
+  "description": "Design briefs and creative production for Spice Digital clients. Built for Dilli Dias and anyone briefing creative for delivery marketplaces or retention. Includes the ratings flyer brief and the email template designer.",
+  "author": {
+    "name": "Maxx Freedman",
+    "email": "maxx@spicedigital.co"
+  },
+  "homepage": "https://spicedigital.co",
+  "repository": "https://github.com/maxxf/spice-team-skills",
+  "keywords": [
+    "design",
+    "figma",
+    "creative",
+    "email-design",
+    "print",
+    "restaurants"
+  ]
+}

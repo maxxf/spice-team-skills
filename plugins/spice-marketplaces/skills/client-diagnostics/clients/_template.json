@@ -1,0 +1,18 @@
+{
+  "client_slug": "<slug>",
+  "client_display_name": "<Display Name>",
+  "notion": {
+    "parent_page_id": "<32-char-uuid-with-dashes-or-without>",
+    "_comment": "Find via notion-search; this is the page diagnostic pages get created under (typically the client's wiki/portal page)"
+  },
+  "brand": {
+    "color_primary": null,
+    "voice_notes": null
+  },
+  "thresholds_override": {
+    "_comment": "Optional: override defaults from diagnostic-framework.md. Omit to use Spice defaults."
+  },
+  "data_quirks": [
+    "_e.g.: 'No Grubhub presence — leave GH columns empty'"
+  ]
+}
