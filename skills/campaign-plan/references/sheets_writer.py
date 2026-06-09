@@ -593,6 +593,22 @@ def write_history(sheet_id: str, rows: list[dict]) -> int:
     return len(new)
 
 
+def read_history(sheet_id: str) -> list[dict]:
+    """Read the History tab back as a list of dicts (keyed by HISTORY_COLS). Source for
+    prior-week WoW + the Dashboard Portfolio Trend. Returns [] if History is empty."""
+    svc = _service()
+    v = svc.spreadsheets().values().get(
+        spreadsheetId=sheet_id, range="History!A1:I100000").execute().get("values", [])
+    if not v or len(v) < 2:
+        return []
+    hdr = v[0]
+    out = []
+    for row in v[1:]:
+        row = (row + [""] * len(hdr))[:len(hdr)]
+        out.append(dict(zip(hdr, row)))
+    return out
+
+
 def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "") -> int:
     """Full-tab rewrite of the Dashboard. Sections, in order:
       title · Overall KPIs · By Platform · By Segment · Top 5 · Bottom 5 ·

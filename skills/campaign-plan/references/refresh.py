@@ -111,17 +111,30 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
                    or _resolve(data_dir, "ue_offers_%s.csv" % weekstart))
     offers_rows = _read_csv(offers_path)
 
+    # Prior-week comparison: read History BEFORE we overwrite this week's snapshot, so the
+    # WoW columns + Portfolio Trend can reference the most recent earlier week.
+    rollup = agg.history_weekly_rollup(sw.read_history(sheet_id))
+    prior_week = max((w for w in rollup if w < weekstart), default=None)
+    prior = rollup.get(prior_week) if prior_week else None
+    prior_ads = prior["ads"] if prior else None
+    prior_offers = prior["offers"] if prior else None
+    if prior_week:
+        print(f"   (comparing vs prior week {prior_week})")
+    else:
+        print("   (no prior week in History yet — WoW shows '—' until next week / backfill)")
+
     # Write each tab
     ac = agg.active_campaigns_from_tracker(tracker_rows)
     print(f"   Active Campaigns: {sw.write_active_campaigns(sheet_id, ac, last_updated=weekstart)} rows")
-    dash = agg.dashboard_from_data(tracker_rows, ads_rows, offers_rows)
+    dash = agg.dashboard_from_data(tracker_rows, ads_rows, offers_rows,
+                                   history_rollup=rollup, weekstart=weekstart)
     print(f"   Dashboard: {sw.write_dashboard(sheet_id, dash, client=display, week=week_label)} rows")
     if ads_rows:
-        print(f"   Ads Reporting: {sw.write_ads_reporting(sheet_id, agg.ads_reporting_from_csv(ads_rows))} rows")
+        print(f"   Ads Reporting: {sw.write_ads_reporting(sheet_id, agg.ads_reporting_from_csv(ads_rows, prior=prior_ads))} rows")
     if offers_rows:
-        print(f"   Offers Reporting: {sw.write_offers_reporting(sheet_id, agg.offers_reporting_from_csv(offers_rows))} rows")
+        print(f"   Offers Reporting: {sw.write_offers_reporting(sheet_id, agg.offers_reporting_from_csv(offers_rows, prior=prior_offers))} rows")
 
-    # History (append-only)
+    # History upsert (ads + offers) — idempotent per week; source for next week's WoW + trend.
     perf = []
     for a in ads_rows:
         perf.append({"campaign": a.get("Campaign", ""), "platform": a.get("Platform", ""),
@@ -129,8 +142,15 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
                      "spend": agg._num(a.get("Spend")),
                      "sales": agg._num(a.get("Attributed Sales") or a.get("Sales")),
                      "orders": agg._num(a.get("Orders")), "kind": "Ad"})
+    for o in offers_rows:
+        perf.append({"campaign": o.get("Promotion") or o.get("Offer") or o.get("Campaign", ""),
+                     "platform": o.get("Platform", ""),
+                     "location": o.get("Locations") or o.get("Location", ""),
+                     "spend": agg._num(o.get("Promo Spend") or o.get("Discount Spend") or o.get("Spend")),
+                     "sales": agg._num(o.get("Attributed Sales") or o.get("Sales")),
+                     "orders": agg._num(o.get("Redemptions") or o.get("Orders")), "kind": "Offer"})
     if perf:
-        print(f"   History: appended {sw.write_history(sheet_id, agg.history_rows(weekstart, perf))} rows")
+        print(f"   History: wrote {sw.write_history(sheet_id, agg.history_rows(weekstart, perf))} rows (this week)")
 
     # Slack draft (GM edits + sends)
     k = dash["kpis"]
