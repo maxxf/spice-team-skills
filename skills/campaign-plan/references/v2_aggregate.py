@@ -39,6 +39,32 @@ def _wow(cur, prev) -> str:
     return f"{(cur - prev) / prev * 100:+.1f}%"
 
 
+def _pct(num, den) -> str:
+    """num as a % of den, e.g. marketing spend % of net sales. '—' when den is missing."""
+    num, den = _num(num), _num(den)
+    if not den:
+        return "—"
+    return f"{num / den * 100:.1f}%"
+
+
+def _canon_locations(raw, aliases) -> list:
+    """Resolve a campaign's freeform location label into canonical store name(s) so it joins
+    to weekly-reporting's net-sales-by-location. `aliases` maps a raw label (whole string or
+    a comma-piece) to a canonical name or list of names. Falls back to the literal piece."""
+    aliases = aliases or {}
+    raw = str(raw).strip()
+    if not raw:
+        return ["(unspecified)"]
+    if raw in aliases:  # whole-string match wins (e.g. "SJ + Pasadena" -> [San Jose, Pasadena])
+        v = aliases[raw]
+        return list(v) if isinstance(v, list) else [v]
+    out = []
+    for piece in [x.strip() for x in raw.replace(";", ",").replace(" + ", ",").split(",") if x.strip()]:
+        v = aliases.get(piece, piece)
+        out.extend(v if isinstance(v, list) else [v])
+    return out or ["(unspecified)"]
+
+
 def history_weekly_rollup(history_rows: list[dict]) -> dict:
     """Group History rows into per-week totals, split by kind (Ad vs Offer).
     Returns {weekstart: {'ads': {spend,sales,orders}, 'offers': {...}}}. The History 'Status'
@@ -88,9 +114,18 @@ def active_campaigns_from_tracker(tracker_rows: list[dict]) -> list[dict]:
 
 def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
                         offers_rows: list[dict], history_rollup: dict | None = None,
-                        weekstart: str | None = None) -> dict:
-    """Build the dashboard dict: KPIs, by-platform, by-segment, top/bottom 5, and (when
-    prior weeks exist in History) a 4-week Portfolio Trend with WoW."""
+                        weekstart: str | None = None, net_sales: dict | None = None,
+                        location_aliases: dict | None = None) -> dict:
+    """Build the dashboard dict: KPIs, by-platform, by-location, top/bottom 5, ad/promo split,
+    and (when prior weeks exist in History) a 4-week Portfolio Trend with WoW.
+
+    `net_sales` (from weekly-reporting) drives the marketing-spend-% and marketing-driven-
+    sales-% columns. Shape: {"total": N, "platform": {name: N}, "location": {name: N}}.
+    When absent, those % columns read '—'."""
+    ns = net_sales or {}
+    ns_total = _num(ns.get("total"))
+    ns_plat = ns.get("platform") or {}
+    ns_loc = ns.get("location") or {}
     live = sum(1 for r in tracker_rows if r.get("Status") == "Live")
     proposed = sum(1 for r in tracker_rows if r.get("Status") == "Proposed")
     blocked = sum(1 for r in tracker_rows if r.get("Status") == "Blocked-on-client")
@@ -114,14 +149,41 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
     total_sales = sum(p["sales"] for p in perf)
     blended = round(total_sales / total_spend, 1) if total_spend else 0
 
-    # By platform
+    # Ad vs Promo split (kind = Ad / Offer) — clearer headline than one blended number.
+    ad_spend = sum(p["spend"] for p in perf if p["kind"] == "Ad")
+    ad_sales = sum(p["sales"] for p in perf if p["kind"] == "Ad")
+    promo_spend = sum(p["spend"] for p in perf if p["kind"] == "Offer")
+    promo_sales = sum(p["sales"] for p in perf if p["kind"] == "Offer")
+
+    # By platform (with marketing-spend-% and marketing-driven-sales-% vs net sales)
     plat = {}
     for p in perf:
         d = plat.setdefault(p["platform"], {"spend": 0, "sales": 0, "orders": 0})
         d["spend"] += p["spend"]; d["sales"] += p["sales"]; d["orders"] += p["orders"]
     by_platform = [{"platform": k, "spend": v["spend"], "sales": v["sales"],
                     "roas": round(v["sales"] / v["spend"], 1) if v["spend"] else 0,
-                    "orders": int(v["orders"])} for k, v in sorted(plat.items())]
+                    "orders": int(v["orders"]),
+                    "mkt_spend_pct": _pct(v["spend"], ns_plat.get(k)),
+                    "mkt_driven_pct": _pct(v["sales"], ns_plat.get(k))}
+                   for k, v in sorted(plat.items())]
+
+    # By location (marketing spend/sales/ROAS per location + % vs net sales). Locations can be
+    # comma-joined on a row ("San Jose, Pasadena"); split so each location gets credit.
+    loc = {}
+    for p in perf:
+        names = _canon_locations(p["location"], location_aliases)
+        for nm in names:
+            d = loc.setdefault(nm, {"spend": 0, "sales": 0, "orders": 0})
+            # split spend/sales evenly across the row's locations to avoid double-counting
+            d["spend"] += p["spend"] / len(names)
+            d["sales"] += p["sales"] / len(names)
+            d["orders"] += p["orders"] / len(names)
+    by_location = [{"location": k, "spend": v["spend"], "sales": v["sales"],
+                    "roas": round(v["sales"] / v["spend"], 1) if v["spend"] else 0,
+                    "orders": int(round(v["orders"])),
+                    "mkt_spend_pct": _pct(v["spend"], ns_loc.get(k)),
+                    "mkt_driven_pct": _pct(v["sales"], ns_loc.get(k))}
+                   for k, v in sorted(loc.items(), key=lambda kv: -kv[1]["spend"])]
 
     # By segment (from tracker Segment col, folding any perf we can map by campaign name)
     seg = {}
@@ -181,8 +243,18 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
     return {
         "kpis": {"live": live, "proposed": proposed, "blocked": blocked,
                  "total_spend": total_spend, "total_sales": total_sales,
-                 "blended_roas": blended, "new_cx": int(new_cx) if new_cx else "—"},
+                 "blended_roas": blended, "new_cx": int(new_cx) if new_cx else "—",
+                 # Ad vs Promo split
+                 "ad_spend": ad_spend, "ad_sales": ad_sales,
+                 "ad_roas": round(ad_sales / ad_spend, 1) if ad_spend else 0,
+                 "promo_spend": promo_spend, "promo_sales": promo_sales,
+                 "promo_roas": round(promo_sales / promo_spend, 1) if promo_spend else 0,
+                 # Marketing efficiency vs net sales (the 3% north-star metric)
+                 "net_sales": ns_total or "—",
+                 "mkt_spend_pct": _pct(total_spend, ns_total),
+                 "mkt_driven_pct": _pct(total_sales, ns_total)},
         "by_platform": by_platform,
+        "by_location": by_location,
         "by_segment": by_segment,
         "top_five": top_five,
         "bottom_five": bottom_five,

@@ -88,6 +88,41 @@ def _read_csv(path):
         return list(csv.DictReader(f))
 
 
+def _load_net_sales(cfg, data_dir):
+    """Load net (total) sales by platform + location from weekly-reporting, for the marketing-
+    spend-% and marketing-driven-sales-% metrics. Looks for `net_sales.csv` (or weekly-
+    reporting's `by_location.csv`) in the inputs. Flexible columns: Platform (optional),
+    Location, and a net-sales column (Net Sales / Total Net Sales / Sales). Returns
+    {"total","platform","location"} or None when no file is present."""
+    import v2_aggregate as agg
+    path = (_resolve(data_dir, cfg.get("net_sales_csv", "net_sales.csv"))
+            or _resolve(data_dir, "by_location.csv"))
+    rows = _read_csv(path)
+    if not rows:
+        return None
+
+    def col(r, *names):
+        for n in names:
+            for key in r:
+                if key.strip().lower() == n:
+                    return r[key]
+        return None
+
+    out = {"total": 0.0, "platform": {}, "location": {}}
+    for r in rows:
+        net = agg._num(col(r, "net sales", "total net sales", "net_sales", "sales"))
+        if not net:
+            continue
+        out["total"] += net
+        plat = (col(r, "platform") or "").strip()
+        if plat:
+            out["platform"][plat] = out["platform"].get(plat, 0) + net
+        loc = (col(r, "location", "locations", "store") or "").strip()
+        if loc:
+            out["location"][loc] = out["location"].get(loc, 0) + net
+    return out if out["total"] else None
+
+
 def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     """v2 path: write the 9-tab live Sheet directly via the Sheets API + emit a Slack draft."""
     import sheets_writer as sw
@@ -123,11 +158,20 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     else:
         print("   (no prior week in History yet — WoW shows '—' until next week / backfill)")
 
-    # Write each tab
-    ac = agg.active_campaigns_from_tracker(tracker_rows)
-    print(f"   Active Campaigns: {sw.write_active_campaigns(sheet_id, ac, last_updated=weekstart)} rows")
+    # Net sales (from weekly-reporting) for the marketing-efficiency % metrics.
+    net_sales = _load_net_sales(cfg, data_dir)
+    if net_sales:
+        print(f"   (net sales loaded: {len(net_sales['platform'])} platforms, {len(net_sales['location'])} locations)")
+    else:
+        print("   (no net_sales.csv — Mkt Spend % / Mkt-Driven Sales % show '—')")
+
+    # Write each tab. Active Campaigns shows LIVE campaigns only — planning/pipeline state
+    # (Proposed/Blocked/Brief) stays internal in Notion + the GM-owned Q-Plan tabs.
+    ac = [r for r in agg.active_campaigns_from_tracker(tracker_rows) if r.get("Status") == "Live"]
+    print(f"   Active Campaigns (Live only): {sw.write_active_campaigns(sheet_id, ac, last_updated=weekstart)} rows")
     dash = agg.dashboard_from_data(tracker_rows, ads_rows, offers_rows,
-                                   history_rollup=rollup, weekstart=weekstart)
+                                   history_rollup=rollup, weekstart=weekstart, net_sales=net_sales,
+                                   location_aliases=cfg.get("location_aliases"))
     print(f"   Dashboard: {sw.write_dashboard(sheet_id, dash, client=display, week=week_label)} rows")
     if ads_rows:
         print(f"   Ads Reporting: {sw.write_ads_reporting(sheet_id, agg.ads_reporting_from_csv(ads_rows, prior=prior_ads))} rows")

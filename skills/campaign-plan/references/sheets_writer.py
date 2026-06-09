@@ -655,12 +655,38 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
                   _roas(k.get("blended_roas")), k.get("new_cx", "—")])
         m.append([])
 
+        # Marketing efficiency vs net sales — the 3% north-star metric.
+        section("Marketing Efficiency")
+        header(["Net Sales", "Marketing Spend", "Mkt Spend %", "Mkt-Driven Sales %"])
+        m.append([_money(k.get("net_sales")), _money(k.get("total_spend")),
+                  k.get("mkt_spend_pct", "—"), k.get("mkt_driven_pct", "—")])
+        m.append([])
+
+        # Ad vs Promo split.
+        section("Ads vs Promos")
+        header(["Channel", "Spend", "Attributed Sales", "ROAS"])
+        m.append(["Ads (Sponsored Listings)", _money(k.get("ad_spend")),
+                  _money(k.get("ad_sales")), _roas(k.get("ad_roas"))])
+        m.append(["Promos (Offers)", _money(k.get("promo_spend")),
+                  _money(k.get("promo_sales")), _roas(k.get("promo_roas"))])
+        m.append([])
+
     if data.get("by_platform"):
         section("By Platform")
-        header(["Platform", "Spend", "Attributed Sales", "ROAS", "Orders"])
+        header(["Platform", "Spend", "Attributed Sales", "ROAS", "Orders", "Mkt Spend %", "Mkt-Driven Sales %"])
         for r in data["by_platform"]:
             m.append([r.get("platform"), _money(r.get("spend")), _money(r.get("sales")),
-                      _roas(r.get("roas")), r.get("orders", "—")])
+                      _roas(r.get("roas")), r.get("orders", "—"),
+                      r.get("mkt_spend_pct", "—"), r.get("mkt_driven_pct", "—")])
+        m.append([])
+
+    if data.get("by_location"):
+        section("By Location")
+        header(["Location", "Spend", "Attributed Sales", "ROAS", "Orders", "Mkt Spend %", "Mkt-Driven Sales %"])
+        for r in data["by_location"]:
+            m.append([r.get("location"), _money(r.get("spend")), _money(r.get("sales")),
+                      _roas(r.get("roas")), r.get("orders", "—"),
+                      r.get("mkt_spend_pct", "—"), r.get("mkt_driven_pct", "—")])
         m.append([])
 
     if data.get("by_segment"):

@@ -10,5 +10,16 @@
   "drive_folder_id": "1UZ2ZX0ntPDGeLai8Dsf7coJFT2i_j0Gs",
   "slack_channel": "#ext-goopkitchen-spice",
   "sheet_id": "1C75jl5NBmGjTHOhUcf9Pky9eLzI3uYh4R6JlTT34kZA",
-  "v2": true
+  "v2": true,
+  "_comment_location_aliases": "Maps freeform campaign-export location labels to canonical store names so per-location marketing-spend-% joins to weekly-reporting net sales. VERIFY canonical names against goop's by_location.csv store list, then complete.",
+  "location_aliases": {
+    "SJ": "San Jose",
+    "SJ + Pasadena": ["San Jose", "Pasadena"],
+    "SJ + Sherman": ["San Jose", "Sherman Oaks"],
+    "NoHo": "North Hollywood",
+    "Pico-Rob": "Pico-Robertson",
+    "SM": "Santa Monica",
+    "Multi-location": "(multi-location)",
+    "14 locations": "(all locations)"
+  }
 }
