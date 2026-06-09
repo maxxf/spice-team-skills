@@ -95,6 +95,11 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     import slack_draft as sd
 
     sheet_id = cfg["sheet_id"]
+    # Friendly week label for the Dashboard title: "W22 (May 25–May 31)" derived from the
+    # Monday weekstart, so every client reads consistently instead of a raw ISO date.
+    _ws = dt.date.fromisoformat(weekstart)
+    _we = _ws + dt.timedelta(days=6)
+    week_label = f"W{_ws.isocalendar()[1]} ({_ws.strftime('%b %-d')}–{_we.strftime('%b %-d')})"
     print("→ v2: ensuring canonical tabs")
     sw.ensure_template_tabs(sheet_id)
 
@@ -108,9 +113,9 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
 
     # Write each tab
     ac = agg.active_campaigns_from_tracker(tracker_rows)
-    print(f"   Active Campaigns: {sw.write_active_campaigns(sheet_id, ac)} rows")
+    print(f"   Active Campaigns: {sw.write_active_campaigns(sheet_id, ac, last_updated=weekstart)} rows")
     dash = agg.dashboard_from_data(tracker_rows, ads_rows, offers_rows)
-    print(f"   Dashboard: {sw.write_dashboard(sheet_id, dash, client=display, week=weekstart)} rows")
+    print(f"   Dashboard: {sw.write_dashboard(sheet_id, dash, client=display, week=week_label)} rows")
     if ads_rows:
         print(f"   Ads Reporting: {sw.write_ads_reporting(sheet_id, agg.ads_reporting_from_csv(ads_rows))} rows")
     if offers_rows:

@@ -104,6 +104,11 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
     by_segment = [{"segment": k, "spend": v["spend"], "sales": v["sales"],
                    "roas": round(v["sales"] / v["spend"], 1) if v["spend"] else 0,
                    "count": v["count"]} for k, v in sorted(seg.items())]
+    # Suppress the whole section when no segment-level spend exists (planned-only campaigns) —
+    # an all-$0/0.0x block reads as broken to the client. Comes back automatically once perf
+    # is mapped per segment.
+    if not any(s["spend"] for s in by_segment):
+        by_segment = []
 
     # Top / bottom 5 by ROAS (only rows with spend)
     ranked = sorted([p for p in perf if p["spend"] > 0],
@@ -115,10 +120,13 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
     top_five = [card(p) for p in ranked[:5]]
     bottom_five = [card(p) for p in ranked[-5:][::-1]] if len(ranked) > 5 else []
 
+    # New customers — sum from the offers export (the only source that reports it).
+    new_cx = sum(_num(o.get("New Customers")) for o in offers_rows)
+
     return {
         "kpis": {"live": live, "proposed": proposed, "blocked": blocked,
                  "total_spend": total_spend, "total_sales": total_sales,
-                 "blended_roas": blended, "new_cx": "—"},
+                 "blended_roas": blended, "new_cx": int(new_cx) if new_cx else "—"},
         "by_platform": by_platform,
         "by_segment": by_segment,
         "top_five": top_five,
@@ -170,7 +178,14 @@ def ads_reporting_from_csv(ads_rows: list[dict]) -> dict:
                  "roas": round(v["sales"] / v["spend"], 1) if v["spend"] else 0,
                  "pct": f"{v['spend']/tot_spend*100:.1f}%" if tot_spend else "—"}
                 for k, v in sorted(aud.items())]
-    return {"aggregate": aggregate, "per_campaign": per, "audience": audience}
+    # A one-row "Audience Segmentation: All / 100%" adds nothing — suppress it.
+    if len(audience) <= 1:
+        audience = []
+    # Funnel columns are only meaningful when the export carries impressions (UE Sponsored
+    # Listings). Flag it so the writer can drop Impressions/Clicks/CTR/CPC otherwise.
+    has_funnel = any(p["impressions"] != "n/a" for p in per)
+    return {"aggregate": aggregate, "per_campaign": per, "audience": audience,
+            "has_funnel": has_funnel}
 
 
 # ---- Offers Reporting ----

@@ -68,6 +68,12 @@ NAMED_RANGES: dict[str, dict[str, Any]] = {
 PROTECTED_TAB_SUBSTRINGS = ["q2 ", "q3 ", "q4 ", "plan", "notes", "trigger", "definition",
                             "archive", "learning"]
 
+# Spice Digital brand palette (Brand/tokens.json, locked 2026-04-21).
+SPICE_ORANGE = {"red": 1.0,   "green": 0.290, "blue": 0.110}  # #FF4A1C — the one accent
+SPICE_CREAM  = {"red": 0.988, "green": 0.961, "blue": 0.925}  # #FCF5EC — warm off-white band
+INK_900      = {"red": 0.094, "green": 0.094, "blue": 0.106}  # #18181B — primary text
+WHITE        = {"red": 1, "green": 1, "blue": 1}
+
 # Status pill colors — match the painted-cell palette from v0.1 (sage / teal / blue / amber / gray).
 STATUS_COLORS = {
     "Live":              {"red": 0.518, "green": 0.800, "blue": 0.086},  # #84CC16
@@ -132,8 +138,8 @@ def _add_tab(svc, sheet_id: str, title: str, headers: list[str], hidden: bool = 
             {"repeatCell": {
                 "range": {"sheetId": gid, "startRowIndex": 0, "endRowIndex": 1},
                 "cell": {"userEnteredFormat": {
-                    "backgroundColor": {"red": 0.122, "green": 0.161, "blue": 0.216},  # CHARCOAL
-                    "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}},
+                    "backgroundColor": SPICE_ORANGE,
+                    "textFormat": {"bold": True, "foregroundColor": WHITE},
                 }},
                 "fields": "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat",
             }},
@@ -353,10 +359,12 @@ def _tab_gid(sheet_id: str, tab: str) -> int:
 def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
                    section_header_rows: list[int] | None = None,
                    col_header_rows: list[int] | None = None,
-                   value_input: str = "RAW") -> int:
+                   value_input: str = "RAW",
+                   freeze_rows: int = 0, freeze_cols: int = 0) -> int:
     """Clear a skill-owned tab and write `matrix` from A1. Applies light formatting:
-    section_header_rows (0-indexed) get bold + larger; col_header_rows get the charcoal
-    header style. Refuses protected tabs.
+    section_header_rows (0-indexed) get a bold cream band; col_header_rows get the Spice
+    Orange header style. freeze_rows/freeze_cols pin headers/labels while scrolling.
+    Refuses protected tabs.
 
     value_input defaults to RAW — these are presentation tabs of pre-formatted strings
     ($, %, ROAS-x), so RAW prevents Sheets coercing e.g. "+2.8%" → 0.028. Pass
@@ -367,6 +375,17 @@ def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
     gid = _tab_gid(sheet_id, tab)
     # Clear the whole tab's values (formatting persists, but we re-apply below).
     svc.spreadsheets().values().clear(spreadsheetId=sheet_id, range=f"'{tab}'!A1:Z1000", body={}).execute()
+    # Unmerge any leftover merged cells from a prior layout BEFORE writing. Writing a 2D array
+    # into a merged range only fills the merge's anchor cell and silently drops the rest of the
+    # row — that's what blanked the KPI row (B6:H6 was merged) and the per-platform Sales/Orders
+    # cells. unmergeCells over a range with no merges is a safe no-op.
+    try:
+        svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": [
+            {"unmergeCells": {"range": {"sheetId": gid, "startRowIndex": 0, "endRowIndex": 1000,
+                                        "startColumnIndex": 0, "endColumnIndex": 26}}},
+        ]}).execute()
+    except Exception:
+        pass  # no merges present, or API declined — writing proceeds regardless
     if not matrix:
         return 0
     # Pad rows to equal width so the API doesn't choke on ragged rows.
@@ -378,6 +397,22 @@ def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
     ).execute()
     # Formatting passes
     reqs = []
+    # Reset stale formatting FIRST. write_full_tab clears cell VALUES, but Sheets keeps cell
+    # FORMAT across refreshes — so a prior layout's oversized hero-number font, or white text
+    # left over from a charcoal header, bleeds into the new content (invisible KPIs rendered
+    # white-on-white, giant cells overflowing their neighbors). Wipe the whole skill-owned
+    # region back to a clean default, THEN layer section/header/alignment on top.
+    reqs.append({"repeatCell": {
+        "range": {"sheetId": gid, "startRowIndex": 0, "endRowIndex": 1000,
+                  "startColumnIndex": 0, "endColumnIndex": 26},
+        "cell": {"userEnteredFormat": {
+            "backgroundColor": {"red": 1, "green": 1, "blue": 1},
+            "horizontalAlignment": "LEFT", "verticalAlignment": "BOTTOM",
+            "textFormat": {"bold": False, "italic": False, "fontSize": 10,
+                           "foregroundColor": {"red": 0, "green": 0, "blue": 0}},
+        }},
+        "fields": "userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)",
+    }})
     # Alignment convention: text labels LEFT, numeric metric columns RIGHT.
     # Auto-detect per column — a column is numeric if the majority of its non-empty data
     # cells parse as a number (after stripping $ , % x). Headers/section rows excluded.
@@ -407,25 +442,44 @@ def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
                 "cell": {"userEnteredFormat": {"horizontalAlignment": "RIGHT"}},
                 "fields": "userEnteredFormat.horizontalAlignment",
             }})
+    # Column-header rows: Spice Orange band, white bold text (replaces the old charcoal).
     for r in (col_header_rows or []):
         reqs.append({"repeatCell": {
             "range": {"sheetId": gid, "startRowIndex": r, "endRowIndex": r + 1,
                       "startColumnIndex": 0, "endColumnIndex": width},
             "cell": {"userEnteredFormat": {
-                "backgroundColor": {"red": 0.122, "green": 0.161, "blue": 0.216},
-                "textFormat": {"bold": True, "foregroundColor": {"red": 1, "green": 1, "blue": 1}, "fontSize": 10},
+                "backgroundColor": SPICE_ORANGE,
+                "textFormat": {"bold": True, "foregroundColor": WHITE, "fontSize": 10},
             }},
             "fields": "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat",
         }})
+    # Section-header rows: full-width warm cream band, bold ink text (groups the section,
+    # no dark grey/black bars).
     for r in (section_header_rows or []):
         reqs.append({"repeatCell": {
             "range": {"sheetId": gid, "startRowIndex": r, "endRowIndex": r + 1,
-                      "startColumnIndex": 0, "endColumnIndex": 1},
-            "cell": {"userEnteredFormat": {"textFormat": {"bold": True, "fontSize": 13}}},
-            "fields": "userEnteredFormat.textFormat",
+                      "startColumnIndex": 0, "endColumnIndex": width},
+            "cell": {"userEnteredFormat": {
+                "backgroundColor": SPICE_CREAM,
+                "textFormat": {"bold": True, "fontSize": 12, "foregroundColor": INK_900},
+            }},
+            "fields": "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat",
         }})
     if reqs:
         svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": reqs}).execute()
+    # Auto-fit columns to content (fixes ragged/truncated widths from the 100px default).
+    svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": [
+        {"autoResizeDimensions": {"dimensions": {"sheetId": gid, "dimension": "COLUMNS",
+                                                  "startIndex": 0, "endIndex": width}}},
+    ]}).execute()
+    # Freeze header rows / label columns so they stay pinned while scrolling.
+    if freeze_rows or freeze_cols:
+        svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": [
+            {"updateSheetProperties": {
+                "properties": {"sheetId": gid, "gridProperties": {
+                    "frozenRowCount": freeze_rows, "frozenColumnCount": freeze_cols}},
+                "fields": "gridProperties.frozenRowCount,gridProperties.frozenColumnCount"}},
+        ]}).execute()
     return len(padded)
 
 
@@ -469,24 +523,47 @@ def _roas(v) -> str:
 
 # ---- per-tab writers (full-tab rewrite) ----
 
+def apply_number_format(sheet_id: str, tab: str, col_index: int, start_row: int,
+                        end_row: int, pattern: str, ntype: str = "NUMBER") -> None:
+    """Apply a numberFormat (e.g. currency, ROAS-x) to one column. 0-indexed col + rows."""
+    gid = _tab_gid(sheet_id, tab)
+    _service().spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": [{
+        "repeatCell": {
+            "range": {"sheetId": gid, "startRowIndex": start_row, "endRowIndex": end_row,
+                      "startColumnIndex": col_index, "endColumnIndex": col_index + 1},
+            "cell": {"userEnteredFormat": {"numberFormat": {"type": ntype, "pattern": pattern}}},
+            "fields": "userEnteredFormat.numberFormat",
+        }}]}).execute()
+
+
+# Active Campaigns is the PLANNING registry (what's running / proposed / blocked + targets).
+# Per-campaign performance lives in the Ads/Offers Reporting tabs — the planned campaigns and
+# the platform's actual sponsored-listings/promos don't map 1:1, so WTD/Lifetime actuals are
+# intentionally NOT shown here (they'd be all-blank). They return if/when perf joins by ID.
 ACTIVE_CAMPAIGNS_COLS = [
     "Campaign Name", "Type", "Platform", "Locations", "Audience", "Status",
-    "Start Date", "End Date", "Budget ($/wk)", "Target ROAS",
-    "WTD Spend", "WTD Sales", "WTD Orders", "WTD New Cx", "WTD ROAS",
-    "Lifetime Spend", "Lifetime Sales", "Lifetime ROAS", "Test?", "Owner", "Last Updated",
+    "Start Date", "End Date", "Target ROAS", "Owner", "Last Updated",
 ]
 
 
-def write_active_campaigns(sheet_id: str, rows: list[dict]) -> int:
-    """Full-tab rewrite of Active Campaigns. Header row + one row per campaign.
-    Status pills painted in column F (index 5). Returns rows written (incl. header)."""
+def write_active_campaigns(sheet_id: str, rows: list[dict], last_updated: str = "") -> int:
+    """Full-tab rewrite of Active Campaigns (planning registry). Header + one row per campaign.
+    Status pills painted in column F (index 5); Target ROAS formatted as Nx; header row + the
+    campaign-name column frozen. Returns rows written (incl. header)."""
     matrix = [ACTIVE_CAMPAIGNS_COLS]
-    matrix += [[r.get(c, "") for c in ACTIVE_CAMPAIGNS_COLS] for r in rows]
+    for r in rows:
+        rr = dict(r)
+        if last_updated and not rr.get("Last Updated"):
+            rr["Last Updated"] = last_updated
+        matrix.append([rr.get(c, "") for c in ACTIVE_CAMPAIGNS_COLS])
     n = write_full_tab(sheet_id, "Active Campaigns", matrix, col_header_rows=[0],
-                       value_input="USER_ENTERED")
+                       value_input="USER_ENTERED", freeze_rows=1, freeze_cols=1)
     if rows:
         paint_status_column(sheet_id, "Active Campaigns", col_index=5, start_row=1,
                             statuses=[r.get("Status", "") for r in rows])
+        # Target ROAS (index 8) → "3.5x"
+        apply_number_format(sheet_id, "Active Campaigns", col_index=8, start_row=1,
+                            end_row=1 + len(rows), pattern='0.0"x"')
     return n
 
 
@@ -495,14 +572,25 @@ HISTORY_COLS = ["Weekstart", "Campaign", "Platform", "Location", "Spend",
 
 
 def write_history(sheet_id: str, rows: list[dict]) -> int:
-    """APPEND snapshot rows to the History tab. Never deletes — append-only by design.
-    Each dict has keys matching HISTORY_COLS. The skill calls this once per refresh after
-    rendering Active Campaigns; History becomes the source for Lifetime cols + L4W/L13W trends.
+    """Upsert this week's snapshot into History. Append-only ACROSS weeks, but idempotent
+    WITHIN a week: re-running a refresh replaces the current week's rows instead of stacking
+    duplicates. Keeps History at one row per (week, campaign) — the basis for Lifetime cols +
+    L4W/L13W trends. Prior weeks are never touched.
     """
     if not rows:
         return 0
-    matrix = [[r.get(c, "") for c in HISTORY_COLS] for r in rows]
-    return append_rows(sheet_id, "History", matrix)
+    svc = _service()
+    weeks = {str(r.get("Weekstart", "")) for r in rows}
+    existing = svc.spreadsheets().values().get(
+        spreadsheetId=sheet_id, range="History!A1:I100000").execute().get("values", [])
+    header = existing[0] if existing else HISTORY_COLS
+    body = [r for r in existing[1:] if not (r and str(r[0]) in weeks)] if len(existing) > 1 else []
+    new = [[r.get(c, "") for c in HISTORY_COLS] for r in rows]
+    svc.spreadsheets().values().clear(spreadsheetId=sheet_id, range="History!A1:I100000", body={}).execute()
+    svc.spreadsheets().values().update(
+        spreadsheetId=sheet_id, range="History!A1", valueInputOption="USER_ENTERED",
+        body={"values": [header] + body + new}).execute()
+    return len(new)
 
 
 def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "") -> int:
@@ -539,7 +627,7 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
     if week:
         title += f" — {week}"
     m.append([title])
-    m.append(["Campaign performance focus. Payout & profitability live in the weekly report."])
+    m.append(["Campaign focus — payout lives in the weekly report"])
     m.append([])
 
     k = data.get("kpis") or {}
@@ -611,7 +699,8 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
                       r.get("mkt_pct", "—"), r.get("notes", "")])
 
     n = write_full_tab(sheet_id, "Dashboard", m,
-                       section_header_rows=section_rows, col_header_rows=header_rows)
+                       section_header_rows=section_rows, col_header_rows=header_rows,
+                       freeze_cols=1)
     return n
 
 
@@ -643,15 +732,28 @@ def write_ads_reporting(sheet_id: str, data: dict) -> int:
         m.append([])
 
     if data.get("per_campaign"):
-        section("Per-Campaign Funnel")
-        header(["Campaign", "Platform", "Audience", "Location", "Impressions", "Clicks",
-                "CTR", "Spend", "CPC", "Orders", "Sales", "ROAS", "CPO"])
+        # Drop the funnel columns (Impressions/Clicks/CTR/CPC) when the export carries no
+        # impression data — otherwise they're a wall of "n/a". They reappear automatically
+        # once an export includes impressions.
+        funnel = data.get("has_funnel", False)
+        section("Per-Campaign Funnel" if funnel else "Per-Campaign Performance")
+        cols = ["Campaign", "Platform", "Audience", "Location"]
+        if funnel:
+            cols += ["Impressions", "Clicks", "CTR"]
+        cols += ["Spend"]
+        if funnel:
+            cols += ["CPC"]
+        cols += ["Orders", "Sales", "ROAS", "CPO"]
+        header(cols)
         for r in data["per_campaign"]:
-            m.append([r.get("campaign"), r.get("platform"), r.get("audience", "All"),
-                      r.get("location"), r.get("impressions", "n/a"), r.get("clicks", "—"),
-                      r.get("ctr", "n/a"), _money(r.get("spend")), r.get("cpc", "n/a"),
-                      r.get("orders", "—"), _money(r.get("sales")), _roas(r.get("roas")),
-                      r.get("cpo", "—")])
+            row = [r.get("campaign"), r.get("platform"), r.get("audience", "All"), r.get("location")]
+            if funnel:
+                row += [r.get("impressions", "n/a"), r.get("clicks", "—"), r.get("ctr", "n/a")]
+            row += [_money(r.get("spend"))]
+            if funnel:
+                row += [r.get("cpc", "n/a")]
+            row += [r.get("orders", "—"), _money(r.get("sales")), _roas(r.get("roas")), r.get("cpo", "—")]
+            m.append(row)
         m.append([])
 
     if data.get("audience"):
@@ -662,7 +764,8 @@ def write_ads_reporting(sheet_id: str, data: dict) -> int:
                       _money(r.get("sales")), _roas(r.get("roas")), r.get("pct", "—")])
 
     return write_full_tab(sheet_id, "Ads Reporting", m,
-                          section_header_rows=section_rows, col_header_rows=header_rows)
+                          section_header_rows=section_rows, col_header_rows=header_rows,
+                          freeze_cols=1)
 
 
 def write_offers_reporting(sheet_id: str, data: dict) -> int:
@@ -710,7 +813,8 @@ def write_offers_reporting(sheet_id: str, data: dict) -> int:
                       _money(r.get("aov")), r.get("pct", "—")])
 
     return write_full_tab(sheet_id, "Offers Reporting", m,
-                          section_header_rows=section_rows, col_header_rows=header_rows)
+                          section_header_rows=section_rows, col_header_rows=header_rows,
+                          freeze_cols=1)
 
 
 ARCHIVE_COLS = ["Year", "Quarter", "Week", "Campaign Name", "Type", "Platform",
