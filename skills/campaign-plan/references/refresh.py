@@ -307,22 +307,67 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     if perf:
         print(f"   History: wrote {sw.write_history(sheet_id, agg.history_rows(weekstart, perf))} rows (this week)")
 
-    # Archive: when a campaign ends, file it once with its totals (GM fills Outcome / Continue).
+    # Archive ended campaigns — driven by the DATA FILES (no Notion dependency), three signals:
+    #   1) the export's own Status column (UE offers: COMPLETED/CANCELED; ads: Off),
+    #   2) History drop-off (ran in a prior week, absent this week),
+    #   3) the Notion tracker Status=Ended (kept as a backstop).
+    # append_archive de-dupes vs the existing tab; we also de-dupe within the run by name.
     ws_d = dt.date.fromisoformat(weekstart)
-    ended = [r for r in tracker_rows
-             if str(r.get("Status", "")).strip().lower() in ("ended", "complete", "completed")]
-    if ended:
-        arch = [{"Year": ws_d.year, "Quarter": f"Q{(ws_d.month - 1) // 3 + 1}", "Week": week_label,
-                 "Campaign Name": r.get("Campaign", ""), "Type": r.get("Type", ""),
-                 "Platform": r.get("Platform", ""), "Locations": r.get("Locations", ""),
-                 "Audience": r.get("Segment", ""), "Start Date": r.get("Flight Start", ""),
-                 "End Date": r.get("Flight End", ""), "Status": "Ended",
-                 "Total Spend": r.get("Spend ($)", ""), "Total Sales": r.get("Attributed Sales ($)", ""),
-                 "Total Orders": r.get("Incremental Orders", ""), "Avg ROAS": r.get("Actual ROAS", "")}
-                for r in ended]
+    q = f"Q{(ws_d.month - 1) // 3 + 1}"
+    ENDED = ("ended", "complete", "completed", "canceled", "cancelled", "off", "inactive")
+    arch, seen_names = [], set()
+
+    def _file(name, typ, plat, loc, aud, spend, sales, orders, end_date, start=""):
+        if not name or name in seen_names:
+            return
+        seen_names.add(name)
+        arch.append({"Year": ws_d.year, "Quarter": q, "Week": week_label, "Campaign Name": name,
+                     "Type": typ, "Platform": plat, "Locations": loc, "Audience": aud,
+                     "Start Date": start, "End Date": end_date or weekstart, "Status": "Ended",
+                     "Total Spend": spend, "Total Sales": sales, "Total Orders": orders,
+                     "Avg ROAS": round(sales / spend, 1) if spend else ""})
+
+    # 1) Export Status column
+    for a in ads_rows:
+        if str(a.get("Status", "")).strip().lower() in ENDED:
+            sp, sa = agg._num(a.get("Spend")), agg._num(a.get("Attributed Sales") or a.get("Sales"))
+            _file(a.get("Campaign", ""), "Ad", a.get("Platform", ""),
+                  a.get("Locations") or a.get("Location", ""), a.get("Audience", ""),
+                  sp, sa, agg._num(a.get("Orders")), weekstart)
+    for o in offers_rows:
+        if str(o.get("Status", "")).strip().lower() in ENDED:
+            sp, sa = agg._num(o.get("Promo Spend") or o.get("Spend")), agg._num(o.get("Attributed Sales") or o.get("Sales"))
+            _file(o.get("Promotion") or o.get("Offer") or o.get("Campaign", ""), "Offer", o.get("Platform", ""),
+                  o.get("Locations") or o.get("Location", ""), o.get("Audience", ""),
+                  sp, sa, agg._num(o.get("Redemptions") or o.get("Orders")), weekstart)
+
+    # 2) History drop-off — active in a prior week, gone this week (lifetime totals from History)
+    try:
+        cur_keys = {p["campaign"] for p in perf}
+        prior = {}
+        for h in sw.read_history(sheet_id):
+            if str(h.get("Weekstart", "")) == weekstart:
+                continue
+            d = prior.setdefault(h.get("Campaign", ""), {"sp": 0, "sa": 0, "o": 0, "kind": h.get("Status", ""), "last": ""})
+            d["sp"] += agg._num(h.get("Spend")); d["sa"] += agg._num(h.get("Sales")); d["o"] += agg._num(h.get("Orders"))
+            d["last"] = max(d["last"], str(h.get("Weekstart", "")))
+        for name, d in prior.items():
+            if name and name not in cur_keys and d["sp"] > 0:
+                _file(name, d["kind"], "", "", "", d["sp"], d["sa"], int(d["o"]), d["last"])
+    except Exception:
+        pass
+
+    # 3) Notion tracker Status=Ended (backstop)
+    for r in tracker_rows:
+        if str(r.get("Status", "")).strip().lower() in ENDED:
+            _file(r.get("Campaign", ""), r.get("Type", ""), r.get("Platform", ""), r.get("Locations", ""),
+                  r.get("Segment", ""), agg._num(r.get("Spend ($)")), agg._num(r.get("Attributed Sales ($)")),
+                  agg._num(r.get("Incremental Orders")), r.get("Flight End", ""), r.get("Flight Start", ""))
+
+    if arch:
         n_arch = sw.append_archive(sheet_id, arch)
         if n_arch:
-            print(f"   Archive: filed {n_arch} newly-ended campaign(s)")
+            print(f"   Archive: filed {n_arch} ended campaign(s) from data files")
 
     # Slack draft (GM edits + sends)
     k = dash["kpis"]
