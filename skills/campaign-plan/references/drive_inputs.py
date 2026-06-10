@@ -83,11 +83,22 @@ def ensure_weekstart_folder(client_drive_folder_id: str, weekstart: str,
 
 
 def find_weekstart_folder(client_drive_folder_id: str, weekstart: str) -> str | None:
-    """Look up the weekstart folder without creating it. Returns ID or None."""
+    """Look up the week's inputs folder. Prefers an exact <weekstart> match; falls back to the
+    most-recently-modified subfolder (the team sometimes names the folder by pull date, e.g.
+    2026-06-09, rather than the Monday weekstart). Returns ID or None."""
     inputs_id = find_subfolder(INPUTS_FOLDER_NAME, client_drive_folder_id)
     if not inputs_id:
         return None
-    return find_subfolder(weekstart, inputs_id)
+    exact = find_subfolder(weekstart, inputs_id)
+    if exact:
+        return exact
+    r = _drive().files().list(
+        q=f"'{inputs_id}' in parents and mimeType = '{FOLDER_MIME}' and trashed = false",
+        fields="files(id,name,modifiedTime)", supportsAllDrives=True,
+        includeItemsFromAllDrives=True, orderBy="modifiedTime desc",
+    ).execute()
+    fs = r.get("files", [])
+    return fs[0]["id"] if fs else None
 
 
 def list_input_files(weekstart_folder_id: str) -> list[dict]:
