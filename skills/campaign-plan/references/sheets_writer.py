@@ -1204,9 +1204,12 @@ def write_offers_reporting(sheet_id: str, data: dict) -> int:
         header(["Promo", "Platform", "Locations", "Audience", "Threshold", "Discount",
                 "Orders", "Sales", "Spend", "ROAS", "New Cx", "% New", "Status"])
         for r in data["per_promo"]:
+            reported = r.get("spend_reported", True)
+            spend_cell = _money(r.get("spend")) if reported else "n/a"
+            roas_cell = _roas(r.get("roas")) if reported else "n/a"
             m.append([r.get("promo"), r.get("platform"), r.get("locations"), r.get("audience", "All"),
                       r.get("threshold", "—"), r.get("discount", "—"), r.get("orders", "—"),
-                      _money(r.get("sales")), _money(r.get("spend")), _roas(r.get("roas")),
+                      _money(r.get("sales")), spend_cell, roas_cell,
                       r.get("new_cx", "—"), r.get("pct_new", "—"), r.get("status", "")])
         m.append([])
 

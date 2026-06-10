@@ -578,14 +578,17 @@ def offers_reporting_from_csv(offers_rows: list[dict], prior: dict | None = None
     `prior` = prior-week offers totals {spend,sales,orders} (from History) for the WoW column."""
     per = []
     for o in offers_rows:
-        spend = _num(o.get("Promo Spend") or o.get("Discount Spend") or o.get("Spend"))
+        raw_spend = o.get("Promo Spend") or o.get("Discount Spend") or o.get("Spend")
+        reported = str(raw_spend).strip().lower() not in ("", "n/a", "none", "—")  # UE has no spend
+        spend = _num(raw_spend)
         sales = _num(o.get("Attributed Sales") or o.get("Sales"))
         per.append({
             "promo": o.get("Promotion") or o.get("Offer") or o.get("Campaign", ""),
             "platform": o.get("Platform", ""), "locations": o.get("Locations") or o.get("Location", ""),
             "audience": o.get("Audience", "All"), "threshold": o.get("Threshold", "—"),
             "discount": o.get("Discount", "—"), "orders": o.get("Redemptions") or o.get("Orders", "—"),
-            "sales": sales, "spend": spend, "roas": round(sales / spend, 1) if spend else 0,
+            "sales": sales, "spend": spend, "spend_reported": reported,
+            "roas": round(sales / spend, 1) if spend else 0,
             "new_cx": o.get("New Customers", "—"), "pct_new": o.get("% New", "—"),
             "status": o.get("Status", "Live"),
         })

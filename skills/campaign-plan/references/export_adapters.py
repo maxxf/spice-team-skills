@@ -107,12 +107,13 @@ def ue_offers(rows: list) -> list:
             continue
         st = str(r.get("Status", "")).strip().lower()
         sales, orders = _num(r.get("Sales (USD)")), _num(r.get("Orders"))
-        if st in ("canceled", "cancelled") and sales <= 0 and orders <= 0:
-            continue  # never-ran canceled offer — skip (the export dumps all historical offers)
+        if sales <= 0 and orders <= 0:
+            continue  # drove nothing this week — skip (kills canceled noise + $0 never-ran dupes
+            # like the two same-named "Free Item" offers, one real, one empty)
         out.append({"Promotion": offer, "Platform": "Uber Eats", "Locations": _loc(r.get("Stores", "")),
                     "Audience": r.get("Audience", "All"), "Threshold": "—", "Discount": "—",
                     "Redemptions": int(_num(r.get("Orders"))), "Attributed Sales": _num(r.get("Sales (USD)")),
-                    "Promo Spend": "",  # UE export carries no offer spend
+                    "Promo Spend": "n/a",  # UE export carries no offer spend (Merchant Portal only)
                     "New Customers": int(_num(r.get("New customers"))), "% New": "—",
                     "Status": "Ended" if st in ("completed", "canceled", "cancelled") else "Live"})
     return out
