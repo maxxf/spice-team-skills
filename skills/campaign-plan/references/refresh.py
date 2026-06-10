@@ -153,6 +153,19 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     prior = rollup.get(prior_week) if prior_week else None
     prior_ads = prior["ads"] if prior else None
     prior_offers = prior["offers"] if prior else None
+    # Guard against a fake +0.0% WoW from static/duplicate input: if the prior week's totals are
+    # identical to this week's, it's not a real prior — drop it so the Summary shows "—".
+    def _same(p, rows, spend_keys, sales_keys, order_keys):
+        if not p:
+            return False
+        cs = sum(agg._num(next((r[k] for k in spend_keys if r.get(k) not in (None, "")), 0)) for r in rows)
+        sa = sum(agg._num(next((r[k] for k in sales_keys if r.get(k) not in (None, "")), 0)) for r in rows)
+        return abs(p.get("spend", 0) - cs) < 0.5 and abs(p.get("sales", 0) - sa) < 0.5
+    if _same(prior_ads, ads_rows, ("Spend",), ("Attributed Sales", "Sales"), ("Orders",)):
+        prior_ads = None
+    if _same(prior_offers, offers_rows, ("Promo Spend", "Discount Spend", "Spend"),
+             ("Attributed Sales", "Sales"), ("Redemptions", "Orders")):
+        prior_offers = None
     if prior_week:
         print(f"   (comparing vs prior week {prior_week})")
     else:

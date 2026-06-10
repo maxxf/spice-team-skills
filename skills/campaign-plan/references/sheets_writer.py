@@ -679,10 +679,16 @@ def write_history(sheet_id: str, rows: list[dict]) -> int:
     header = existing[0] if existing else HISTORY_COLS
     body = [r for r in existing[1:] if not (r and str(r[0]) in weeks)] if len(existing) > 1 else []
     new = [[r.get(c, "") for c in HISTORY_COLS] for r in rows]
-    svc.spreadsheets().values().clear(spreadsheetId=sheet_id, range="History!A1:I100000", body={}).execute()
+    out = [header] + body + new
+    # Resilient write: UPDATE (overwrite) first, then clear only the tail beyond the new content.
+    # If a call fails between the two, History still has data (never an empty-then-failed clear).
     svc.spreadsheets().values().update(
         spreadsheetId=sheet_id, range="History!A1", valueInputOption="USER_ENTERED",
-        body={"values": [header] + body + new}).execute()
+        body={"values": out}).execute()
+    prev_len = len(existing)
+    if prev_len > len(out):
+        svc.spreadsheets().values().clear(
+            spreadsheetId=sheet_id, range=f"History!A{len(out) + 1}:I{prev_len + 1}", body={}).execute()
     return len(new)
 
 
