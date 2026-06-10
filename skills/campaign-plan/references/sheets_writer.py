@@ -1125,7 +1125,8 @@ def write_ads_reporting(sheet_id: str, data: dict) -> int:
     def section(t): m.append([t]); section_rows.append(len(m) - 1)
     def header(c): m.append(c); header_rows.append(len(m) - 1)
 
-    m.append(["Ads Reporting (Sponsored Listings)"]); m.append([])
+    m.append(["Ads Reporting (Sponsored Listings)"])
+    m.append(["Platform-reported attribution — totals differ from the Dashboard's settled figures."])
 
     if data.get("aggregate"):
         section("Ads Summary")
@@ -1168,7 +1169,7 @@ def write_ads_reporting(sheet_id: str, data: dict) -> int:
 
     return write_full_tab(sheet_id, "Ads Reporting", m,
                           section_header_rows=section_rows, col_header_rows=header_rows,
-                          freeze_cols=1, title_rows=1)
+                          freeze_cols=1, title_rows=2)
 
 
 def write_offers_reporting(sheet_id: str, data: dict) -> int:
@@ -1188,7 +1189,8 @@ def write_offers_reporting(sheet_id: str, data: dict) -> int:
     def section(t): m.append([t]); section_rows.append(len(m) - 1)
     def header(c): m.append(c); header_rows.append(len(m) - 1)
 
-    m.append(["Offers Reporting (Promotions)"]); m.append([])
+    m.append(["Offers Reporting (Promotions)"])
+    m.append(["Platform-reported attribution — totals differ from the Dashboard's settled figures. UE offers carry no spend."])
 
     if data.get("aggregate"):
         section("Offers Summary")
@@ -1217,7 +1219,7 @@ def write_offers_reporting(sheet_id: str, data: dict) -> int:
 
     return write_full_tab(sheet_id, "Offers Reporting", m,
                           section_header_rows=section_rows, col_header_rows=header_rows,
-                          freeze_cols=1, title_rows=1)
+                          freeze_cols=1, title_rows=2)
 
 
 ARCHIVE_COLS = ["Year", "Quarter", "Week", "Campaign Name", "Type", "Platform",

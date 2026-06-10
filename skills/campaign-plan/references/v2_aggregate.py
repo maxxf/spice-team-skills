@@ -518,14 +518,13 @@ def ads_reporting_from_csv(ads_rows: list[dict], prior: dict | None = None) -> d
         sales = _num(a.get("Attributed Sales") or a.get("Sales"))
         orders = _num(a.get("Orders"))
         plat = a.get("Platform", "")
-        is_ue = "uber" in plat.lower()
         per.append({
             "campaign": a.get("Campaign", ""), "platform": plat,
             "audience": a.get("Audience", "All"), "location": a.get("Locations") or a.get("Location", ""),
-            "impressions": int(imp) if (is_ue and imp) else "n/a",
+            "impressions": int(imp) if imp else "n/a",
             "clicks": int(clk) if clk else "—",
-            "ctr": f"{clk/imp*100:.1f}%" if (is_ue and imp) else "n/a",
-            "spend": spend, "cpc": f"${spend/clk:.2f}" if (is_ue and clk) else "n/a",
+            "ctr": f"{clk/imp*100:.1f}%" if imp else "n/a",
+            "spend": spend, "cpc": f"${spend/clk:.2f}" if clk else "n/a",
             "orders": int(orders) if orders else "—", "sales": sales,
             "roas": round(sales / spend, 1) if spend else 0,
             "cpo": f"${spend/orders:.2f}" if orders else "—",

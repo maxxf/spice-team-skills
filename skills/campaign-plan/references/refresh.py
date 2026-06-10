@@ -139,12 +139,18 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     sw.ensure_template_tabs(sheet_id)
 
     tracker_rows = _read_csv(tracker_csv)
-    ads_rows = _read_csv(_resolve(data_dir, cfg.get("ads_detail_csv")))
-    # offers CSV is optional; look for dd_offers / ue_offers in inputs, else the configured one
-    offers_path = (_resolve(data_dir, cfg.get("offers_csv"))
-                   or _resolve(data_dir, "dd_offers_%s.csv" % weekstart)
-                   or _resolve(data_dir, "ue_offers_%s.csv" % weekstart))
-    offers_rows = _read_csv(offers_path)
+    # Per-campaign data: parse the real platform exports (UE/DD Sponsored Listings + Offers/Promos)
+    # straight from the inputs folder. Falls back to a legacy single ads_detail/offers CSV.
+    import export_adapters as ea
+    ads_rows, offers_rows, used = ea.load_campaign_exports(os.path.join(data_dir, "inputs"))
+    if used:
+        print(f"   (campaign exports parsed: {len(ads_rows)} ad rows, {len(offers_rows)} offer rows from {len(used)} files)")
+    else:
+        ads_rows = _read_csv(_resolve(data_dir, cfg.get("ads_detail_csv")))
+        offers_path = (_resolve(data_dir, cfg.get("offers_csv"))
+                       or _resolve(data_dir, "dd_offers_%s.csv" % weekstart)
+                       or _resolve(data_dir, "ue_offers_%s.csv" % weekstart))
+        offers_rows = _read_csv(offers_path)
 
     # Prior-week comparison: read History BEFORE we overwrite this week's snapshot, so the
     # WoW columns + Portfolio Trend can reference the most recent earlier week.
@@ -345,6 +351,8 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     def _file(name, typ, plat, loc, aud, spend, sales, orders, end_date, start=""):
         if not name or name in seen_names:
             return
+        if agg._num(spend) <= 0 and agg._num(sales) <= 0:
+            return  # never-ran / $0 campaign — don't clutter the Archive
         seen_names.add(name)
         arch.append({"Year": ws_d.year, "Quarter": q, "Week": week_label, "Campaign Name": name,
                      "Type": typ, "Platform": plat, "Locations": loc, "Audience": aud,
