@@ -775,20 +775,20 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
         # KPI hero strip — 5 cards in cols B..K (col A is frozen, kept out of the merges).
         # Three rows per card: label · big value · WoW delta. Replaces the old Overall section.
         tile_rows = (len(m), len(m) + 1, len(m) + 2)
-        m.append(["", "NET SALES", "", "MKT SPEND %", "", "MKT ROAS", "", "BLENDED ROAS", "", "NEW CX", ""])
-        m.append(["", _money_short(k.get("net_sales")), "", k.get("mkt_spend_pct", "—"), "",
+        m.append(["", "TOTAL SALES", "", "MKT SPEND %", "", "MKT ROAS", "", "BLENDED ROAS", "", "NEW CX", ""])
+        m.append(["", _money_short(k.get("total_sales_display")), "", k.get("mkt_spend_pct", "—"), "",
                   _roas(k.get("marketing_roas")), "", _roas(k.get("blended_roas")), "", k.get("new_cx", "—"), ""])
-        m.append(["", k.get("net_sales_wow", "—"), "", k.get("mkt_spend_pct_wow", "—"), "",
+        m.append(["", k.get("total_sales_wow", "—"), "", k.get("mkt_spend_pct_wow", "—"), "",
                   k.get("roas_wow", "—"), "", "—", "", k.get("new_cx_wow", "—"), ""])
         m.append([])
 
         # Marketing efficiency vs Total Sales — the 3% north-star metric (canonical).
         # Track both Marketing ROAS (deduped, standard) and Blended ROAS (client-defined).
         section("Marketing Efficiency")
-        header(["Net Sales", "Marketing Spend", "Mkt Spend %", "Mkt-Driven Sales %",
+        header(["Total Sales", "Marketing Spend", "Mkt Spend %", "Mkt-Driven Sales %",
                 "Marketing ROAS", "Blended ROAS", "CPO", "New-Cust CAC"])
         mkt_pct_cell = (len(m), 2, k.get("mkt_spend_pct_val"))  # color this cell vs 3%
-        m.append([_money(k.get("net_sales")), _money(k.get("total_spend")),
+        m.append([_money(k.get("total_sales_display")), _money(k.get("total_spend")),
                   k.get("mkt_spend_pct", "—"), k.get("mkt_driven_pct", "—"),
                   _roas(k.get("marketing_roas")), _roas(k.get("blended_roas")),
                   _money(k.get("cpo")), _money(k.get("new_cust_cac"))])

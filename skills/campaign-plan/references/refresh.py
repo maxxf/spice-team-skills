@@ -201,16 +201,16 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     else:
         ac = [r for r in agg.active_campaigns_from_tracker(tracker_rows) if r.get("Status") == "Live"]
         print(f"   Active Campaigns (Live only): {sw.write_active_campaigns(sheet_id, ac, last_updated=weekstart)} rows")
-    # Prior-week net sales (for the Net Sales / Mkt Spend % tile WoW — the sales sheet has it now).
+    # Prior-week TOTAL sales (for the Total Sales / Mkt Spend % tile WoW).
     prior_net_total = None
     if cfg.get("net_sales_sheet_id"):
         try:
             import net_sales_pull as nsp
             pw = (dt.date.fromisoformat(weekstart) - dt.timedelta(days=7)).isoformat()
-            pn = nsp.pull_net_sales(cfg["net_sales_sheet_id"], pw,
-                                    cfg.get("net_sales_platform_tab", "Weekly Platform Overview 2.0"),
-                                    cfg.get("net_sales_location_tab", "By Location 2.0"))
-            prior_net_total = pn.get("total") or None
+            psm = nsp.pull_sales_metrics(cfg["net_sales_sheet_id"], pw,
+                                         cfg.get("net_sales_platform_tab", "Weekly Platform Overview 2.0"),
+                                         cfg.get("net_sales_location_tab", "By Location 2.0"))
+            prior_net_total = agg._cnum((psm.get("overview") or {}).get("total_sales"))
         except Exception:
             prior_net_total = None
 
