@@ -730,6 +730,25 @@ def seed_definitions(sheet_id: str) -> int:
     return len(DEFINITIONS)
 
 
+def append_weekly_learning(sheet_id: str, weekstart: str, theme: str, observation: str) -> int:
+    """Append a dated, data-derived 'auto-draft' learning to Account Learnings so learnings
+    accumulate week over week (the GM curates / promotes them). Idempotent: skips if this
+    week's auto-draft already exists; never touches GM-authored rows."""
+    if not observation:
+        return 0
+    svc = _service()
+    cur = svc.spreadsheets().values().get(
+        spreadsheetId=sheet_id, range="'Account Learnings'!A2:F1000").execute().get("values", [])
+    for r in cur:
+        if len(r) > 5 and str(r[0]) == weekstart and str(r[5]).strip().lower() == "auto-draft":
+            return 0  # already logged this week
+    svc.spreadsheets().values().append(
+        spreadsheetId=sheet_id, range="'Account Learnings'!A:G", valueInputOption="RAW",
+        insertDataOption="INSERT_ROWS",
+        body={"values": [[weekstart, theme, observation, "", "", "auto-draft", ""]]}).execute()
+    return 1
+
+
 def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "") -> int:
     """Full-tab rewrite of the Dashboard. Sections, in order:
       title · Overall KPIs · By Platform · By Segment · Top 5 · Bottom 5 ·

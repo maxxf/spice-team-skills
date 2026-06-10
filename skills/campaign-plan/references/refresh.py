@@ -255,6 +255,32 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
             print(f"   Notes & Definitions: seeded {seeded} rows")
     except Exception as e:
         print(f"   (definitions seed skipped: {str(e)[:80]})")
+
+    # Ongoing learnings: auto-draft a dated, data-grounded weekly signal for the GM to curate.
+    try:
+        kx = dash.get("kpis", {})
+        bits = []
+        msv = kx.get("mkt_spend_pct_val")
+        if msv is not None:
+            bits.append(f"Marketing spend {msv:.1f}% of sales "
+                        f"({'above' if msv > 3 else 'at/under'} the 3% target); Marketing ROAS {kx.get('marketing_roas')}.")
+        tr = dash.get("marketing_organic_trend") or []
+        if len(tr) >= 2:
+            def _sh(t):
+                tot = t["mktg_driven"] + t["organic"]
+                return (t["mktg_driven"] / tot * 100) if tot else 0
+            direction = "rising" if tr[-1]["organic"] > tr[0]["organic"] else "falling"
+            bits.append(f"Marketing-driven share {_sh(tr[0]):.0f}% to {_sh(tr[-1]):.0f}% over {len(tr)} wks "
+                        f"(organic {direction}).")
+        bt = dash.get("by_tier") or []
+        if bt:
+            worst = max(bt, key=lambda r: r.get("mkt_spend_pct_val") or 0)
+            bits.append(f"{worst['tier']} tier heaviest at {worst.get('mkt_spend_pct')} spend / sales.")
+        obs = " ".join(bits)
+        if obs and sw.append_weekly_learning(sheet_id, weekstart, "Weekly signal", obs):
+            print("   Account Learnings: auto-draft logged")
+    except Exception as e:
+        print(f"   (learning draft skipped: {str(e)[:80]})")
     if ads_rows:
         print(f"   Ads Reporting: {sw.write_ads_reporting(sheet_id, agg.ads_reporting_from_csv(ads_rows, prior=prior_ads))} rows")
     if offers_rows:
