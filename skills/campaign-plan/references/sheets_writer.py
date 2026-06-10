@@ -360,7 +360,7 @@ def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
                    section_header_rows: list[int] | None = None,
                    col_header_rows: list[int] | None = None,
                    value_input: str = "RAW",
-                   freeze_rows: int = 0, freeze_cols: int = 0) -> int:
+                   freeze_rows: int = 0, freeze_cols: int = 0, title_rows: int = 0) -> int:
     """Clear a skill-owned tab and write `matrix` from A1. Applies light formatting:
     section_header_rows (0-indexed) get a bold cream band; col_header_rows get the Spice
     Orange header style. freeze_rows/freeze_cols pin headers/labels while scrolling.
@@ -465,6 +465,20 @@ def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
             }},
             "fields": "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat",
         }})
+    # Title block: big bold title on row 0, muted subtitle on the rest of the block.
+    if title_rows:
+        reqs.append({"repeatCell": {
+            "range": {"sheetId": gid, "startRowIndex": 0, "endRowIndex": 1,
+                      "startColumnIndex": 0, "endColumnIndex": width},
+            "cell": {"userEnteredFormat": {"textFormat": {"bold": True, "fontSize": 15, "foregroundColor": INK_900}}},
+            "fields": "userEnteredFormat.textFormat"}})
+        if title_rows > 1:
+            reqs.append({"repeatCell": {
+                "range": {"sheetId": gid, "startRowIndex": 1, "endRowIndex": title_rows,
+                          "startColumnIndex": 0, "endColumnIndex": width},
+                "cell": {"userEnteredFormat": {"textFormat": {"italic": True, "fontSize": 10,
+                         "foregroundColor": {"red": 0.42, "green": 0.42, "blue": 0.45}}}},
+                "fields": "userEnteredFormat.textFormat"}})
     if reqs:
         svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": reqs}).execute()
     # Auto-fit columns to content (fixes ragged/truncated widths from the 100px default).
@@ -472,12 +486,14 @@ def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
         {"autoResizeDimensions": {"dimensions": {"sheetId": gid, "dimension": "COLUMNS",
                                                   "startIndex": 0, "endIndex": width}}},
     ]}).execute()
-    # Freeze header rows / label columns so they stay pinned while scrolling.
-    if freeze_rows or freeze_cols:
+    # Freeze header rows / label columns so they stay pinned while scrolling. The title block
+    # is always frozen so it stays visible.
+    eff_freeze_rows = max(freeze_rows, title_rows)
+    if eff_freeze_rows or freeze_cols:
         svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": [
             {"updateSheetProperties": {
                 "properties": {"sheetId": gid, "gridProperties": {
-                    "frozenRowCount": freeze_rows, "frozenColumnCount": freeze_cols}},
+                    "frozenRowCount": eff_freeze_rows, "frozenColumnCount": freeze_cols}},
                 "fields": "gridProperties.frozenRowCount,gridProperties.frozenColumnCount"}},
         ]}).execute()
     return len(padded)
@@ -566,7 +582,7 @@ def write_active_campaigns_by_location(sheet_id: str, groups: list, week: str = 
         m.append([])
 
     n = write_full_tab(sheet_id, "Active Campaigns", m, section_header_rows=section_rows,
-                       col_header_rows=header_rows, freeze_cols=1)
+                       col_header_rows=header_rows, freeze_cols=1, title_rows=1)
     paint_status_cells(sheet_id, "Active Campaigns", col_index=3, cells=status_cells)
     return n
 
@@ -941,7 +957,7 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
 
     n = write_full_tab(sheet_id, "Dashboard", m,
                        section_header_rows=section_rows, col_header_rows=header_rows,
-                       freeze_cols=1)
+                       freeze_cols=1, title_rows=2)
     gid = _tab_gid(sheet_id, "Dashboard")
     reqs = []
     GREEN = {"red": 0.80, "green": 0.92, "blue": 0.80}
@@ -1139,7 +1155,7 @@ def write_ads_reporting(sheet_id: str, data: dict) -> int:
 
     return write_full_tab(sheet_id, "Ads Reporting", m,
                           section_header_rows=section_rows, col_header_rows=header_rows,
-                          freeze_cols=1)
+                          freeze_cols=1, title_rows=1)
 
 
 def write_offers_reporting(sheet_id: str, data: dict) -> int:
@@ -1188,7 +1204,7 @@ def write_offers_reporting(sheet_id: str, data: dict) -> int:
 
     return write_full_tab(sheet_id, "Offers Reporting", m,
                           section_header_rows=section_rows, col_header_rows=header_rows,
-                          freeze_cols=1)
+                          freeze_cols=1, title_rows=1)
 
 
 ARCHIVE_COLS = ["Year", "Quarter", "Week", "Campaign Name", "Type", "Platform",
