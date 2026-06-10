@@ -297,10 +297,22 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
             print("   Account Learnings: auto-draft logged")
     except Exception as e:
         print(f"   (learning draft skipped: {str(e)[:80]})")
+    # Per-campaign tabs: write real export data when present, else an honest placeholder (never
+    # dummy/reconstructed numbers that don't reconcile with the canonical Dashboard).
     if ads_rows:
         print(f"   Ads Reporting: {sw.write_ads_reporting(sheet_id, agg.ads_reporting_from_csv(ads_rows, prior=prior_ads))} rows")
+    else:
+        sw.write_placeholder(sheet_id, "Ads Reporting", "Ads Reporting (Sponsored Listings)",
+                             ["Per-campaign ad detail is pending the weekly export pipeline.",
+                              "Live ad spend, sales, ROAS and CPO by platform + location are on the Dashboard."])
+        print("   Ads Reporting: placeholder (no per-campaign export)")
     if offers_rows:
         print(f"   Offers Reporting: {sw.write_offers_reporting(sheet_id, agg.offers_reporting_from_csv(offers_rows, prior=prior_offers))} rows")
+    else:
+        sw.write_placeholder(sheet_id, "Offers Reporting", "Offers Reporting (Promotions)",
+                             ["Per-promo detail is pending the weekly export pipeline.",
+                              "Live promo spend + marketing-driven sales are on the Dashboard."])
+        print("   Offers Reporting: placeholder (no per-campaign export)")
 
     # History upsert (ads + offers) — idempotent per week; source for next week's WoW + trend.
     perf = []

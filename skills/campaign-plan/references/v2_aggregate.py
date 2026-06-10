@@ -328,7 +328,7 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
 
     # New customers — sum from the offers export (the only source that reports it).
     new_cx = sum(_num(o.get("New Customers")) for o in offers_rows)
-    new_cust_cac = total_spend / new_cx if new_cx else 0  # blended marketing cost per new cust
+    new_cust_cac = total_spend / new_cx if new_cx else None  # blended cost per new cust; None -> "—"
 
     # Prior-week totals (from History) for WoW on the headline KPIs.
     pt = {"spend": 0, "sales": 0, "orders": 0}
@@ -403,7 +403,7 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
         if _cpo is not None:
             cpo_total = _cpo
         organic_sales = _org
-        new_cust_cac = (total_spend / new_cx) if new_cx else 0
+        new_cust_cac = (total_spend / new_cx) if new_cx else None
         # Ads-vs-Promos investment split from canonical (ad spend vs discounts). Deduped
         # marketing-driven sales can't be split by channel, so this view is spend-only.
         _adsp = _cnum(ov.get("ad_spend")); _disc = _cnum(ov.get("discounts"))

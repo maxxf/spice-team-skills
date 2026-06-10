@@ -1100,6 +1100,13 @@ def write_charts(sheet_id: str, data: dict) -> int:
     return len(adds)
 
 
+def write_placeholder(sheet_id: str, tab: str, title: str, lines: list) -> int:
+    """Write a clean title + note to a tab when there's no real data to show — used instead of
+    leaving stale/dummy numbers in the per-campaign tabs."""
+    m = [[title], []] + [[ln] for ln in lines]
+    return write_full_tab(sheet_id, tab, m, title_rows=1)
+
+
 def write_ads_reporting(sheet_id: str, data: dict) -> int:
     """Full-tab rewrite of Ads Reporting. Sections: Aggregate (WoW) · Per-Campaign funnel ·
     Audience Segmentation.
