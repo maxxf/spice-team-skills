@@ -507,11 +507,88 @@ def paint_status_column(sheet_id: str, tab: str, col_index: int, start_row: int,
         }}]}).execute()
 
 
+def paint_status_cells(sheet_id: str, tab: str, col_index: int, cells: list) -> None:
+    """Paint status pills on scattered (non-contiguous) rows. cells = [(row_0idx, status), ...]."""
+    if not cells:
+        return
+    gid = _tab_gid(sheet_id, tab)
+    reqs = []
+    for r, st in cells:
+        stn = STATUS_EMOJI_MAP.get(st, st)
+        if stn in STATUS_COLORS:
+            fmt = {"backgroundColor": STATUS_COLORS[stn],
+                   "textFormat": {"bold": True, "foregroundColor": WHITE}}
+        else:
+            fmt = {"backgroundColor": WHITE}
+        reqs.append({"repeatCell": {
+            "range": {"sheetId": gid, "startRowIndex": r, "endRowIndex": r + 1,
+                      "startColumnIndex": col_index, "endColumnIndex": col_index + 1},
+            "cell": {"userEnteredFormat": fmt},
+            "fields": "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"}})
+    _service().spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": reqs}).execute()
+
+
+def paint_cell_bg(sheet_id: str, tab: str, row: int, col: int, bg: dict) -> None:
+    """Set one cell's background color (0-indexed row/col). Used for the 3%-target signal."""
+    gid = _tab_gid(sheet_id, tab)
+    _service().spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": [{
+        "repeatCell": {
+            "range": {"sheetId": gid, "startRowIndex": row, "endRowIndex": row + 1,
+                      "startColumnIndex": col, "endColumnIndex": col + 1},
+            "cell": {"userEnteredFormat": {"backgroundColor": bg}},
+            "fields": "userEnteredFormat.backgroundColor"}}]}).execute()
+
+
+def write_active_campaigns_by_location(sheet_id: str, groups: list, week: str = "") -> int:
+    """Render Active Campaigns grouped by location: a cream band per location, then the running
+    campaigns under it (ads + offers) with performance. Status pills in the Status column."""
+    m: list[list[Any]] = []
+    section_rows, header_rows = [], []
+
+    def section(t): m.append([t]); section_rows.append(len(m) - 1)
+    def header(c): m.append(c); header_rows.append(len(m) - 1)
+
+    title = "Active Campaigns by Location"
+    if week:
+        title += f" — {week}"
+    m.append([title]); m.append([])
+
+    COLS = ["Campaign", "Type", "Platform", "Status", "Spend", "Attributed Sales", "ROAS", "Orders"]
+    status_cells = []  # (row_0idx, status)
+    for g in groups:
+        section(f"📍 {g['location']}  ·  {g['count']} campaign(s)")
+        header(COLS)
+        for c in g["campaigns"]:
+            status_cells.append((len(m), c.get("status", "Live")))  # Status is col index 3
+            m.append([c.get("campaign"), c.get("type"), c.get("platform"), c.get("status", "Live"),
+                      _money(c.get("spend")), _money(c.get("sales")), _roas(c.get("roas")),
+                      int(c["orders"]) if c.get("orders") else "—"])
+        m.append([])
+
+    n = write_full_tab(sheet_id, "Active Campaigns", m, section_header_rows=section_rows,
+                       col_header_rows=header_rows, freeze_cols=1)
+    paint_status_cells(sheet_id, "Active Campaigns", col_index=3, cells=status_cells)
+    return n
+
+
 def _money(v) -> str:
     try:
         return f"${float(str(v).replace('$','').replace(',','')):,.0f}"
     except (ValueError, TypeError):
         return str(v) if v not in (None, "") else "—"
+
+
+def _money_short(v) -> str:
+    """Abbreviated currency for KPI tiles: $1.40M / $940K / $680."""
+    try:
+        n = float(str(v).replace("$", "").replace(",", ""))
+    except (ValueError, TypeError):
+        return str(v) if v not in (None, "") else "—"
+    if abs(n) >= 1_000_000:
+        return f"${n / 1_000_000:.2f}M"
+    if abs(n) >= 1_000:
+        return f"${n / 1_000:.0f}K"
+    return f"${n:,.0f}"
 
 
 def _roas(v) -> str:
@@ -609,6 +686,45 @@ def read_history(sheet_id: str) -> list[dict]:
     return out
 
 
+DEFINITIONS = [
+    ["Metric", "Definition"],
+    ["Net Sales", "Total marketplace net sales (tax excluded), pulled weekly from the sales sheet. The denominator for the % metrics."],
+    ["Marketing Spend", "Ad (sponsored-listing) spend + merchant-funded promo spend for the week."],
+    ["Mkt Spend %", "Marketing Spend / Net Sales. North-star target 3% (green <=3%, amber <=4%, red >4%)."],
+    ["Mkt-Attributed Sales %", "(Ad-attributed + offer-attributed sales) / Net Sales. Can exceed 100% because one order can be attributed to BOTH an ad and a promo (see Double-Dip). It is attribution, not incrementality."],
+    ["Blended ROAS", "Attributed sales / marketing spend across ads + offers."],
+    ["CPO", "Cost per order = marketing spend / orders. Blends ad orders + offer redemptions, so orders that did both are counted twice. Read as directional."],
+    ["New-Cust CAC", "Marketing spend / new customers acquired (from offer data)."],
+    ["Double-Dip %", "Share of orders attributed to BOTH an ad and a promo. Currently '-' until an order-level overlap field is available from the platform exports."],
+    ["Store Tier", "Red / Yellow / Green from the sales sheet, grouping stores by health and priority."],
+    ["Action", "Scale up = efficient (<=3% spend, ROAS >=6). Pull back = heavy overspend (>10%). Watch = above the 3% target. Hold = on track."],
+    ["WoW", "Week-over-week change vs the prior week. Fills in as weekly history accumulates."],
+]
+
+
+def seed_definitions(sheet_id: str) -> int:
+    """Seed the Notes & Definitions tab with the metric glossary — ONLY if it's still empty
+    (header row or blank), so any human edits are never overwritten. Returns rows written."""
+    svc = _service()
+    try:
+        cur = svc.spreadsheets().values().get(
+            spreadsheetId=sheet_id, range="'Notes & Definitions'!A1:B100").execute().get("values", [])
+    except Exception:
+        return 0
+    if len([r for r in cur if any(str(c).strip() for c in r)]) > 1:
+        return 0  # already has content beyond the header — leave it alone
+    svc.spreadsheets().values().update(
+        spreadsheetId=sheet_id, range="'Notes & Definitions'!A1",
+        valueInputOption="RAW", body={"values": DEFINITIONS}).execute()
+    svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": [{
+        "repeatCell": {"range": {"sheetId": _tab_gid(sheet_id, "Notes & Definitions"),
+                                 "startRowIndex": 0, "endRowIndex": 1, "startColumnIndex": 0, "endColumnIndex": 2},
+                       "cell": {"userEnteredFormat": {"backgroundColor": SPICE_ORANGE,
+                                "textFormat": {"bold": True, "foregroundColor": WHITE}}},
+                       "fields": "userEnteredFormat.backgroundColor,userEnteredFormat.textFormat"}}]}).execute()
+    return len(DEFINITIONS)
+
+
 def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "") -> int:
     """Full-tab rewrite of the Dashboard. Sections, in order:
       title · Overall KPIs · By Platform · By Segment · Top 5 · Bottom 5 ·
@@ -646,20 +762,28 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
     m.append(["Campaign focus — payout lives in the weekly report"])
     m.append([])
 
+    mkt_pct_cell = None  # (row, col, value%) — painted vs the 3% target after the write
+    heat_cells = []      # (row, col, value, kind) — threshold-colored after the write
+    tile_rows = None     # (label_row, value_row) for the KPI hero strip
     k = data.get("kpis") or {}
     if k:
-        section("Overall")
-        header(["Live", "Proposed", "Blocked", "Total Spend", "Attributed Sales", "Blended ROAS", "New Cx"])
-        m.append([k.get("live", "—"), k.get("proposed", "—"), k.get("blocked", "—"),
-                  _money(k.get("total_spend")), _money(k.get("total_sales")),
-                  _roas(k.get("blended_roas")), k.get("new_cx", "—")])
+        # KPI hero strip — 5 cards in cols B..K (col A is frozen, kept out of the merges).
+        # Three rows per card: label · big value · WoW delta. Replaces the old Overall section.
+        tile_rows = (len(m), len(m) + 1, len(m) + 2)
+        m.append(["", "NET SALES", "", "MKT SPEND %", "", "BLENDED ROAS", "", "CPO", "", "NEW CX", ""])
+        m.append(["", _money_short(k.get("net_sales")), "", k.get("mkt_spend_pct", "—"), "",
+                  _roas(k.get("blended_roas")), "", _money(k.get("cpo")), "", k.get("new_cx", "—"), ""])
+        m.append(["", k.get("net_sales_wow", "—"), "", k.get("mkt_spend_pct_wow", "—"), "",
+                  k.get("roas_wow", "—"), "", k.get("cpo_wow", "—"), "", k.get("new_cx_wow", "—"), ""])
         m.append([])
 
         # Marketing efficiency vs net sales — the 3% north-star metric.
         section("Marketing Efficiency")
-        header(["Net Sales", "Marketing Spend", "Mkt Spend %", "Mkt-Driven Sales %"])
+        header(["Net Sales", "Marketing Spend", "Mkt Spend %", "Mkt-Attributed Sales %", "New-Cust CAC"])
+        mkt_pct_cell = (len(m), 2, k.get("mkt_spend_pct_val"))  # color this cell vs 3%
         m.append([_money(k.get("net_sales")), _money(k.get("total_spend")),
-                  k.get("mkt_spend_pct", "—"), k.get("mkt_driven_pct", "—")])
+                  k.get("mkt_spend_pct", "—"), k.get("mkt_driven_pct", "—"),
+                  _money(k.get("new_cust_cac"))])
         m.append([])
 
         # Ad vs Promo split.
@@ -671,22 +795,58 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
                   _money(k.get("promo_sales")), _roas(k.get("promo_roas"))])
         m.append([])
 
+        # Channel overlap (double-dip). Components are computable; the true overlap % needs an
+        # order-level "attributed to both" field that current exports don't carry.
+        section("Channel Overlap (Double-Dip)")
+        header(["Ad-Attributed Sales %", "Offer-Attributed Sales %", "Combined", "Double-Dip %"])
+        m.append([k.get("ad_driven_pct", "—"), k.get("offer_driven_pct", "—"),
+                  k.get("mkt_driven_pct", "—"), k.get("double_dip_pct", "—")])
+        m.append(["Double-dip = orders attributed to BOTH an ad and an offer; Combined overstates "
+                  "true marketing-driven sales by that overlap. Needs an order-level field to fill."])
+        m.append([])
+
+    if data.get("by_tier"):
+        section("By Store Tier")
+        header(["Tier", "Spend", "Attributed Sales", "ROAS", "Orders", "Mkt Spend %", "Mkt-Attributed Sales %"])
+        for r in data["by_tier"]:
+            heat_cells.append((len(m), 3, r.get("roas"), "roas"))
+            heat_cells.append((len(m), 5, r.get("mkt_spend_pct_val"), "mktpct"))
+            m.append([r.get("tier"), _money(r.get("spend")), _money(r.get("sales")),
+                      _roas(r.get("roas")), r.get("orders", "—"),
+                      r.get("mkt_spend_pct", "—"), r.get("mkt_driven_pct", "—")])
+        m.append([])
+
     if data.get("by_platform"):
         section("By Platform")
-        header(["Platform", "Spend", "Attributed Sales", "ROAS", "Orders", "Mkt Spend %", "Mkt-Driven Sales %"])
+        header(["Platform", "Spend", "Attributed Sales", "ROAS", "Orders", "CPO",
+                "Mkt Spend %", "Mkt-Attributed Sales %"])
         for r in data["by_platform"]:
+            heat_cells.append((len(m), 3, r.get("roas"), "roas"))
+            heat_cells.append((len(m), 6, r.get("mkt_spend_pct_val"), "mktpct"))
             m.append([r.get("platform"), _money(r.get("spend")), _money(r.get("sales")),
-                      _roas(r.get("roas")), r.get("orders", "—"),
+                      _roas(r.get("roas")), r.get("orders", "—"), _money(r.get("cpo")),
                       r.get("mkt_spend_pct", "—"), r.get("mkt_driven_pct", "—")])
         m.append([])
 
     if data.get("by_location"):
         section("By Location")
-        header(["Location", "Spend", "Attributed Sales", "ROAS", "Orders", "Mkt Spend %", "Mkt-Driven Sales %"])
+        header(["Location", "Tier", "Spend", "Attributed Sales", "ROAS", "Orders", "CPO",
+                "Mkt Spend %", "Mkt-Attributed Sales %", "Action"])
         for r in data["by_location"]:
-            m.append([r.get("location"), _money(r.get("spend")), _money(r.get("sales")),
-                      _roas(r.get("roas")), r.get("orders", "—"),
-                      r.get("mkt_spend_pct", "—"), r.get("mkt_driven_pct", "—")])
+            heat_cells.append((len(m), 4, r.get("roas"), "roas"))
+            heat_cells.append((len(m), 7, r.get("mkt_spend_pct_val"), "mktpct"))
+            heat_cells.append((len(m), 9, r.get("flag"), "flag"))
+            m.append([r.get("location"), r.get("tier", ""), _money(r.get("spend")), _money(r.get("sales")),
+                      _roas(r.get("roas")), r.get("orders", "—"), _money(r.get("cpo")),
+                      r.get("mkt_spend_pct", "—"), r.get("mkt_driven_pct", "—"), r.get("flag", "")])
+        m.append([])
+
+    if data.get("by_audience"):
+        section("Customer Segmentation (by Audience)")
+        header(["Audience", "Spend", "Attributed Sales", "ROAS", "Orders", "% of Spend"])
+        for r in data["by_audience"]:
+            m.append([r.get("segment"), _money(r.get("spend")), _money(r.get("sales")),
+                      _roas(r.get("roas")), r.get("orders", "—"), r.get("pct_spend", "—")])
         m.append([])
 
     if data.get("by_segment"):
@@ -743,7 +903,130 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
     n = write_full_tab(sheet_id, "Dashboard", m,
                        section_header_rows=section_rows, col_header_rows=header_rows,
                        freeze_cols=1)
+    gid = _tab_gid(sheet_id, "Dashboard")
+    reqs = []
+    GREEN = {"red": 0.80, "green": 0.92, "blue": 0.80}
+    AMBER = {"red": 0.99, "green": 0.96, "blue": 0.83}
+    RED = {"red": 0.97, "green": 0.82, "blue": 0.82}
+
+    def _bg(row, col, color):
+        reqs.append({"repeatCell": {
+            "range": {"sheetId": gid, "startRowIndex": row, "endRowIndex": row + 1,
+                      "startColumnIndex": col, "endColumnIndex": col + 1},
+            "cell": {"userEnteredFormat": {"backgroundColor": color}},
+            "fields": "userEnteredFormat.backgroundColor"}})
+
+    # Mkt Spend % cell vs the 3% north star.
+    if mkt_pct_cell and mkt_pct_cell[2] is not None:
+        v = mkt_pct_cell[2]
+        _bg(mkt_pct_cell[0], mkt_pct_cell[1], GREEN if v <= 3 else AMBER if v <= 4 else RED)
+
+    # Heat-color the ROAS / Mkt Spend % columns + the Action flag across the breakdown tables.
+    for row, col, val, kind in heat_cells:
+        if kind == "roas" and val is not None:
+            _bg(row, col, GREEN if val >= 6 else AMBER if val >= 3 else RED)
+        elif kind == "mktpct" and val is not None:
+            _bg(row, col, GREEN if val <= 3 else AMBER if val <= 4 else RED)
+        elif kind == "flag" and val:
+            if "Scale" in val:
+                _bg(row, col, GREEN)
+            elif "Pull" in val:
+                _bg(row, col, RED)
+            elif "Watch" in val:
+                _bg(row, col, AMBER)
+
+    # KPI hero tiles: merge each 2-col card, big centered value, cream band, label muted.
+    if tile_rows:
+        lrow, vrow, wrow = tile_rows
+        for c0 in (1, 3, 5, 7, 9):
+            for rr in (lrow, vrow, wrow):
+                reqs.append({"mergeCells": {"mergeType": "MERGE_ALL", "range": {
+                    "sheetId": gid, "startRowIndex": rr, "endRowIndex": rr + 1,
+                    "startColumnIndex": c0, "endColumnIndex": c0 + 2}}})
+
+        def _tile_fmt(rr, size, color, bold=True):
+            reqs.append({"repeatCell": {
+                "range": {"sheetId": gid, "startRowIndex": rr, "endRowIndex": rr + 1,
+                          "startColumnIndex": 1, "endColumnIndex": 11},
+                "cell": {"userEnteredFormat": {"backgroundColor": SPICE_CREAM, "horizontalAlignment": "CENTER",
+                         "verticalAlignment": "MIDDLE",
+                         "textFormat": {"bold": bold, "fontSize": size, "foregroundColor": color}}},
+                "fields": "userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)"}})
+
+        muted = {"red": 0.42, "green": 0.42, "blue": 0.45}
+        _tile_fmt(lrow, 8, muted)          # label
+        _tile_fmt(vrow, 18, INK_900)       # big value
+        _tile_fmt(wrow, 9, muted, bold=False)  # WoW delta (vs last week)
+        # Flag the Mkt Spend % hero tile (cols 3-4) against the 3% north star.
+        msv = k.get("mkt_spend_pct_val")
+        if msv is not None:
+            _bg(vrow, 3, GREEN if msv <= 3 else AMBER if msv <= 4 else RED)
+
+    if reqs:
+        _service().spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": reqs}).execute()
     return n
+
+
+def write_charts(sheet_id: str, data: dict) -> int:
+    """Add embedded charts to the Dashboard (Spend vs Sales by platform + by location, ROAS by
+    platform). Numeric source lands on a hidden _ChartData tab; existing Dashboard charts are
+    deleted first so re-runs don't stack. Returns the number of charts added."""
+    svc = _service()
+    # Ensure the hidden data tab.
+    meta = get_metadata(sheet_id)
+    if "_ChartData" not in meta["tabs"]:
+        svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": [
+            {"addSheet": {"properties": {"title": "_ChartData", "hidden": True,
+                                         "gridProperties": {"rowCount": 60, "columnCount": 12}}}}]}).execute()
+        _GID_CACHE.pop(sheet_id, None)
+    cd = _tab_gid(sheet_id, "_ChartData")
+    dash = _tab_gid(sheet_id, "Dashboard")
+
+    plats = data.get("by_platform", []) or []
+    locs = (data.get("by_location", []) or [])[:8]
+    pmat = [["Platform", "Spend", "Attributed Sales", "ROAS"]] + \
+           [[p.get("platform"), round(p.get("spend", 0)), round(p.get("sales", 0)), p.get("roas", 0)] for p in plats]
+    lmat = [["Location", "Spend", "Attributed Sales"]] + \
+           [[l.get("location"), round(l.get("spend", 0)), round(l.get("sales", 0))] for l in locs]
+    svc.spreadsheets().values().clear(spreadsheetId=sheet_id, range="_ChartData!A1:Z100", body={}).execute()
+    svc.spreadsheets().values().update(spreadsheetId=sheet_id, range="_ChartData!A1",
+                                       valueInputOption="RAW", body={"values": pmat}).execute()
+    svc.spreadsheets().values().update(spreadsheetId=sheet_id, range="_ChartData!F1",
+                                       valueInputOption="RAW", body={"values": lmat}).execute()
+
+    # Delete existing Dashboard charts.
+    full = svc.spreadsheets().get(spreadsheetId=sheet_id,
+                                  fields="sheets(properties(sheetId),charts(chartId))").execute()
+    dels = [{"deleteEmbeddedObject": {"objectId": c["chartId"]}}
+            for s in full["sheets"] if s["properties"]["sheetId"] == dash
+            for c in s.get("charts", [])]
+    if dels:
+        svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": dels}).execute()
+
+    def _src(r0, r1, c0, c1):
+        return {"sources": [{"sheetId": cd, "startRowIndex": r0, "endRowIndex": r1,
+                             "startColumnIndex": c0, "endColumnIndex": c1}]}
+
+    def _col_chart(title, nrows, dom_c, series_cs, anchor_row, ctype="COLUMN"):
+        return {"addChart": {"chart": {
+            "spec": {"title": title, "basicChart": {
+                "chartType": ctype, "legendPosition": "BOTTOM_LEGEND", "headerCount": 1,
+                "domains": [{"domain": {"sourceRange": _src(0, nrows, dom_c, dom_c + 1)}}],
+                "series": [{"series": {"sourceRange": _src(0, nrows, c, c + 1)}, "targetAxis": "LEFT_AXIS"}
+                           for c in series_cs]}},
+            "position": {"overlayPosition": {
+                "anchorCell": {"sheetId": dash, "rowIndex": anchor_row, "columnIndex": 11},
+                "widthPixels": 460, "heightPixels": 280}}}}}
+
+    adds = []
+    if len(pmat) > 1:
+        adds.append(_col_chart("Spend vs Attributed Sales by Platform", len(pmat), 0, [1, 2], 3))
+        adds.append(_col_chart("ROAS by Platform", len(pmat), 0, [3], 19))
+    if len(lmat) > 1:
+        adds.append(_col_chart("Spend vs Sales by Location (Top 8)", len(lmat), 5, [6, 7], 35))
+    if adds:
+        svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": adds}).execute()
+    return len(adds)
 
 
 def write_ads_reporting(sheet_id: str, data: dict) -> int:
@@ -926,11 +1209,15 @@ def validate_sheet(sheet_id: str) -> dict:
         except Exception:
             return []
 
-    # Active Campaigns header must lead with "Campaign Name"
+    # Active Campaigns: accept either the flat planning registry (A1 = "Campaign Name") or the
+    # by-location view (A1 = the "Active Campaigns by Location…" title). Either is valid; a
+    # blank/numeric A1 would signal drift.
     if "Active Campaigns" in tabs:
         h = _row("Active Campaigns", "A1:U1")
-        if h and h[0] != "Campaign Name":
-            errors.append(f"Active Campaigns header drift: A1 = {h[0]!r}, expected 'Campaign Name'")
+        a1 = h[0] if h else ""
+        if a1 and not (a1 == "Campaign Name" or a1.startswith("Active Campaigns")):
+            errors.append(f"Active Campaigns header drift: A1 = {a1!r}, expected 'Campaign Name' "
+                          f"or an 'Active Campaigns…' title")
 
     # Off-by-one detector: in the reporting tabs, scan for a row whose first cell is a known
     # aggregate-table header label ("Metric") followed by NUMERIC cells in the same row —

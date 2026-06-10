@@ -110,12 +110,49 @@ def active_campaigns_from_tracker(tracker_rows: list[dict]) -> list[dict]:
     return out
 
 
+def active_campaigns_by_location(ads_rows: list[dict], offers_rows: list[dict],
+                                 location_aliases: dict | None = None) -> list[dict]:
+    """Group the running campaigns (ads + offers) by canonical location for a clean
+    'what's live where' view. A campaign that spans multiple locations appears under each.
+    Returns [{location, count, total_spend, campaigns:[{campaign,type,platform,status,
+    spend,sales,roas,orders}]}], sorted by location spend desc, campaigns by spend desc."""
+    items = []
+    for a in ads_rows:
+        sp, sa = _num(a.get("Spend")), _num(a.get("Attributed Sales") or a.get("Sales"))
+        items.append({"campaign": a.get("Campaign", ""), "type": "Ad",
+                      "platform": a.get("Platform", ""), "status": a.get("Status", "Live") or "Live",
+                      "raw_loc": a.get("Locations") or a.get("Location", ""),
+                      "spend": sp, "sales": sa, "orders": _num(a.get("Orders")),
+                      "roas": round(sa / sp, 1) if sp else 0})
+    for o in offers_rows:
+        sp, sa = _num(o.get("Promo Spend") or o.get("Discount Spend") or o.get("Spend")), \
+            _num(o.get("Attributed Sales") or o.get("Sales"))
+        items.append({"campaign": o.get("Promotion") or o.get("Offer") or o.get("Campaign", ""),
+                      "type": "Offer", "platform": o.get("Platform", ""),
+                      "status": o.get("Status", "Live") or "Live",
+                      "raw_loc": o.get("Locations") or o.get("Location", ""),
+                      "spend": sp, "sales": sa, "orders": _num(o.get("Redemptions") or o.get("Orders")),
+                      "roas": round(sa / sp, 1) if sp else 0})
+    groups: dict = {}
+    for it in items:
+        for loc in _canon_locations(it["raw_loc"], location_aliases):
+            groups.setdefault(loc, []).append(it)
+    out = []
+    for loc, camps in groups.items():
+        out.append({"location": loc, "count": len(camps),
+                    "total_spend": sum(c["spend"] for c in camps),
+                    "campaigns": sorted(camps, key=lambda c: -c["spend"])})
+    out.sort(key=lambda g: -g["total_spend"])
+    return out
+
+
 # ---- Dashboard ----
 
 def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
                         offers_rows: list[dict], history_rollup: dict | None = None,
                         weekstart: str | None = None, net_sales: dict | None = None,
-                        location_aliases: dict | None = None) -> dict:
+                        location_aliases: dict | None = None, tier_map: dict | None = None,
+                        prior_net_total: float | None = None) -> dict:
     """Build the dashboard dict: KPIs, by-platform, by-location, top/bottom 5, ad/promo split,
     and (when prior weeks exist in History) a 4-week Portfolio Trend with WoW.
 
@@ -135,19 +172,23 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
     for a in ads_rows:
         perf.append({"campaign": a.get("Campaign", ""), "platform": a.get("Platform", ""),
                      "location": a.get("Locations") or a.get("Location", ""),
+                     "audience": a.get("Audience", "All") or "All",
                      "spend": _num(a.get("Spend")), "sales": _num(a.get("Attributed Sales") or a.get("Sales")),
                      "orders": _num(a.get("Orders")), "kind": "Ad"})
     for o in offers_rows:
         perf.append({"campaign": o.get("Promotion") or o.get("Offer") or o.get("Campaign", ""),
                      "platform": o.get("Platform", ""),
                      "location": o.get("Locations") or o.get("Location", ""),
+                     "audience": o.get("Audience", "All") or "All",
                      "spend": _num(o.get("Promo Spend") or o.get("Discount Spend") or o.get("Spend")),
                      "sales": _num(o.get("Attributed Sales") or o.get("Sales")),
                      "orders": _num(o.get("Redemptions") or o.get("Orders")), "kind": "Offer"})
 
     total_spend = sum(p["spend"] for p in perf)
     total_sales = sum(p["sales"] for p in perf)
+    total_orders = sum(p["orders"] for p in perf)
     blended = round(total_sales / total_spend, 1) if total_spend else 0
+    cpo_total = total_spend / total_orders if total_orders else 0
 
     # Ad vs Promo split (kind = Ad / Offer) — clearer headline than one blended number.
     ad_spend = sum(p["spend"] for p in perf if p["kind"] == "Ad")
@@ -160,10 +201,16 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
     for p in perf:
         d = plat.setdefault(p["platform"], {"spend": 0, "sales": 0, "orders": 0})
         d["spend"] += p["spend"]; d["sales"] += p["sales"]; d["orders"] += p["orders"]
+    def _pctval(num, den):
+        num, den = _num(num), _num(den)
+        return (num / den * 100) if den else None
+
     by_platform = [{"platform": k, "spend": v["spend"], "sales": v["sales"],
                     "roas": round(v["sales"] / v["spend"], 1) if v["spend"] else 0,
                     "orders": int(v["orders"]),
+                    "cpo": v["spend"] / v["orders"] if v["orders"] else 0,
                     "mkt_spend_pct": _pct(v["spend"], ns_plat.get(k)),
+                    "mkt_spend_pct_val": _pctval(v["spend"], ns_plat.get(k)),
                     "mkt_driven_pct": _pct(v["sales"], ns_plat.get(k))}
                    for k, v in sorted(plat.items())]
 
@@ -178,12 +225,65 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
             d["spend"] += p["spend"] / len(names)
             d["sales"] += p["sales"] / len(names)
             d["orders"] += p["orders"] / len(names)
-    by_location = [{"location": k, "spend": v["spend"], "sales": v["sales"],
+    def _eff_flag(mkt_val, roas):
+        """Recommend an action vs the 3% spend north star: scale efficient winners, pull back
+        heavy overspend, watch the in-between."""
+        if mkt_val is None:
+            return ""
+        if mkt_val > 10:
+            return "⚠ Pull back"
+        if mkt_val <= 3 and roas >= 6:
+            return "▲ Scale up"
+        if mkt_val > 4:
+            return "Watch"
+        return "Hold"
+
+    by_location = []
+    for k, v in sorted(loc.items(), key=lambda kv: -kv[1]["spend"]):
+        roas = round(v["sales"] / v["spend"], 1) if v["spend"] else 0
+        mkt_val = _pctval(v["spend"], ns_loc.get(k))
+        by_location.append({"location": k, "spend": v["spend"], "sales": v["sales"],
+                            "roas": roas, "orders": int(round(v["orders"])),
+                            "cpo": v["spend"] / v["orders"] if v["orders"] else 0,
+                            "mkt_spend_pct": _pct(v["spend"], ns_loc.get(k)),
+                            "mkt_spend_pct_val": mkt_val,
+                            "mkt_driven_pct": _pct(v["sales"], ns_loc.get(k)),
+                            "tier": (tier_map or {}).get(k, ""),
+                            "flag": _eff_flag(mkt_val, roas)})
+
+    # By tier (segment locations into Red/Yellow/Green using the sales sheet's tier map).
+    by_tier = []
+    if tier_map:
+        tg = {}
+        for r in by_location:
+            t = r.get("tier")
+            if not t:
+                continue
+            d = tg.setdefault(t, {"spend": 0, "sales": 0, "orders": 0, "net": 0})
+            d["spend"] += r["spend"]; d["sales"] += r["sales"]; d["orders"] += r["orders"]
+            d["net"] += _num(ns_loc.get(r["location"]))
+        for t in ("Red", "Yellow", "Green"):
+            if t in tg:
+                d = tg[t]
+                by_tier.append({"tier": t, "spend": d["spend"], "sales": d["sales"],
+                                "roas": round(d["sales"] / d["spend"], 1) if d["spend"] else 0,
+                                "orders": int(d["orders"]),
+                                "mkt_spend_pct": _pct(d["spend"], d["net"]),
+                                "mkt_spend_pct_val": _pctval(d["spend"], d["net"]),
+                                "mkt_driven_pct": _pct(d["sales"], d["net"])})
+
+    # Customer segmentation — by targeted audience (All / New / Lapsed), from the campaign data.
+    aud = {}
+    for p in perf:
+        kx = p.get("audience") or "All"
+        d = aud.setdefault(kx, {"spend": 0, "sales": 0, "orders": 0})
+        d["spend"] += p["spend"]; d["sales"] += p["sales"]; d["orders"] += p["orders"]
+    by_audience = [{"segment": kx, "spend": v["spend"], "sales": v["sales"],
                     "roas": round(v["sales"] / v["spend"], 1) if v["spend"] else 0,
-                    "orders": int(round(v["orders"])),
-                    "mkt_spend_pct": _pct(v["spend"], ns_loc.get(k)),
-                    "mkt_driven_pct": _pct(v["sales"], ns_loc.get(k))}
-                   for k, v in sorted(loc.items(), key=lambda kv: -kv[1]["spend"])]
+                    "orders": int(v["orders"]), "pct_spend": _pct(v["spend"], total_spend)}
+                   for kx, v in sorted(aud.items(), key=lambda kv: -kv[1]["spend"])]
+    if len(by_audience) <= 1:  # a single "All" bucket isn't a segmentation — suppress
+        by_audience = []
 
     # By segment (from tracker Segment col, folding any perf we can map by campaign name)
     seg = {}
@@ -213,6 +313,21 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
 
     # New customers — sum from the offers export (the only source that reports it).
     new_cx = sum(_num(o.get("New Customers")) for o in offers_rows)
+    new_cust_cac = total_spend / new_cx if new_cx else 0  # blended marketing cost per new cust
+
+    # Prior-week totals (from History) for WoW on the headline KPIs.
+    pt = {"spend": 0, "sales": 0, "orders": 0}
+    if history_rollup and weekstart:
+        pws = sorted(w for w in history_rollup if w < weekstart)
+        if pws:
+            a = history_rollup[pws[-1]]
+            pt["spend"] = a["ads"]["spend"] + a["offers"]["spend"]
+            pt["sales"] = a["ads"]["sales"] + a["offers"]["sales"]
+            pt["orders"] = a["ads"]["orders"] + a["offers"]["orders"]
+    prior_roas = pt["sales"] / pt["spend"] if pt["spend"] else 0
+    prior_cpo = pt["spend"] / pt["orders"] if pt["orders"] else 0
+    cur_mkt_pct = (total_spend / ns_total * 100) if ns_total else 0
+    prior_mkt_pct = (pt["spend"] / prior_net_total * 100) if prior_net_total else 0
 
     # Portfolio Trend — last 4 weeks of total spend / sales / blended ROAS, from History plus
     # the current week. Only built when at least one PRIOR week exists (a single week has no
@@ -243,7 +358,19 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
     return {
         "kpis": {"live": live, "proposed": proposed, "blocked": blocked,
                  "total_spend": total_spend, "total_sales": total_sales,
+                 "total_orders": int(total_orders), "cpo": cpo_total,
                  "blended_roas": blended, "new_cx": int(new_cx) if new_cx else "—",
+                 "new_cust_cac": new_cust_cac,
+                 # WoW deltas on the headline (vs the most recent prior week in History)
+                 "spend_wow": _wow(total_spend, pt["spend"]),
+                 "sales_wow": _wow(total_sales, pt["sales"]),
+                 "orders_wow": _wow(total_orders, pt["orders"]),
+                 "roas_wow": _wow(blended, prior_roas),
+                 "cpo_wow": _wow(cpo_total, prior_cpo),
+                 # tile WoW: Net Sales + Mkt Spend % use the sales-sheet prior week (available now)
+                 "net_sales_wow": _wow(ns_total, prior_net_total) if prior_net_total else "—",
+                 "mkt_spend_pct_wow": _wow(cur_mkt_pct, prior_mkt_pct) if (prior_mkt_pct and ns_total) else "—",
+                 "new_cx_wow": "—",
                  # Ad vs Promo split
                  "ad_spend": ad_spend, "ad_sales": ad_sales,
                  "ad_roas": round(ad_sales / ad_spend, 1) if ad_spend else 0,
@@ -252,9 +379,17 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
                  # Marketing efficiency vs net sales (the 3% north-star metric)
                  "net_sales": ns_total or "—",
                  "mkt_spend_pct": _pct(total_spend, ns_total),
-                 "mkt_driven_pct": _pct(total_sales, ns_total)},
+                 "mkt_driven_pct": _pct(total_sales, ns_total),
+                 "mkt_spend_pct_val": (total_spend / ns_total * 100) if ns_total else None,
+                 # Channel overlap (double-dip): components computable; true overlap needs an
+                 # order-level field not in current exports, so the % itself is "—" for now.
+                 "ad_driven_pct": _pct(ad_sales, ns_total),
+                 "offer_driven_pct": _pct(promo_sales, ns_total),
+                 "double_dip_pct": "—"},
         "by_platform": by_platform,
         "by_location": by_location,
+        "by_tier": by_tier,
+        "by_audience": by_audience,
         "by_segment": by_segment,
         "top_five": top_five,
         "bottom_five": bottom_five,

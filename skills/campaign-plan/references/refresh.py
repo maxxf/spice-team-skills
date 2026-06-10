@@ -158,21 +158,77 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     else:
         print("   (no prior week in History yet — WoW shows '—' until next week / backfill)")
 
-    # Net sales (from weekly-reporting) for the marketing-efficiency % metrics.
-    net_sales = _load_net_sales(cfg, data_dir)
+    # Net sales (for the marketing-efficiency % metrics). Prefer a live cross-pull from the
+    # client's weekly sales sheet; fall back to a net_sales.csv / by_location.csv in inputs.
+    net_sales = None
+    if cfg.get("net_sales_sheet_id"):
+        try:
+            import net_sales_pull as nsp
+            net_sales = nsp.pull_net_sales(
+                cfg["net_sales_sheet_id"], weekstart,
+                cfg.get("net_sales_platform_tab", "Weekly Platform Overview 2.0"),
+                cfg.get("net_sales_location_tab", "By Location 2.0"))
+            if not (net_sales and net_sales.get("total")):
+                net_sales = None
+        except Exception as e:
+            print(f"   (net-sales sheet pull failed: {str(e)[:90]})")
+            net_sales = None
+    if not net_sales:
+        net_sales = _load_net_sales(cfg, data_dir)
     if net_sales:
-        print(f"   (net sales loaded: {len(net_sales['platform'])} platforms, {len(net_sales['location'])} locations)")
+        print(f"   (net sales: ${net_sales['total']:,.0f} total, {len(net_sales['platform'])} platforms, {len(net_sales['location'])} locations)")
     else:
-        print("   (no net_sales.csv — Mkt Spend % / Mkt-Driven Sales % show '—')")
+        print("   (no net sales source — Mkt Spend % / Mkt-Driven Sales % show '—')")
 
-    # Write each tab. Active Campaigns shows LIVE campaigns only — planning/pipeline state
-    # (Proposed/Blocked/Brief) stays internal in Notion + the GM-owned Q-Plan tabs.
-    ac = [r for r in agg.active_campaigns_from_tracker(tracker_rows) if r.get("Status") == "Live"]
-    print(f"   Active Campaigns (Live only): {sw.write_active_campaigns(sheet_id, ac, last_updated=weekstart)} rows")
+    # Store-tier map (Red/Yellow/Green) from the sales sheet, for the By-Tier segmentation.
+    tier_map = None
+    if cfg.get("net_sales_sheet_id"):
+        try:
+            import net_sales_pull as nsp
+            tier_map = nsp.pull_tier_map(cfg["net_sales_sheet_id"], cfg.get("tier_tab", "By Tier"))
+            if tier_map:
+                print(f"   (tier map: {len(tier_map)} locations tiered)")
+        except Exception as e:
+            print(f"   (tier-map pull skipped: {str(e)[:80]})")
+
+    # Active Campaigns = a clean by-location view of what's actually running (ads + offers).
+    # Planning/pipeline state stays internal in Notion + the GM-owned Q-Plan tabs. Falls back
+    # to a flat Live list for planning-only clients with no performance exports yet.
+    if ads_rows or offers_rows:
+        groups = agg.active_campaigns_by_location(ads_rows, offers_rows, cfg.get("location_aliases"))
+        n_ac = sw.write_active_campaigns_by_location(sheet_id, groups, week=week_label)
+        print(f"   Active Campaigns by location: {n_ac} rows ({len(groups)} locations)")
+    else:
+        ac = [r for r in agg.active_campaigns_from_tracker(tracker_rows) if r.get("Status") == "Live"]
+        print(f"   Active Campaigns (Live only): {sw.write_active_campaigns(sheet_id, ac, last_updated=weekstart)} rows")
+    # Prior-week net sales (for the Net Sales / Mkt Spend % tile WoW — the sales sheet has it now).
+    prior_net_total = None
+    if cfg.get("net_sales_sheet_id"):
+        try:
+            import net_sales_pull as nsp
+            pw = (dt.date.fromisoformat(weekstart) - dt.timedelta(days=7)).isoformat()
+            pn = nsp.pull_net_sales(cfg["net_sales_sheet_id"], pw,
+                                    cfg.get("net_sales_platform_tab", "Weekly Platform Overview 2.0"),
+                                    cfg.get("net_sales_location_tab", "By Location 2.0"))
+            prior_net_total = pn.get("total") or None
+        except Exception:
+            prior_net_total = None
+
     dash = agg.dashboard_from_data(tracker_rows, ads_rows, offers_rows,
                                    history_rollup=rollup, weekstart=weekstart, net_sales=net_sales,
-                                   location_aliases=cfg.get("location_aliases"))
+                                   location_aliases=cfg.get("location_aliases"), tier_map=tier_map,
+                                   prior_net_total=prior_net_total)
     print(f"   Dashboard: {sw.write_dashboard(sheet_id, dash, client=display, week=week_label)} rows")
+    try:
+        print(f"   Charts: {sw.write_charts(sheet_id, dash)} embedded")
+    except Exception as e:
+        print(f"   (charts skipped: {str(e)[:90]})")
+    try:
+        seeded = sw.seed_definitions(sheet_id)
+        if seeded:
+            print(f"   Notes & Definitions: seeded {seeded} rows")
+    except Exception as e:
+        print(f"   (definitions seed skipped: {str(e)[:80]})")
     if ads_rows:
         print(f"   Ads Reporting: {sw.write_ads_reporting(sheet_id, agg.ads_reporting_from_csv(ads_rows, prior=prior_ads))} rows")
     if offers_rows:
