@@ -798,7 +798,7 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
         m.append(["", _money_short(k.get("total_sales_display")), "", k.get("mkt_spend_pct", "—"), "",
                   _roas(k.get("marketing_roas")), "", _roas(k.get("blended_roas")), "", k.get("new_cx", "—"), ""])
         m.append(["", k.get("total_sales_wow", "—"), "", k.get("mkt_spend_pct_wow", "—"), "",
-                  k.get("roas_wow", "—"), "", "—", "", k.get("new_cx_wow", "—"), ""])
+                  k.get("roas_wow", "—"), "", k.get("blended_roas_wow", "—"), "", k.get("new_cx_wow", "—"), ""])
         m.append([])
 
         # Marketing efficiency vs Total Sales — the 3% north-star metric (canonical).

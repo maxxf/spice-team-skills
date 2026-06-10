@@ -201,8 +201,9 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     else:
         ac = [r for r in agg.active_campaigns_from_tracker(tracker_rows) if r.get("Status") == "Live"]
         print(f"   Active Campaigns (Live only): {sw.write_active_campaigns(sheet_id, ac, last_updated=weekstart)} rows")
-    # Prior-week TOTAL sales (for the Total Sales / Mkt Spend % tile WoW).
+    # Prior-week canonical metrics (for correct canonical-to-canonical headline WoW).
     prior_net_total = None
+    prior_overview = None
     if cfg.get("net_sales_sheet_id"):
         try:
             import net_sales_pull as nsp
@@ -210,9 +211,10 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
             psm = nsp.pull_sales_metrics(cfg["net_sales_sheet_id"], pw,
                                          cfg.get("net_sales_platform_tab", "Weekly Platform Overview 2.0"),
                                          cfg.get("net_sales_location_tab", "By Location 2.0"))
-            prior_net_total = agg._cnum((psm.get("overview") or {}).get("total_sales"))
+            prior_overview = psm.get("overview") or {}
+            prior_net_total = agg._cnum(prior_overview.get("total_sales"))
         except Exception:
-            prior_net_total = None
+            prior_overview = None
 
     # Canonical weekly-reporting metrics (deduped, correct denominators) for the efficiency
     # sections. Per-campaign tabs stay export-derived.
@@ -234,7 +236,8 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     dash = agg.dashboard_from_data(tracker_rows, ads_rows, offers_rows,
                                    history_rollup=rollup, weekstart=weekstart, net_sales=net_sales,
                                    location_aliases=cfg.get("location_aliases"), tier_map=tier_map,
-                                   prior_net_total=prior_net_total, sales_metrics=sales_metrics)
+                                   prior_net_total=prior_net_total, sales_metrics=sales_metrics,
+                                   prior_overview=prior_overview)
     # Multi-week Marketing-Driven vs Organic trend (incrementality read).
     if cfg.get("net_sales_sheet_id"):
         try:
@@ -354,9 +357,13 @@ def main():
     tracker_csv = os.path.join(data_dir, f"{args.client}_tracker.csv")
     os.makedirs(data_dir, exist_ok=True)
 
-    # Compute the weekstart (Monday of the as_of week) for Drive folder lookup.
-    as_of_date = dt.date.fromisoformat(args.as_of) if args.as_of else dt.date.today()
-    weekstart = _monday_of(as_of_date).isoformat()
+    # Reporting week = the most recent COMPLETED Mon-Sun. With --as-of, the given date's week
+    # is the reporting week. Without it, default to last week (Monday of this week minus 7) so a
+    # mid-week run reports the week that just ended, not the in-progress one.
+    if args.as_of:
+        weekstart = _monday_of(dt.date.fromisoformat(args.as_of)).isoformat()
+    else:
+        weekstart = (_monday_of(dt.date.today()) - dt.timedelta(days=7)).isoformat()
 
     # Step 0 — PULL FROM DRIVE: download this week's inputs from the client's Drive folder
     # into <data_dir>/inputs/. Falls back gracefully if folder doesn't exist.

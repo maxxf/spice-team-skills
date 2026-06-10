@@ -166,7 +166,8 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
                         offers_rows: list[dict], history_rollup: dict | None = None,
                         weekstart: str | None = None, net_sales: dict | None = None,
                         location_aliases: dict | None = None, tier_map: dict | None = None,
-                        prior_net_total: float | None = None, sales_metrics: dict | None = None) -> dict:
+                        prior_net_total: float | None = None, sales_metrics: dict | None = None,
+                        prior_overview: dict | None = None) -> dict:
     """Build the dashboard dict: KPIs, by-platform, by-location, top/bottom 5, ad/promo split,
     and (when prior weeks exist in History) a 4-week Portfolio Trend with WoW.
 
@@ -458,6 +459,14 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
 
     cur_mkt_pct = (total_spend / denom_sales * 100) if denom_sales else 0
 
+    # Prior-week canonical values for correct (canonical-to-canonical) WoW on the headline.
+    po = prior_overview or {}
+    po_ts = _cnum(po.get("total_sales")); po_inv = _cnum(po.get("mktg_investment"))
+    po_roas = _cnum(po.get("roas")); po_cpo = _cnum(po.get("cpo")); po_bl = _cnum(po.get("blended_roas"))
+    po_mktpct = (po_inv / po_ts * 100) if (po_inv and po_ts) else None
+    if ov:  # canonical mode — the History/reconstruction Portfolio Trend would conflict
+        portfolio_trend = []
+
     return {
         "kpis": {"live": live, "proposed": proposed, "blocked": blocked,
                  "total_spend": total_spend, "total_sales": total_sales,
@@ -465,13 +474,12 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
                  "marketing_roas": mktg_roas, "blended_roas": blended_roas_disp,
                  "new_cx": int(new_cx) if new_cx else "—",
                  "new_cust_cac": new_cust_cac,
-                 "spend_wow": _wow(total_spend, pt["spend"]),
-                 "sales_wow": _wow(total_sales, pt["sales"]),
-                 "orders_wow": _wow(total_orders, pt["orders"]),
-                 "roas_wow": _wow(mktg_roas, prior_roas),
-                 "cpo_wow": _wow(cpo_total, prior_cpo),
-                 "total_sales_wow": _wow(denom_sales, prior_net_total) if prior_net_total else "—",
-                 "mkt_spend_pct_wow": _wow(cur_mkt_pct, prior_mkt_pct) if (prior_mkt_pct and denom_sales) else "—",
+                 # Headline WoW — canonical-to-canonical (vs the prior week's sales-sheet metrics)
+                 "total_sales_wow": _wow(denom_sales, po_ts) if po_ts else "—",
+                 "mkt_spend_pct_wow": _wow(cur_mkt_pct, po_mktpct) if po_mktpct else "—",
+                 "roas_wow": _wow(mktg_roas, po_roas) if po_roas else "—",
+                 "blended_roas_wow": _wow(blended_roas_disp, po_bl) if po_bl else "—",
+                 "cpo_wow": _wow(cpo_total, po_cpo) if po_cpo else "—",
                  "new_cx_wow": "—",
                  # Ad vs Promo split (campaign-export attributed)
                  "ad_spend": ad_spend, "ad_sales": ad_sales,
