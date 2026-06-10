@@ -687,18 +687,21 @@ def read_history(sheet_id: str) -> list[dict]:
 
 
 DEFINITIONS = [
-    ["Metric", "Definition"],
-    ["Net Sales", "Total marketplace net sales (tax excluded), pulled weekly from the sales sheet. The denominator for the % metrics."],
-    ["Marketing Spend", "Ad (sponsored-listing) spend + merchant-funded promo spend for the week."],
-    ["Mkt Spend %", "Marketing Spend / Net Sales. North-star target 3% (green <=3%, amber <=4%, red >4%)."],
-    ["Mkt-Attributed Sales %", "(Ad-attributed + offer-attributed sales) / Net Sales. Can exceed 100% because one order can be attributed to BOTH an ad and a promo (see Double-Dip). It is attribution, not incrementality."],
-    ["Blended ROAS", "Attributed sales / marketing spend across ads + offers."],
-    ["CPO", "Cost per order = marketing spend / orders. Blends ad orders + offer redemptions, so orders that did both are counted twice. Read as directional."],
-    ["New-Cust CAC", "Marketing spend / new customers acquired (from offer data)."],
-    ["Double-Dip %", "Share of orders attributed to BOTH an ad and a promo. Currently '-' until an order-level overlap field is available from the platform exports."],
+    ["Metric", "Definition (Spice weekly-reporting methodology)"],
+    ["Total Sales", "Food subtotal excluding tax — the top line before deductions. Denominator for the % metrics."],
+    ["Net Sales", "Total Sales minus merchant-funded discounts."],
+    ["Marketing Spend", "Total Marketing Investment = ad spend + offer/discount spend for the week."],
+    ["Mkt Spend %", "Marketing Spend / Total Sales. North-star target 3% (green <=3%, amber <=4%, red >4%)."],
+    ["Marketing-Driven Sales", "Net sales from orders attributed to a campaign (ad OR offer). Deduped — an order is counted once even if it used both an ad and an offer."],
+    ["Mkt-Driven Sales %", "Marketing-Driven Sales / Total Sales. The rest is Organic."],
+    ["Organic Sales", "Sales from orders with no marketing attribution (Total Sales - Marketing-Driven)."],
+    ["Marketing ROAS", "Marketing-Driven Sales / Marketing Spend. 3.0+ is generally healthy."],
+    ["CPO", "Marketing CPO = Marketing Spend / Orders from Marketing (deduped marketing orders)."],
+    ["New-Cust CAC", "Marketing Spend / new customers acquired (from offer data)."],
     ["Store Tier", "Red / Yellow / Green from the sales sheet, grouping stores by health and priority."],
     ["Action", "Scale up = efficient (<=3% spend, ROAS >=6). Pull back = heavy overspend (>10%). Watch = above the 3% target. Hold = on track."],
     ["WoW", "Week-over-week change vs the prior week. Fills in as weekly history accumulates."],
+    ["Source", "Efficiency metrics are cross-pulled from the weekly sales sheet (canonical weekly-reporting numbers). Per-campaign detail (Ads / Offers tabs) comes from the platform campaign exports."],
 ]
 
 
@@ -770,44 +773,45 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
         # KPI hero strip — 5 cards in cols B..K (col A is frozen, kept out of the merges).
         # Three rows per card: label · big value · WoW delta. Replaces the old Overall section.
         tile_rows = (len(m), len(m) + 1, len(m) + 2)
-        m.append(["", "NET SALES", "", "MKT SPEND %", "", "BLENDED ROAS", "", "CPO", "", "NEW CX", ""])
+        m.append(["", "NET SALES", "", "MKT SPEND %", "", "MKT ROAS", "", "CPO", "", "NEW CX", ""])
         m.append(["", _money_short(k.get("net_sales")), "", k.get("mkt_spend_pct", "—"), "",
                   _roas(k.get("blended_roas")), "", _money(k.get("cpo")), "", k.get("new_cx", "—"), ""])
         m.append(["", k.get("net_sales_wow", "—"), "", k.get("mkt_spend_pct_wow", "—"), "",
                   k.get("roas_wow", "—"), "", k.get("cpo_wow", "—"), "", k.get("new_cx_wow", "—"), ""])
         m.append([])
 
-        # Marketing efficiency vs net sales — the 3% north-star metric.
+        # Marketing efficiency vs Total Sales — the 3% north-star metric (canonical).
         section("Marketing Efficiency")
-        header(["Net Sales", "Marketing Spend", "Mkt Spend %", "Mkt-Attributed Sales %", "New-Cust CAC"])
+        header(["Net Sales", "Marketing Spend", "Mkt Spend %", "Mkt-Driven Sales %", "New-Cust CAC"])
         mkt_pct_cell = (len(m), 2, k.get("mkt_spend_pct_val"))  # color this cell vs 3%
         m.append([_money(k.get("net_sales")), _money(k.get("total_spend")),
                   k.get("mkt_spend_pct", "—"), k.get("mkt_driven_pct", "—"),
                   _money(k.get("new_cust_cac"))])
         m.append([])
 
-        # Ad vs Promo split.
+        # Ad vs Promo investment split (spend only — canonical marketing-driven sales is deduped
+        # and not split by channel).
         section("Ads vs Promos")
-        header(["Channel", "Spend", "Attributed Sales", "ROAS"])
-        m.append(["Ads (Sponsored Listings)", _money(k.get("ad_spend")),
-                  _money(k.get("ad_sales")), _roas(k.get("ad_roas"))])
-        m.append(["Promos (Offers)", _money(k.get("promo_spend")),
-                  _money(k.get("promo_sales")), _roas(k.get("promo_roas"))])
+        header(["Channel", "Marketing Spend", "% of Mktg Spend"])
+        _tot = k.get("total_spend") or 0
+        _shr = lambda v: f"{(v / _tot * 100):.0f}%" if _tot else "—"
+        m.append(["Ads (Sponsored Listings)", _money(k.get("ad_spend")), _shr(k.get("ad_spend") or 0)])
+        m.append(["Promos (Offers)", _money(k.get("promo_spend")), _shr(k.get("promo_spend") or 0)])
         m.append([])
 
-        # Channel overlap (double-dip). Components are computable; the true overlap % needs an
-        # order-level "attributed to both" field that current exports don't carry.
-        section("Channel Overlap (Double-Dip)")
-        header(["Ad-Attributed Sales %", "Offer-Attributed Sales %", "Combined", "Double-Dip %"])
-        m.append([k.get("ad_driven_pct", "—"), k.get("offer_driven_pct", "—"),
-                  k.get("mkt_driven_pct", "—"), k.get("double_dip_pct", "—")])
-        m.append(["Double-dip = orders attributed to BOTH an ad and an offer; Combined overstates "
-                  "true marketing-driven sales by that overlap. Needs an order-level field to fill."])
+    # Marketing vs Organic (canonical, deduped). Replaces the muddy double-dip section: the
+    # weekly-reporting methodology counts an order once even if it used both an ad and an offer,
+    # so there's no double-count to surface.
+    if data.get("by_marketing_organic"):
+        section("Marketing vs Organic")
+        header(["Source", "Net Sales", "% of Total Sales"])
+        for r in data["by_marketing_organic"]:
+            m.append([r.get("label"), _money(r.get("sales")), r.get("pct", "—")])
         m.append([])
 
     if data.get("by_tier"):
         section("By Store Tier")
-        header(["Tier", "Spend", "Attributed Sales", "ROAS", "Orders", "Mkt Spend %", "Mkt-Attributed Sales %"])
+        header(["Tier", "Mktg Spend", "Mktg-Driven Sales", "ROAS", "Orders", "Mkt Spend %", "Mkt-Driven Sales %"])
         for r in data["by_tier"]:
             heat_cells.append((len(m), 3, r.get("roas"), "roas"))
             heat_cells.append((len(m), 5, r.get("mkt_spend_pct_val"), "mktpct"))
@@ -818,8 +822,8 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
 
     if data.get("by_platform"):
         section("By Platform")
-        header(["Platform", "Spend", "Attributed Sales", "ROAS", "Orders", "CPO",
-                "Mkt Spend %", "Mkt-Attributed Sales %"])
+        header(["Platform", "Mktg Spend", "Mktg-Driven Sales", "ROAS", "Orders", "CPO",
+                "Mkt Spend %", "Mkt-Driven Sales %"])
         for r in data["by_platform"]:
             heat_cells.append((len(m), 3, r.get("roas"), "roas"))
             heat_cells.append((len(m), 6, r.get("mkt_spend_pct_val"), "mktpct"))
@@ -830,8 +834,8 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
 
     if data.get("by_location"):
         section("By Location")
-        header(["Location", "Tier", "Spend", "Attributed Sales", "ROAS", "Orders", "CPO",
-                "Mkt Spend %", "Mkt-Attributed Sales %", "Action"])
+        header(["Location", "Tier", "Mktg Spend", "Mktg-Driven Sales", "ROAS", "Orders", "CPO",
+                "Mkt Spend %", "Mkt-Driven Sales %", "Action"])
         for r in data["by_location"]:
             heat_cells.append((len(m), 4, r.get("roas"), "roas"))
             heat_cells.append((len(m), 7, r.get("mkt_spend_pct_val"), "mktpct"))

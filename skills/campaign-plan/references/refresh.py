@@ -214,10 +214,27 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
         except Exception:
             prior_net_total = None
 
+    # Canonical weekly-reporting metrics (deduped, correct denominators) for the efficiency
+    # sections. Per-campaign tabs stay export-derived.
+    sales_metrics = None
+    if cfg.get("net_sales_sheet_id"):
+        try:
+            import net_sales_pull as nsp
+            sales_metrics = nsp.pull_sales_metrics(
+                cfg["net_sales_sheet_id"], weekstart,
+                cfg.get("net_sales_platform_tab", "Weekly Platform Overview 2.0"),
+                cfg.get("net_sales_location_tab", "By Location 2.0"))
+            if sales_metrics and sales_metrics.get("overview"):
+                ov = sales_metrics["overview"]
+                print(f"   (canonical metrics: Mkt Spend % {ov.get('mkt_spend_pct')}, ROAS {ov.get('roas')}, CPO {ov.get('cpo')})")
+        except Exception as e:
+            print(f"   (canonical metrics pull skipped: {str(e)[:80]})")
+            sales_metrics = None
+
     dash = agg.dashboard_from_data(tracker_rows, ads_rows, offers_rows,
                                    history_rollup=rollup, weekstart=weekstart, net_sales=net_sales,
                                    location_aliases=cfg.get("location_aliases"), tier_map=tier_map,
-                                   prior_net_total=prior_net_total)
+                                   prior_net_total=prior_net_total, sales_metrics=sales_metrics)
     print(f"   Dashboard: {sw.write_dashboard(sheet_id, dash, client=display, week=week_label)} rows")
     try:
         print(f"   Charts: {sw.write_charts(sheet_id, dash)} embedded")

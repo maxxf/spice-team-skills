@@ -47,6 +47,20 @@ def _pct(num, den) -> str:
     return f"{num / den * 100:.1f}%"
 
 
+def _cnum(v):
+    """Parse a canonical sales-sheet display string ($1,460,007 / 6% / 5.1 / 29,105) to float.
+    Returns None for blanks, '#DIV/0!', '—', etc."""
+    if v is None:
+        return None
+    s = str(v).replace("$", "").replace(",", "").replace("%", "").replace("x", "").strip()
+    if s in ("", "—", "--", "n/a") or "DIV" in s.upper() or s.startswith("#"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
 def _canon_locations(raw, aliases) -> list:
     """Resolve a campaign's freeform location label into canonical store name(s) so it joins
     to weekly-reporting's net-sales-by-location. `aliases` maps a raw label (whole string or
@@ -152,7 +166,7 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
                         offers_rows: list[dict], history_rollup: dict | None = None,
                         weekstart: str | None = None, net_sales: dict | None = None,
                         location_aliases: dict | None = None, tier_map: dict | None = None,
-                        prior_net_total: float | None = None) -> dict:
+                        prior_net_total: float | None = None, sales_metrics: dict | None = None) -> dict:
     """Build the dashboard dict: KPIs, by-platform, by-location, top/bottom 5, ad/promo split,
     and (when prior weeks exist in History) a 4-week Portfolio Trend with WoW.
 
@@ -355,42 +369,123 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
                 {"metric": "Blended ROAS", **dict(zip(cols, map(rx, roas_v))), "wow": _wow(roas_v[3], roas_v[2])},
             ]
 
+    # ---- Canonical override (weekly-reporting methodology) ----
+    # When the sales sheet's pre-computed metrics are available, use them for the efficiency
+    # sections: Total Sales denominator, deduped Marketing Driven Sales/Orders, canonical
+    # Marketing ROAS/CPO. Per-campaign tabs (Ads/Offers/Top-Bottom/Audience) stay export-derived.
+    denom_sales = ns_total           # % denominator (canonical = Total Sales)
+    net_sales_display = ns_total     # the "Net Sales" tile
+    organic_sales = None
+    by_marketing_organic = []
+    ov = (sales_metrics or {}).get("overview")
+    if ov:
+        _ts = _cnum(ov.get("total_sales")); _ns = _cnum(ov.get("net_sales"))
+        _inv = _cnum(ov.get("mktg_investment")); _mds = _cnum(ov.get("mktg_driven_sales"))
+        _org = _cnum(ov.get("organic_sales")); _mo = _cnum(ov.get("mktg_orders"))
+        _roas = _cnum(ov.get("roas")); _cpo = _cnum(ov.get("cpo"))
+        if _ts:
+            denom_sales = _ts
+        if _ns is not None:
+            net_sales_display = _ns
+        if _inv is not None:
+            total_spend = _inv
+        if _mds is not None:
+            total_sales = _mds
+        if _mo:
+            total_orders = int(_mo)
+        if _roas is not None:
+            blended = _roas
+        if _cpo is not None:
+            cpo_total = _cpo
+        organic_sales = _org
+        new_cust_cac = (total_spend / new_cx) if new_cx else 0
+        # Ads-vs-Promos investment split from canonical (ad spend vs discounts). Deduped
+        # marketing-driven sales can't be split by channel, so this view is spend-only.
+        _adsp = _cnum(ov.get("ad_spend")); _disc = _cnum(ov.get("discounts"))
+        if _adsp is not None:
+            ad_spend = _adsp
+        if _disc is not None:
+            promo_spend = _disc
+        ad_sales = promo_sales = 0
+        if _mds is not None and _org is not None and _ts:
+            by_marketing_organic = [
+                {"label": "Marketing-Driven", "sales": _mds, "pct": _pct(_mds, _ts)},
+                {"label": "Organic", "sales": _org, "pct": _pct(_org, _ts)}]
+
+        def _cb(namekey, name, c):
+            ts = _cnum(c.get("total_sales")); inv = _cnum(c.get("mktg_investment"))
+            mds = _cnum(c.get("mktg_driven_sales")); mo = _cnum(c.get("mktg_orders"))
+            roas = _cnum(c.get("roas")); cpo = _cnum(c.get("cpo")); msp = _cnum(c.get("mkt_spend_pct"))
+            return {namekey: name, "spend": inv or 0, "sales": mds or 0,
+                    "roas": roas if roas is not None else 0, "orders": int(mo) if mo else 0,
+                    "cpo": cpo if cpo is not None else 0,
+                    "mkt_spend_pct": (f"{msp:.0f}%" if msp is not None else "—"),
+                    "mkt_spend_pct_val": msp, "mkt_driven_pct": _pct(mds, ts),
+                    "tier": (tier_map or {}).get(name, ""),
+                    "flag": _eff_flag(msp, roas if roas is not None else 0)}
+
+        pm = sales_metrics.get("platform") or {}
+        by_platform = [_cb("platform", k, v) for k, v in sorted(pm.items())
+                       if (_cnum(v.get("mktg_investment")) or 0) > 0]
+        lm = sales_metrics.get("location") or {}
+        by_location = sorted([_cb("location", k, v) for k, v in lm.items()
+                              if (_cnum(v.get("mktg_investment")) or 0) > 0], key=lambda r: -r["spend"])
+        by_tier = []
+        if tier_map:
+            tg = {}
+            for k, v in lm.items():
+                t = tier_map.get(k)
+                if not t:
+                    continue
+                d = tg.setdefault(t, {"ts": 0, "inv": 0, "mds": 0, "mo": 0})
+                d["ts"] += _cnum(v.get("total_sales")) or 0
+                d["inv"] += _cnum(v.get("mktg_investment")) or 0
+                d["mds"] += _cnum(v.get("mktg_driven_sales")) or 0
+                d["mo"] += _cnum(v.get("mktg_orders")) or 0
+            for t in ("Red", "Yellow", "Green"):
+                if t in tg:
+                    d = tg[t]
+                    by_tier.append({"tier": t, "spend": d["inv"], "sales": d["mds"],
+                                    "roas": round(d["mds"] / d["inv"], 1) if d["inv"] else 0,
+                                    "orders": int(d["mo"]),
+                                    "mkt_spend_pct": _pct(d["inv"], d["ts"]),
+                                    "mkt_spend_pct_val": (d["inv"] / d["ts"] * 100) if d["ts"] else None,
+                                    "mkt_driven_pct": _pct(d["mds"], d["ts"])})
+
+    cur_mkt_pct = (total_spend / denom_sales * 100) if denom_sales else 0
+
     return {
         "kpis": {"live": live, "proposed": proposed, "blocked": blocked,
                  "total_spend": total_spend, "total_sales": total_sales,
                  "total_orders": int(total_orders), "cpo": cpo_total,
                  "blended_roas": blended, "new_cx": int(new_cx) if new_cx else "—",
                  "new_cust_cac": new_cust_cac,
-                 # WoW deltas on the headline (vs the most recent prior week in History)
                  "spend_wow": _wow(total_spend, pt["spend"]),
                  "sales_wow": _wow(total_sales, pt["sales"]),
                  "orders_wow": _wow(total_orders, pt["orders"]),
                  "roas_wow": _wow(blended, prior_roas),
                  "cpo_wow": _wow(cpo_total, prior_cpo),
-                 # tile WoW: Net Sales + Mkt Spend % use the sales-sheet prior week (available now)
-                 "net_sales_wow": _wow(ns_total, prior_net_total) if prior_net_total else "—",
-                 "mkt_spend_pct_wow": _wow(cur_mkt_pct, prior_mkt_pct) if (prior_mkt_pct and ns_total) else "—",
+                 "net_sales_wow": _wow(net_sales_display, prior_net_total) if prior_net_total else "—",
+                 "mkt_spend_pct_wow": _wow(cur_mkt_pct, prior_mkt_pct) if (prior_mkt_pct and denom_sales) else "—",
                  "new_cx_wow": "—",
-                 # Ad vs Promo split
+                 # Ad vs Promo split (campaign-export attributed)
                  "ad_spend": ad_spend, "ad_sales": ad_sales,
                  "ad_roas": round(ad_sales / ad_spend, 1) if ad_spend else 0,
                  "promo_spend": promo_spend, "promo_sales": promo_sales,
                  "promo_roas": round(promo_sales / promo_spend, 1) if promo_spend else 0,
-                 # Marketing efficiency vs net sales (the 3% north-star metric)
-                 "net_sales": ns_total or "—",
-                 "mkt_spend_pct": _pct(total_spend, ns_total),
-                 "mkt_driven_pct": _pct(total_sales, ns_total),
-                 "mkt_spend_pct_val": (total_spend / ns_total * 100) if ns_total else None,
-                 # Channel overlap (double-dip): components computable; true overlap needs an
-                 # order-level field not in current exports, so the % itself is "—" for now.
-                 "ad_driven_pct": _pct(ad_sales, ns_total),
-                 "offer_driven_pct": _pct(promo_sales, ns_total),
-                 "double_dip_pct": "—"},
+                 # Marketing efficiency vs Total Sales (3% north star) — canonical when available
+                 "net_sales": net_sales_display or "—",
+                 "mkt_spend_pct": _pct(total_spend, denom_sales),
+                 "mkt_driven_pct": _pct(total_sales, denom_sales),
+                 "mkt_spend_pct_val": (total_spend / denom_sales * 100) if denom_sales else None,
+                 "organic_sales": organic_sales,
+                 "organic_pct": _pct(organic_sales, denom_sales) if organic_sales else "—"},
         "by_platform": by_platform,
         "by_location": by_location,
         "by_tier": by_tier,
         "by_audience": by_audience,
         "by_segment": by_segment,
+        "by_marketing_organic": by_marketing_organic,
         "top_five": top_five,
         "bottom_five": bottom_five,
         "portfolio_trend": portfolio_trend,

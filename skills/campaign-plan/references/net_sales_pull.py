@@ -84,6 +84,47 @@ def pull_net_sales(sheet_id: str, weekstart: str,
     return out
 
 
+# Canonical metric labels (weekly-reporting methodology) -> our keys.
+METRIC_KEYS = {
+    "total sales": "total_sales", "net sales": "net_sales", "discounts": "discounts",
+    "ad spend": "ad_spend", "marketing driven sales": "mktg_driven_sales",
+    "organic sales": "organic_sales", "total orders": "total_orders",
+    "orders from marketing": "mktg_orders", "organic orders": "organic_orders", "aov": "aov",
+    "total marketing investment": "mktg_investment", "marketing spend / sales %": "mkt_spend_pct",
+    "marketing roas": "roas", "marketing cpo": "cpo", "blended roas": "blended_roas",
+}
+
+
+def _extract_all(rows: list, week_col: int) -> dict:
+    """Walk section headers; capture EVERY canonical metric (raw display string) at week_col.
+    Returns {section_name: {metric_key: raw_string}}."""
+    out, cur = {}, None
+    for r in rows:
+        a = r[0].strip() if len(r) > 0 and r[0] else ""
+        b = r[1].strip() if len(r) > 1 and r[1] else ""
+        if a and not b and a.lower() not in _SKIP_SECTIONS:
+            cur = a
+            out.setdefault(cur, {})
+        elif cur and a.lower() in METRIC_KEYS and week_col is not None and week_col < len(r):
+            out[cur][METRIC_KEYS[a.lower()]] = r[week_col]
+    return out
+
+
+def pull_sales_metrics(sheet_id: str, weekstart: str,
+                       platform_tab: str = "Weekly Platform Overview 2.0",
+                       location_tab: str = "By Location 2.0") -> dict:
+    """Cross-pull the canonical weekly-reporting metrics (already deduped + correct) per scope.
+    Returns {"overview": {...}, "platform": {canonical_name: {...}}, "location": {store: {...}}}
+    where each inner dict maps metric_key -> raw display string."""
+    iso = dt.date.fromisoformat(weekstart).isocalendar()[1]
+    pv = _read(sheet_id, platform_tab)
+    psec = _extract_all(pv, _week_col(pv, iso))
+    lv = _read(sheet_id, location_tab)
+    lsec = _extract_all(lv, _week_col(lv, iso))
+    platform = {PLATFORM_CANON.get(k.upper(), k): v for k, v in psec.items() if k.upper() in PLATFORM_CANON}
+    return {"overview": psec.get("Overview", {}), "platform": platform, "location": lsec}
+
+
 def pull_tier_map(sheet_id: str, tier_tab: str = "By Tier") -> dict:
     """Parse the By Tier tab's section headers (e.g. '🔴 RED | San Jose, Pasadena') into a
     {location: tier} map so the campaign dashboard can segment by store tier. Tier is one of
