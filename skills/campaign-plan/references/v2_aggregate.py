@@ -377,12 +377,14 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
     net_sales_display = ns_total     # the "Net Sales" tile
     organic_sales = None
     by_marketing_organic = []
+    mktg_roas = blended              # Marketing ROAS (default = export blended)
+    blended_roas_disp = blended      # Blended ROAS (goop-specific, client-defined)
     ov = (sales_metrics or {}).get("overview")
     if ov:
         _ts = _cnum(ov.get("total_sales")); _ns = _cnum(ov.get("net_sales"))
         _inv = _cnum(ov.get("mktg_investment")); _mds = _cnum(ov.get("mktg_driven_sales"))
         _org = _cnum(ov.get("organic_sales")); _mo = _cnum(ov.get("mktg_orders"))
-        _roas = _cnum(ov.get("roas")); _cpo = _cnum(ov.get("cpo"))
+        _roas = _cnum(ov.get("roas")); _cpo = _cnum(ov.get("cpo")); _bl = _cnum(ov.get("blended_roas"))
         if _ts:
             denom_sales = _ts
         if _ns is not None:
@@ -394,7 +396,9 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
         if _mo:
             total_orders = int(_mo)
         if _roas is not None:
-            blended = _roas
+            mktg_roas = _roas
+        if _bl is not None:
+            blended_roas_disp = _bl
         if _cpo is not None:
             cpo_total = _cpo
         organic_sales = _org
@@ -458,12 +462,13 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
         "kpis": {"live": live, "proposed": proposed, "blocked": blocked,
                  "total_spend": total_spend, "total_sales": total_sales,
                  "total_orders": int(total_orders), "cpo": cpo_total,
-                 "blended_roas": blended, "new_cx": int(new_cx) if new_cx else "—",
+                 "marketing_roas": mktg_roas, "blended_roas": blended_roas_disp,
+                 "new_cx": int(new_cx) if new_cx else "—",
                  "new_cust_cac": new_cust_cac,
                  "spend_wow": _wow(total_spend, pt["spend"]),
                  "sales_wow": _wow(total_sales, pt["sales"]),
                  "orders_wow": _wow(total_orders, pt["orders"]),
-                 "roas_wow": _wow(blended, prior_roas),
+                 "roas_wow": _wow(mktg_roas, prior_roas),
                  "cpo_wow": _wow(cpo_total, prior_cpo),
                  "net_sales_wow": _wow(net_sales_display, prior_net_total) if prior_net_total else "—",
                  "mkt_spend_pct_wow": _wow(cur_mkt_pct, prior_mkt_pct) if (prior_mkt_pct and denom_sales) else "—",

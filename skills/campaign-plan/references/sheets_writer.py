@@ -695,7 +695,9 @@ DEFINITIONS = [
     ["Marketing-Driven Sales", "Net sales from orders attributed to a campaign (ad OR offer). Deduped — an order is counted once even if it used both an ad and an offer."],
     ["Mkt-Driven Sales %", "Marketing-Driven Sales / Total Sales. The rest is Organic."],
     ["Organic Sales", "Sales from orders with no marketing attribution (Total Sales - Marketing-Driven)."],
-    ["Marketing ROAS", "Marketing-Driven Sales / Marketing Spend. 3.0+ is generally healthy."],
+    ["Marketing ROAS", "Marketing-Driven Sales / Marketing Spend. 3.0+ is generally healthy. The standard, deduped measure."],
+    ["Blended ROAS", "Client-defined ROAS (goop) that credits marketing more broadly than the deduped Marketing ROAS. Tracked alongside it, not a replacement."],
+    ["Marketing vs Organic", "Marketing-Driven vs Organic share of Total Sales, with a weekly trend — the incrementality read: is marketing additive or cannibalizing organic?"],
     ["CPO", "Marketing CPO = Marketing Spend / Orders from Marketing (deduped marketing orders)."],
     ["New-Cust CAC", "Marketing Spend / new customers acquired (from offer data)."],
     ["Store Tier", "Red / Yellow / Green from the sales sheet, grouping stores by health and priority."],
@@ -773,20 +775,23 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
         # KPI hero strip — 5 cards in cols B..K (col A is frozen, kept out of the merges).
         # Three rows per card: label · big value · WoW delta. Replaces the old Overall section.
         tile_rows = (len(m), len(m) + 1, len(m) + 2)
-        m.append(["", "NET SALES", "", "MKT SPEND %", "", "MKT ROAS", "", "CPO", "", "NEW CX", ""])
+        m.append(["", "NET SALES", "", "MKT SPEND %", "", "MKT ROAS", "", "BLENDED ROAS", "", "NEW CX", ""])
         m.append(["", _money_short(k.get("net_sales")), "", k.get("mkt_spend_pct", "—"), "",
-                  _roas(k.get("blended_roas")), "", _money(k.get("cpo")), "", k.get("new_cx", "—"), ""])
+                  _roas(k.get("marketing_roas")), "", _roas(k.get("blended_roas")), "", k.get("new_cx", "—"), ""])
         m.append(["", k.get("net_sales_wow", "—"), "", k.get("mkt_spend_pct_wow", "—"), "",
-                  k.get("roas_wow", "—"), "", k.get("cpo_wow", "—"), "", k.get("new_cx_wow", "—"), ""])
+                  k.get("roas_wow", "—"), "", "—", "", k.get("new_cx_wow", "—"), ""])
         m.append([])
 
         # Marketing efficiency vs Total Sales — the 3% north-star metric (canonical).
+        # Track both Marketing ROAS (deduped, standard) and Blended ROAS (client-defined).
         section("Marketing Efficiency")
-        header(["Net Sales", "Marketing Spend", "Mkt Spend %", "Mkt-Driven Sales %", "New-Cust CAC"])
+        header(["Net Sales", "Marketing Spend", "Mkt Spend %", "Mkt-Driven Sales %",
+                "Marketing ROAS", "Blended ROAS", "CPO", "New-Cust CAC"])
         mkt_pct_cell = (len(m), 2, k.get("mkt_spend_pct_val"))  # color this cell vs 3%
         m.append([_money(k.get("net_sales")), _money(k.get("total_spend")),
                   k.get("mkt_spend_pct", "—"), k.get("mkt_driven_pct", "—"),
-                  _money(k.get("new_cust_cac"))])
+                  _roas(k.get("marketing_roas")), _roas(k.get("blended_roas")),
+                  _money(k.get("cpo")), _money(k.get("new_cust_cac"))])
         m.append([])
 
         # Ad vs Promo investment split (spend only — canonical marketing-driven sales is deduped
@@ -807,6 +812,17 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
         header(["Source", "Net Sales", "% of Total Sales"])
         for r in data["by_marketing_organic"]:
             m.append([r.get("label"), _money(r.get("sales")), r.get("pct", "—")])
+        m.append([])
+
+    if data.get("marketing_organic_trend"):
+        # Incrementality read: watch whether organic erodes as marketing-driven scales.
+        section("Marketing vs Organic — Trend")
+        header(["Week", "Marketing-Driven", "Organic", "Total Sales", "Mkt-Driven %"])
+        for t in data["marketing_organic_trend"]:
+            md, org = t.get("mktg_driven", 0), t.get("organic", 0)
+            tot = md + org
+            m.append([t.get("week"), _money(md), _money(org), _money(tot),
+                      f"{md / tot * 100:.0f}%" if tot else "—"])
         m.append([])
 
     if data.get("by_tier"):
@@ -997,6 +1013,12 @@ def write_charts(sheet_id: str, data: dict) -> int:
                                        valueInputOption="RAW", body={"values": pmat}).execute()
     svc.spreadsheets().values().update(spreadsheetId=sheet_id, range="_ChartData!F1",
                                        valueInputOption="RAW", body={"values": lmat}).execute()
+    trend = data.get("marketing_organic_trend") or []
+    tmat = [["Week", "Marketing-Driven", "Organic"]] + \
+           [[t.get("week"), round(t.get("mktg_driven", 0)), round(t.get("organic", 0))] for t in trend]
+    if len(tmat) > 1:
+        svc.spreadsheets().values().update(spreadsheetId=sheet_id, range="_ChartData!K1",
+                                           valueInputOption="RAW", body={"values": tmat}).execute()
 
     # Delete existing Dashboard charts.
     full = svc.spreadsheets().get(spreadsheetId=sheet_id,
@@ -1011,13 +1033,15 @@ def write_charts(sheet_id: str, data: dict) -> int:
         return {"sources": [{"sheetId": cd, "startRowIndex": r0, "endRowIndex": r1,
                              "startColumnIndex": c0, "endColumnIndex": c1}]}
 
-    def _col_chart(title, nrows, dom_c, series_cs, anchor_row, ctype="COLUMN"):
+    def _col_chart(title, nrows, dom_c, series_cs, anchor_row, ctype="COLUMN", stacked=False):
+        bc = {"chartType": ctype, "legendPosition": "BOTTOM_LEGEND", "headerCount": 1,
+              "domains": [{"domain": {"sourceRange": _src(0, nrows, dom_c, dom_c + 1)}}],
+              "series": [{"series": {"sourceRange": _src(0, nrows, c, c + 1)}, "targetAxis": "LEFT_AXIS"}
+                         for c in series_cs]}
+        if stacked:
+            bc["stackedType"] = "STACKED"
         return {"addChart": {"chart": {
-            "spec": {"title": title, "basicChart": {
-                "chartType": ctype, "legendPosition": "BOTTOM_LEGEND", "headerCount": 1,
-                "domains": [{"domain": {"sourceRange": _src(0, nrows, dom_c, dom_c + 1)}}],
-                "series": [{"series": {"sourceRange": _src(0, nrows, c, c + 1)}, "targetAxis": "LEFT_AXIS"}
-                           for c in series_cs]}},
+            "spec": {"title": title, "basicChart": bc},
             "position": {"overlayPosition": {
                 "anchorCell": {"sheetId": dash, "rowIndex": anchor_row, "columnIndex": 11},
                 "widthPixels": 460, "heightPixels": 280}}}}}
@@ -1028,6 +1052,8 @@ def write_charts(sheet_id: str, data: dict) -> int:
         adds.append(_col_chart("ROAS by Platform", len(pmat), 0, [3], 19))
     if len(lmat) > 1:
         adds.append(_col_chart("Spend vs Sales by Location (Top 8)", len(lmat), 5, [6, 7], 35))
+    if len(tmat) > 1:
+        adds.append(_col_chart("Marketing-Driven vs Organic (weekly)", len(tmat), 10, [11, 12], 51, stacked=True))
     if adds:
         svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": adds}).execute()
     return len(adds)

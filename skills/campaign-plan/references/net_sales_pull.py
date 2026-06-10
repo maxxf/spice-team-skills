@@ -125,6 +125,39 @@ def pull_sales_metrics(sheet_id: str, weekstart: str,
     return {"overview": psec.get("Overview", {}), "platform": platform, "location": lsec}
 
 
+def pull_overview_trend(sheet_id: str, weekstart: str, n: int = 6,
+                        platform_tab: str = "Weekly Platform Overview 2.0") -> list:
+    """Pull the last n weeks of overall Marketing-Driven vs Organic sales (the incrementality
+    read: is marketing additive or cannibalizing organic?). Returns oldest→newest list of
+    {week, mktg_driven, organic}."""
+    iso = dt.date.fromisoformat(weekstart).isocalendar()[1]
+    rows = _read(sheet_id, platform_tab)
+    wcol = _week_col(rows, iso)
+    if wcol is None:
+        return []
+    date_row = next((r for r in rows if len(r) > 1 and str(r[1]).strip().lower() == "metric"), None)
+    cur, mds_row, org_row = None, None, None
+    for r in rows:
+        a = r[0].strip() if r and r[0] else ""
+        b = r[1].strip() if len(r) > 1 and r[1] else ""
+        if a and not b and a.lower() not in _SKIP_SECTIONS:
+            if cur == "Overview":
+                break  # passed the Overview block
+            cur = a
+        elif cur == "Overview":
+            if a.lower() == "marketing driven sales":
+                mds_row = r
+            elif a.lower() == "organic sales":
+                org_row = r
+    out = []
+    for c in range(max(2, wcol - (n - 1)), wcol + 1):
+        wk = date_row[c] if date_row and c < len(date_row) else str(c)
+        out.append({"week": wk,
+                    "mktg_driven": _num(mds_row[c]) if mds_row and c < len(mds_row) else 0,
+                    "organic": _num(org_row[c]) if org_row and c < len(org_row) else 0})
+    return out
+
+
 def pull_tier_map(sheet_id: str, tier_tab: str = "By Tier") -> dict:
     """Parse the By Tier tab's section headers (e.g. '🔴 RED | San Jose, Pasadena') into a
     {location: tier} map so the campaign dashboard can segment by store tier. Tier is one of

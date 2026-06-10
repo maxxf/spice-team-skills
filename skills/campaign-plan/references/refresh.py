@@ -235,6 +235,15 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
                                    history_rollup=rollup, weekstart=weekstart, net_sales=net_sales,
                                    location_aliases=cfg.get("location_aliases"), tier_map=tier_map,
                                    prior_net_total=prior_net_total, sales_metrics=sales_metrics)
+    # Multi-week Marketing-Driven vs Organic trend (incrementality read).
+    if cfg.get("net_sales_sheet_id"):
+        try:
+            import net_sales_pull as nsp
+            dash["marketing_organic_trend"] = nsp.pull_overview_trend(
+                cfg["net_sales_sheet_id"], weekstart, 6,
+                cfg.get("net_sales_platform_tab", "Weekly Platform Overview 2.0"))
+        except Exception:
+            pass
     print(f"   Dashboard: {sw.write_dashboard(sheet_id, dash, client=display, week=week_label)} rows")
     try:
         print(f"   Charts: {sw.write_charts(sheet_id, dash)} embedded")
