@@ -1199,11 +1199,19 @@ ARCHIVE_COLS = ["Year", "Quarter", "Week", "Campaign Name", "Type", "Platform",
 
 def append_archive(sheet_id: str, ended_rows: list[dict]) -> int:
     """Append Ended campaigns to Archive. NEVER clears — existing curation is preserved.
-    Hypothesis/Outcome/Continue fields stay blank for the GM to fill in.
+    Idempotent: skips campaigns already archived (keyed on Campaign Name + End Date), so
+    re-runs don't double-archive. Hypothesis/Outcome/Continue stay blank for the GM.
     """
     if not ended_rows:
         return 0
-    matrix = [[r.get(c, "") for c in ARCHIVE_COLS] for r in ended_rows]
+    existing = _service().spreadsheets().values().get(
+        spreadsheetId=sheet_id, range="Archive!A2:L100000").execute().get("values", [])
+    # Campaign Name = col D (idx 3), End Date = col L (idx 11)
+    seen = {(r[3], r[11] if len(r) > 11 else "") for r in existing if len(r) > 3}
+    fresh = [r for r in ended_rows if (r.get("Campaign Name", ""), r.get("End Date", "")) not in seen]
+    if not fresh:
+        return 0
+    matrix = [[r.get(c, "") for c in ARCHIVE_COLS] for r in fresh]
     return append_rows(sheet_id, "Archive", matrix)
 
 

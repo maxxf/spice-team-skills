@@ -307,6 +307,23 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     if perf:
         print(f"   History: wrote {sw.write_history(sheet_id, agg.history_rows(weekstart, perf))} rows (this week)")
 
+    # Archive: when a campaign ends, file it once with its totals (GM fills Outcome / Continue).
+    ws_d = dt.date.fromisoformat(weekstart)
+    ended = [r for r in tracker_rows
+             if str(r.get("Status", "")).strip().lower() in ("ended", "complete", "completed")]
+    if ended:
+        arch = [{"Year": ws_d.year, "Quarter": f"Q{(ws_d.month - 1) // 3 + 1}", "Week": week_label,
+                 "Campaign Name": r.get("Campaign", ""), "Type": r.get("Type", ""),
+                 "Platform": r.get("Platform", ""), "Locations": r.get("Locations", ""),
+                 "Audience": r.get("Segment", ""), "Start Date": r.get("Flight Start", ""),
+                 "End Date": r.get("Flight End", ""), "Status": "Ended",
+                 "Total Spend": r.get("Spend ($)", ""), "Total Sales": r.get("Attributed Sales ($)", ""),
+                 "Total Orders": r.get("Incremental Orders", ""), "Avg ROAS": r.get("Actual ROAS", "")}
+                for r in ended]
+        n_arch = sw.append_archive(sheet_id, arch)
+        if n_arch:
+            print(f"   Archive: filed {n_arch} newly-ended campaign(s)")
+
     # Slack draft (GM edits + sends)
     k = dash["kpis"]
     summary = {"headline": {"spend": k["total_spend"], "sales": k["total_sales"],
