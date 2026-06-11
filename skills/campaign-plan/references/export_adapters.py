@@ -12,6 +12,11 @@ drops in `Campaign Plan Inputs/<week>/` — no dependency on weekly-reporting. S
     offers-campaigns*.csv                   -> Uber Eats (no spend column — UE doesn't report it)
     MARKETING_PROMOTION*.csv                -> DoorDash (daily; promo spend = "Funded by you")
 
+GAP — Grubhub: most clients also run GH paid (Sponsored Placement, GH loyalty), and the roadmap/
+strategy layer already supports GH lanes. No GH adapter exists yet because we lack a sample
+export to learn the format from. When a GM supplies a GH campaign export (any GH-running client
+works), add gh_sponsored_placement() here + a filename hook in load_campaign_exports.
+
 Output dicts use the same keys the v2 aggregators already consume (Campaign/Platform/Location/
 Spend/Attributed Sales/Orders/Impressions/Clicks/New Customers; Promotion/Promo Spend/etc).
 """

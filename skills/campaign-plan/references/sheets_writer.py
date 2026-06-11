@@ -244,8 +244,13 @@ def setup_named_ranges(sheet_id: str, dry_run: bool = False) -> dict:
     return {"created": created, "skipped_existing": exist_list, "skipped_missing_tab": missing_tab}
 
 
-def assert_safe_to_write(sheet_id: str, range_or_name: str) -> None:
-    """Guardrail: refuse to write a range whose tab is on the protected list."""
+def assert_safe_to_write(sheet_id: str, range_or_name: str, allow_protected: bool = False) -> None:
+    """Guardrail: refuse to write a range whose tab is on the protected list.
+    allow_protected=True is the explicit opt-in used ONLY by strategy_write.py — the
+    Plan-campaigns session is the one authorized writer for Q-plan tabs. Every other
+    call site (refresh.py and friends) stays default-False."""
+    if allow_protected:
+        return
     tab = range_or_name.split("!", 1)[0].strip("'") if "!" in range_or_name else None
     # If it's a named range, look up the tab.
     if tab is None:
@@ -265,19 +270,34 @@ def assert_safe_to_write(sheet_id: str, range_or_name: str) -> None:
         )
 
 
-def clear_range(sheet_id: str, range_or_name: str) -> None:
+def read_range(sheet_id: str, range_a1: str) -> list:
+    """Read values from a range. Reads are never guarded."""
+    r = _service().spreadsheets().values().get(spreadsheetId=sheet_id, range=range_a1).execute()
+    return r.get("values", [])
+
+
+def create_tab(sheet_id: str, title: str, allow_protected: bool = False) -> int:
+    """Create a new tab; returns its gid. Guarded like writes (Q-plan creation needs the opt-in)."""
+    assert_safe_to_write(sheet_id, f"'{title}'!A1", allow_protected=allow_protected)
+    r = _service().spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={
+        "requests": [{"addSheet": {"properties": {"title": title}}}]}).execute()
+    return r["replies"][0]["addSheet"]["properties"]["sheetId"]
+
+
+def clear_range(sheet_id: str, range_or_name: str, allow_protected: bool = False) -> None:
     """Clear values in a range (named or A1)."""
-    assert_safe_to_write(sheet_id, range_or_name)
+    assert_safe_to_write(sheet_id, range_or_name, allow_protected=allow_protected)
     _service().spreadsheets().values().clear(
         spreadsheetId=sheet_id, range=range_or_name, body={},
     ).execute()
 
 
-def write_range(sheet_id: str, range_or_name: str, values: list[list[Any]]) -> int:
+def write_range(sheet_id: str, range_or_name: str, values: list[list[Any]],
+                allow_protected: bool = False) -> int:
     """Write a 2D array of values. USER_ENTERED so formulas/dates parse like a human typed them.
     Returns rows updated.
     """
-    assert_safe_to_write(sheet_id, range_or_name)
+    assert_safe_to_write(sheet_id, range_or_name, allow_protected=allow_protected)
     if not values:
         return 0
     r = _service().spreadsheets().values().update(
@@ -360,17 +380,18 @@ def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
                    section_header_rows: list[int] | None = None,
                    col_header_rows: list[int] | None = None,
                    value_input: str = "RAW",
-                   freeze_rows: int = 0, freeze_cols: int = 0, title_rows: int = 0) -> int:
+                   freeze_rows: int = 0, freeze_cols: int = 0, title_rows: int = 0,
+                   allow_protected: bool = False) -> int:
     """Clear a skill-owned tab and write `matrix` from A1. Applies light formatting:
     section_header_rows (0-indexed) get a bold cream band; col_header_rows get the Spice
     Orange header style. freeze_rows/freeze_cols pin headers/labels while scrolling.
-    Refuses protected tabs.
+    Refuses protected tabs unless allow_protected (strategy_write.py's Q-plan opt-in).
 
     value_input defaults to RAW — these are presentation tabs of pre-formatted strings
     ($, %, ROAS-x), so RAW prevents Sheets coercing e.g. "+2.8%" → 0.028. Pass
     "USER_ENTERED" only when you want Sheets to parse numbers/formulas (e.g. Active
     Campaigns, where WTD numeric columns should stay sortable)."""
-    assert_safe_to_write(sheet_id, f"'{tab}'!A1")
+    assert_safe_to_write(sheet_id, f"'{tab}'!A1", allow_protected=allow_protected)
     svc = _service()
     gid = _tab_gid(sheet_id, tab)
     # Clear the whole tab's values (formatting persists, but we re-apply below).
@@ -891,15 +912,20 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
 
     if data.get("by_location"):
         section("By Location")
+        # Trend hierarchy: WoW alerts -> L4W Trend confirms direction -> vs Tier assigns
+        # ownership (a store isn't "declining" if its whole tier moved the same way).
         header(["Location", "Tier", "Mktg Spend", "Mktg-Driven Sales", "ROAS", "Orders", "CPO",
-                "Mkt Spend %", "Mkt-Driven Sales %", "Action"])
+                "Mkt Spend %", "Mkt-Driven Sales %", "L4W Trend", "vs Tier", "Action"])
         for r in data["by_location"]:
             heat_cells.append((len(m), 4, r.get("roas"), "roas"))
             heat_cells.append((len(m), 7, r.get("mkt_spend_pct_val"), "mktpct"))
-            heat_cells.append((len(m), 9, r.get("flag"), "flag"))
+            heat_cells.append((len(m), 9, r.get("l4w_mom_heat"), "mom"))
+            heat_cells.append((len(m), 10, r.get("vs_tier_heat"), "mom"))
+            heat_cells.append((len(m), 11, r.get("flag"), "flag"))
             m.append([r.get("location"), r.get("tier", ""), _money(r.get("spend")), _money(r.get("sales")),
                       _roas(r.get("roas")), r.get("orders", "—"), _money(r.get("cpo")),
-                      r.get("mkt_spend_pct", "—"), r.get("mkt_driven_pct", "—"), r.get("flag", "")])
+                      r.get("mkt_spend_pct", "—"), r.get("mkt_driven_pct", "—"),
+                      r.get("l4w_mom", "—"), r.get("vs_tier", "—"), r.get("flag", "")])
         m.append([])
 
     if data.get("by_audience"):
@@ -988,6 +1014,12 @@ def write_dashboard(sheet_id: str, data: dict, client: str = "", week: str = "")
             _bg(row, col, GREEN if val >= 6 else AMBER if val >= 3 else RED)
         elif kind == "mktpct" and val is not None:
             _bg(row, col, GREEN if val <= 3 else AMBER if val <= 4 else RED)
+        elif kind == "mom" and val is not None:
+            # symmetric momentum heat: ±5% is signal, in between is noise-neutral
+            if val >= 5:
+                _bg(row, col, GREEN)
+            elif val <= -5:
+                _bg(row, col, RED)
         elif kind == "flag" and val:
             if "Scale" in val:
                 _bg(row, col, GREEN)

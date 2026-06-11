@@ -8,9 +8,11 @@ description: >
   campaign plan for [client]", "refresh campaign tracker", "campaign performance
   for [client]", "pull campaign data for [client]", "build campaign plan for
   [client]", or when the user drops platform campaign exports and mentions the
-  campaign plan. EXECUTION of new campaigns stays with campaign-ops; this skill
-  is the planning + performance-tracking layer.
-version: 0.1.0
+  campaign plan. ALSO triggers on "plan strategy for [client]", "build the
+  [client] roadmap", "tier strategy for [client]", "analyze [client] campaigns" —
+  see the Mode router. EXECUTION of new campaigns stays with campaign-ops; this
+  skill is the planning + performance-tracking + strategy layer.
+version: 0.2.0
 ---
 
 # Campaign Plan & Performance Tracker
@@ -18,6 +20,128 @@ version: 0.1.0
 The campaign plan is a living, per-client deliverable. **Internal:** Notion Campaign Planning DB (`collection://1c8d3ff0-18e7-8067-abff-000b54568283`) where the team plans + coordinates. **Client-facing:** a formatted Excel workbook (Dashboard + Campaign Tracker + Legend) shared in the client's Drive folder. This skill keeps the workbook current from weekly platform data.
 
 The whole point: **the team pulls campaign data files, drops them into the skill, and the shared workbook updates.** Easy loop, no hand-formatting.
+
+---
+
+## Mode router (START HERE)
+
+When this skill triggers, resolve to one of three modes. **Route directly when the trigger is explicit; otherwise ask the user to pick.**
+
+| Mode | What it does | Writes | Example triggers |
+|---|---|---|---|
+| **Update reporting sheet** | The automated weekly refresh (exports → Dashboard/Ads/Offers/History) — Phases 0–3 below | Sheet (reporting tabs) | "refresh campaign plan", "update campaign tracker", "pull campaign data" |
+| **Plan campaigns** | Interactive tier → strategy → events → roadmap session — Phase S below | Notion strategy page · Q-plan tabs · Notion DB rows (`Not started`) · client config | "plan strategy for [client]", "build the roadmap", "tier strategy" |
+| **Run analysis** | Read-only Q&A over the live sheet + History (declines, incrementality, what's working) | none | "analyze [client]", "why did X drop" |
+
+**Run analysis is purely conversational:** run `strategy_read.py --client <slug>`, read History if the question needs trend, answer in chat citing playbook rules where relevant. No dedicated script, no writes, no artifacts. If the user asks for something that requires writing (a findings doc, a tier change), offer to switch modes.
+
+---
+
+## Phase S: Plan campaigns (interactive strategy + roadmap session)
+
+The strategic layer. Claude drives the conversation; Python does only deterministic I/O
+(`references/strategy_read.py` read, `references/strategy_write.py` write). The canonical rubric
+lives at `references/tier-framework.md` — **load it before the tier gate.** The design authority is
+`specs/2026-06-11-strategy-roadmap-design.md` (edge cases: no diagnostic → propose from
+performance only and say so; new client → defaults + more questions; unmatched locations →
+surface and ask, never guess; envelope vs %-of-sales conflict → show both, user picks; re-order
+stale >1 quarter → flag, proceed on explicit OK only).
+
+**Brand-agnostic rule (binding):** no client names or brand assumptions in any logic — everything
+flows from `clients/<slug>.json`. A new client is a config file, nothing else.
+
+### S1. Read
+
+```bash
+.venv/bin/python references/strategy_read.py --client <slug>
+```
+
+Returns per-location merged data: `saved` (last session's tier/goal/re-order from config
+`tier_strategy`), `diagnostic` (Green/Yellow/Red color), `performance` (canonical ROAS / spend% /
+mkt-driven% / sales), `flags` (`reorder_stale`, `perf_above_tier`, `perf_below_tier`), plus
+`unmatched` lists. Also read `references/tier-framework.md`.
+
+### S2. Tier gate (approval #1 — nothing proceeds without it)
+
+Render the per-location scorecard as a markdown table:
+
+`Location · Goal (proposed → confirm) · ROAS · Spend% · Menu conv · Ops · Capacity · Re-order (saved → confirm) → Proposed tier · Why`
+
+- Seed tiers via the vocabulary map in tier-framework.md (colors inform, scorecard speaks 5-tier).
+- **Always render tiers with their emoji** (🟢 Top · 🔵 Mid · 🟠 Low · 🟣 New · 🔴 Red) in the
+  scorecard, the roadmap draft, and the Notion page — the sheet writer paints matching row tints
+  automatically. One visual language everywhere (legend in tier-framework.md).
+- **Data-source note:** `strategy_read.py` supplies color + ROAS/spend%/mkt-driven%/sales only.
+  Menu conv / Ops / Capacity have no wired source — render "—" and ask the GM to fill or confirm
+  at the gate. Never invent values.
+- Flag movers with reasons; flag stale re-orders; prompt for missing re-order rates (GM captures
+  manually from platforms) and `opened` dates for new-looking locations.
+- Color-term adjustments ("keep Pico Yellow") get mapped via the table and confirmed back.
+- On approval, persist: write `{"locations": {...}}` to a temp JSON and run
+  `strategy_write.py --client <slug> --config <file>` (the script merges keys, so each gate's
+  write preserves the others).
+
+### S3. Per-tier strategy (approval #2)
+
+For each approved tier, recommend a strategy block — **every line cites its playbook rule**
+(`references/playbooks/`):
+
+- **Spend** — default band from tier-framework.md (% of tier sales); if the user gives a budget
+  envelope, allocate it instead and show both. 55/45 acquisition/retention baseline tilted by
+  re-order logic. Show suggested $ from current sales.
+- **Campaign types** — location-based only, never keyword (meta-rule 3); matched to tier + each
+  location's goal (Top: loyalty/retention + stepped-pullback tests · Mid: per goal ·
+  Low: acquisition offers + ops/menu fix workstream · New: awareness + flyer play · Red: none).
+- **Segmentation** — New/Existing/Lapsed mix per tier, re-order-adjusted.
+- **Cadence/exit** — creative refresh by wk 4–5, spend-down schedule planned at entry (meta-rule 5).
+
+User approves/edits per tier → persist `{"tiers": {...}}` via `--config`.
+
+### S4. Events
+
+Ask: NROs/launches + dates? LTOs/menu drops? Client moments? Blackout weeks? Pre-fill US holidays
+inside the window for confirm/add — brand events only ever come from this Q&A, never from code.
+
+### S5. Roadmap gate (approval #3)
+
+Draft the rolling ~90-day (13-week) grid in chat as a markdown table grouped by tier, events band
+on top, **one lane per location × platform** (DD/UE/GH — only platforms the location actually
+runs). **Cells must be tactical — an ops analyst executes them without asking questions:**
+mechanic + actual weekly $ (computed from that location's latest weekly sales × the band %) +
+the action verb. `SL $2.2K/wk`, `Cut offers $7.0K→$3.3K/wk`, `TEST: SL cut $2.2K→$1.1K/wk`,
+`READ: tot sales vs 4wk base; dip <5% ⇒ keep cut` — never abstract directives like
+"Pullback −50%" or "walk down" without the dollar figures. Tests carry their read rule in the
+read-week cell. Default platform split per playbook: DD carries offers/depth + loyalty (payout
+math), UE carries SLs + first-order, **GH carries Sponsored Placement + GH loyalty for clients
+running Grubhub paid** — the GH lane (orange label) appears for any location where the client
+runs GH; never silently omit a platform the client is on. Iterate until approved.
+
+**Comp methodology for every test read and baseline (canonical):**
+1. **Baseline = clean trailing 4 weeks** — exclude holiday-push weeks, outages, and one-off
+   depth promos from the window (a July 4 push in the baseline fakes a dip).
+2. **Read deliberate changes as diff-vs-controls, never raw pre/post** — controls = matched
+   same-tier/same-goal stores with stable spend through the test window. Effect = test store's
+   Δ% minus controls' Δ%; a raw pre/post can't separate "we changed spend" from "the market
+   moved." Threshold gaps (e.g. <5% ⇒ non-incremental) live in the read-week cell.
+3. **YoY same-weeks is a sanity check only** where clean prior-year data exists — store mix
+   and engagement effects distort it as a primary comp.
+
+### S6. Write (only after final approval)
+
+1. Build the grid JSON (spec §Interfaces) →
+   `strategy_write.py --client <slug> --grid grid.json --check` first. If any target tab is
+   non-empty, show the user what's there and get an explicit confirm, then re-run with
+   `--overwrite`. Empty tabs write directly (no `--overwrite` needed). This is the ONE authorized
+   writer for Q-plan tabs; the weekly refresh never touches them.
+2. **Notion strategy page** (client-shareable) via Notion MCP: why-this-quarter summary → per-tier
+   sections (posture, goal, locations, spend %/$, campaign types, segmentation, key plays) →
+   roadmap-at-a-glance table. First run: resolve the client's Documents Hub via Notion search,
+   confirm destination with the user, cache `notion_parent_page_id` + `notion_strategy_page_id`
+   via `--config`. Later runs update the cached page.
+3. **Planning DB**: push each planned campaign through `references/add_campaign.py` with status
+   `Not started` and `--notes "Roadmap <window>"` (lands in the "Performance Notes" property) so
+   campaign-ops picks them up — no double-entry.
+4. Suggest the GM share the Notion page + updated sheet with the client.
 
 ---
 
@@ -208,9 +332,9 @@ The canonical campaign plan Sheet has **11 tabs** in this order (9 visible + His
 | 2 | **Active Campaigns** | Notion Campaign Planning DB ∪ UE Ads ∪ UE Offers ∪ DD SLs ∪ DD Promos ∪ GH SLs | Auto | Mon + intraday |
 | 3 | **Ads Reporting** | UE Ads Manager export + DD Sponsored Listings export + GH SLs export (per-platform funnel) | Auto | Mon |
 | 4 | **Offers Reporting** | UE Offers export + DD Promotions export (per-promo + audience split) | Auto | Mon |
-| 5 | **Q2 [year] Plan** | Forward calendar (NROs, holidays, cultural events) + per-location weekly grid | **Human-authored** | Weekly status updates |
-| 6 | **Q3 [year] Plan** | Same | **Human-authored** | Weekly status updates |
-| 7 | **Q4 [year] Plan** | Same | **Human-authored** | Weekly status updates |
+| 5 | **Q2 [year] Plan** | Phase S roadmap grid (events band + per-location weekly grid by tier) | **Session-authored** (Phase S writes on approval; weekly refresh never touches) | Per strategy session |
+| 6 | **Q3 [year] Plan** | Same | **Session-authored** (same) | Per strategy session |
+| 7 | **Q4 [year] Plan** | Same | **Session-authored** (same) | Per strategy session |
 | 8 | **Archive** | Ended campaigns moved from Active + hypothesis/outcome/continue Y/N | Auto-move, human-curate | Within 5 business days of campaign end |
 | 9 | **Notes / Triggers / Definitions** | Static (trigger-action automation rules + glossary + status legend + tab index) | One-time template | As needed |
 | 10 | **History** (hidden) | Append-only snapshot per (week × campaign) — Spend/Sales/Orders/ROAS/Status per weekstart | **Auto, append-only** | Every refresh |

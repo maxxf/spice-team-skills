@@ -162,12 +162,66 @@ def active_campaigns_by_location(ads_rows: list[dict], offers_rows: list[dict],
 
 # ---- Dashboard ----
 
+def location_momentum(loc_history: dict, weekstart: str) -> dict:
+    """Trend hierarchy math: L4W avg vs prior-4W avg per location, from the canonical
+    location-week sales history. Requires >=3 present weeks per 4-week block (missing or
+    zero-sales closed weeks are skipped). Returns {loc: {"l4w","p4w","mom"}} (mom = % change)."""
+    import datetime as _dt
+    end = _dt.date.fromisoformat(weekstart)
+    mondays = [(end - _dt.timedelta(weeks=i)).isoformat() for i in range(8)]  # newest first
+    out = {}
+    for loc, hist in (loc_history or {}).items():
+        last4 = [hist[w] for w in mondays[:4] if hist.get(w)]
+        prev4 = [hist[w] for w in mondays[4:] if hist.get(w)]
+        if len(last4) < 3 or len(prev4) < 3:
+            out[loc] = {"l4w": None, "p4w": None, "mom": None}
+            continue
+        l4, p4 = sum(last4) / len(last4), sum(prev4) / len(prev4)
+        out[loc] = {"l4w": l4, "p4w": p4, "mom": (l4 - p4) / p4 * 100 if p4 else None}
+    return out
+
+
+def attach_trend_hierarchy(by_location: list, loc_history: dict | None, weekstart: str | None,
+                           tier_assignments: dict | None) -> None:
+    """Mutates by_location rows: adds L4W momentum + tier-relative columns, and upgrades the
+    tier label to the 5-tier emoji vocabulary when a tier_strategy assignment exists.
+    Hierarchy: WoW alerts -> L4W momentum confirms -> tier-relative assigns ownership."""
+    TIER_EMOJI = {"Top": "🟢 Top", "Mid": "🔵 Mid", "Low": "🟠 Low", "New": "🟣 New", "Red": "🔴 Red"}
+    mom = location_momentum(loc_history, weekstart) if (loc_history and weekstart) else {}
+    # cohort = 5-tier assignment when present, else the diagnostic color already on the row
+    for r in by_location:
+        a = (tier_assignments or {}).get(r.get("location"))
+        if a in TIER_EMOJI:
+            r["tier"] = TIER_EMOJI[a]
+        r["_cohort"] = a or r.get("tier") or "?"
+        r["l4w_mom_val"] = (mom.get(r.get("location")) or {}).get("mom")
+    cohorts = {}
+    for r in by_location:
+        if r["l4w_mom_val"] is not None:
+            cohorts.setdefault(r["_cohort"], []).append(r["l4w_mom_val"])
+    for r in by_location:
+        v = r.pop("l4w_mom_val")
+        peers = [x for x in cohorts.get(r.pop("_cohort"), [])]
+        r["l4w_mom"] = f"{v:+.1f}%" if v is not None else "—"
+        r["l4w_mom_heat"] = v
+        if v is None or len(peers) < 2:
+            r["vs_tier"], r["vs_tier_heat"] = "—", None
+        else:
+            ps = sorted(peers)  # median, not mean — one ramping outlier shouldn't smear the cohort
+            mid = len(ps) // 2
+            cohort_med = ps[mid] if len(ps) % 2 else (ps[mid - 1] + ps[mid]) / 2
+            d = v - cohort_med
+            r["vs_tier"] = f"{d:+.1f} pts"
+            r["vs_tier_heat"] = d
+
+
 def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
                         offers_rows: list[dict], history_rollup: dict | None = None,
                         weekstart: str | None = None, net_sales: dict | None = None,
                         location_aliases: dict | None = None, tier_map: dict | None = None,
                         prior_net_total: float | None = None, sales_metrics: dict | None = None,
-                        prior_overview: dict | None = None) -> dict:
+                        prior_overview: dict | None = None, loc_history: dict | None = None,
+                        tier_assignments: dict | None = None) -> dict:
     """Build the dashboard dict: KPIs, by-platform, by-location, top/bottom 5, ad/promo split,
     and (when prior weeks exist in History) a 4-week Portfolio Trend with WoW.
 
@@ -466,6 +520,8 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
     po_mktpct = (po_inv / po_ts * 100) if (po_inv and po_ts) else None
     if ov:  # canonical mode — the History/reconstruction Portfolio Trend would conflict
         portfolio_trend = []
+
+    attach_trend_hierarchy(by_location, loc_history, weekstart, tier_assignments)
 
     return {
         "kpis": {"live": live, "proposed": proposed, "blocked": blocked,

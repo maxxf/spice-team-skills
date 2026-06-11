@@ -158,6 +158,46 @@ def pull_overview_trend(sheet_id: str, weekstart: str, n: int = 6,
     return out
 
 
+def pull_location_sales_history(sheet_id: str, location_tab: str = "By Location 2.0") -> dict:
+    """All weeks of canonical Total Sales per location from the wide By Location tab.
+    Returns {location: {weekstart_iso: sales_float}} — the source sheet IS the history store,
+    so trend math needs no separate backfill. Year per column is inferred by matching the
+    date cell ('20-Oct') against the ISO week number row, so the pull is year-agnostic."""
+    rows = _read(sheet_id, location_tab)
+    wk_row = next((r for r in rows if len(r) > 1 and str(r[1]).strip().lower() == "week"), None)
+    dt_row = next((r for r in rows if len(r) > 1 and str(r[1]).strip().lower() == "metric"), None)
+    if not wk_row or not dt_row:
+        return {}
+    months = {m: i + 1 for i, m in enumerate(
+        ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"])}
+    cols = []  # (col_index, weekstart_iso)
+    for c in range(2, len(wk_row)):
+        iso = str(wk_row[c]).strip()
+        raw = str(dt_row[c]).strip() if c < len(dt_row) else ""
+        if not iso.isdigit() or "-" not in raw:
+            continue
+        d_s, m_s = raw.split("-", 1)
+        mo = months.get(m_s.strip().lower()[:3])
+        if not mo or not d_s.strip().isdigit():
+            continue
+        for year in (2024, 2025, 2026, 2027, 2028):
+            try:
+                d = dt.date(year, mo, int(d_s))
+            except ValueError:
+                continue
+            if d.isocalendar()[1] == int(iso):
+                cols.append((c, d.isoformat()))
+                break
+    out = {}
+    for c, ws in cols:
+        for loc, metrics in _extract_all(rows, c).items():
+            raw = metrics.get("total_sales", "")
+            if str(raw).strip() in ("", "—", "-"):
+                continue
+            out.setdefault(loc, {})[ws] = _num(raw)
+    return out
+
+
 def pull_tier_map(sheet_id: str, tier_tab: str = "By Tier") -> dict:
     """Parse the By Tier tab's section headers (e.g. '🔴 RED | San Jose, Pasadena') into a
     {location: tier} map so the campaign dashboard can segment by store tier. Tier is one of

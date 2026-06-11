@@ -210,6 +210,24 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
         except Exception as e:
             print(f"   (tier-map pull skipped: {str(e)[:80]})")
 
+    # Full-year location sales history (the wide sales sheet IS the history store) -> powers
+    # the By Location trend hierarchy (L4W momentum + vs-Tier cohort read).
+    loc_history = None
+    if cfg.get("net_sales_sheet_id"):
+        try:
+            import net_sales_pull as nsp
+            loc_history = nsp.pull_location_sales_history(
+                cfg["net_sales_sheet_id"], cfg.get("net_sales_location_tab", "By Location 2.0"))
+            if loc_history:
+                n_wk = max(len(v) for v in loc_history.values())
+                print(f"   (location history: {len(loc_history)} locations x up to {n_wk} weeks)")
+        except Exception as e:
+            print(f"   (location-history pull skipped: {str(e)[:80]})")
+    # 5-tier assignments from the strategy session (tier gate output) -> vs-Tier cohorts.
+    tier_assignments = {loc: rec.get("tier") for loc, rec in
+                        ((cfg.get("tier_strategy") or {}).get("locations") or {}).items()
+                        if rec.get("tier")} or None
+
     # Active Campaigns = a clean by-location view of what's actually running (ads + offers).
     # Planning/pipeline state stays internal in Notion + the GM-owned Q-Plan tabs. Falls back
     # to a flat Live list for planning-only clients with no performance exports yet.
@@ -256,7 +274,8 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
                                    history_rollup=rollup, weekstart=weekstart, net_sales=net_sales,
                                    location_aliases=cfg.get("location_aliases"), tier_map=tier_map,
                                    prior_net_total=prior_net_total, sales_metrics=sales_metrics,
-                                   prior_overview=prior_overview)
+                                   prior_overview=prior_overview, loc_history=loc_history,
+                                   tier_assignments=tier_assignments)
     # Multi-week Marketing-Driven vs Organic trend (incrementality read).
     if cfg.get("net_sales_sheet_id"):
         try:
