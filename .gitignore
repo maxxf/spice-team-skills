@@ -1,0 +1,14 @@
+# Python virtual envs created by client-diagnostics/scripts/setup_venvs.sh
+.venv/
+**/.venv/
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Diagnostic run artifacts (written to /tmp by default, but ignore if local)
+diagnostic-runs/
+
+# macOS
+.DS_Store

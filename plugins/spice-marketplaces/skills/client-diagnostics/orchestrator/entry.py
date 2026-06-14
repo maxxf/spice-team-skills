@@ -18,7 +18,28 @@ from pathlib import Path
 
 from orchestrator import chart_helpers, contract, cross_cutting, output_layout, run_state
 
-SKILLS_ROOT = Path("/Users/maxx/Desktop/Cowork/Skills")
+def _resolve_skills_root() -> Path:
+    """Locate the directory that holds the diagnostic-* sub-skills.
+
+    Resolution order, so the pipeline runs on any machine (not just the
+    original dev box):
+      1. SPICE_SKILLS_ROOT env var — explicit override
+      2. sibling of this skill — normal plugin/repo install, where
+         diagnostic-topline/menu/ops/campaigns/action-plan sit next to
+         client-diagnostics
+      3. legacy Cowork path — Maxx's original local layout (last-resort fallback)
+    """
+    env = os.environ.get("SPICE_SKILLS_ROOT")
+    if env:
+        return Path(env).expanduser()
+    # entry.py lives at <skills_root>/client-diagnostics/orchestrator/entry.py
+    sibling_root = Path(__file__).resolve().parents[2]
+    if (sibling_root / "diagnostic-topline").is_dir():
+        return sibling_root
+    return Path("/Users/maxx/Desktop/Cowork/Skills")
+
+
+SKILLS_ROOT = _resolve_skills_root()
 
 
 @dataclass(frozen=True)

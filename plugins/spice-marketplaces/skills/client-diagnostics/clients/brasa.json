@@ -1,0 +1,19 @@
+{
+  "client_slug": "brasa",
+  "client_display_name": "Brasa Peruvian",
+  "notion": {
+    "parent_page_id": "37ad3ff0-18e7-808d-95c5-c7e9168897c1",
+    "_comment": "Brasa Peruvian client portal page (Clients DB). Diagnostic pages get created under this."
+  },
+  "brand": {
+    "color_primary": null,
+    "voice_notes": null
+  },
+  "thresholds_override": {
+    "_comment": "Optional: override defaults from diagnostic-framework.md. Omit to use Spice defaults."
+  },
+  "data_quirks": [
+    "6 locations split between New York and Toronto.",
+    "Grubhub is US-only — Toronto locations likely have no Grubhub presence; expect GH data for NY stores only. Confirm during data collection and note skipped GH stores in manifest."
+  ]
+}
