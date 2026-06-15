@@ -92,7 +92,11 @@ For each approved tier, recommend a strategy block — **every line cites its pl
 - **Campaign types** — location-based only, never keyword (meta-rule 3); matched to tier + each
   location's goal (Top: loyalty/retention + stepped-pullback tests · Mid: per goal ·
   Low: acquisition offers + ops/menu fix workstream · New: awareness + flyer play · Red: none).
-- **Segmentation** — New/Existing/Lapsed mix per tier, re-order-adjusted.
+- **Segmentation** — **all non-New stores run ads SPLIT by audience (New/Existing/Lapsed) with a
+  budget cap per segment**, never one blended campaign — it's how you separate acquisition from
+  cannibalization and protect net payout (cap the existing-customer line on mature stores). New
+  tier runs blended/awareness until it has a base (add segmentation at the 60-day re-tier). The
+  per-segment caps split the tier's spend band; mix is re-order-adjusted.
 - **Cadence/exit** — creative refresh by wk 4–5, spend-down schedule planned at entry (meta-rule 5).
 
 User approves/edits per tier → persist `{"tiers": {...}}` via `--config`.

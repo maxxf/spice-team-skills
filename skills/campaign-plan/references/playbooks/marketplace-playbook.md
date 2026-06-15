@@ -33,6 +33,7 @@ The unifying frame under everything below — the 3% north star, the cannibaliza
 - **The Cardinal Rule (§1) is the off-curve gate** — a broken store isn't anywhere on the curve yet; fix foundations before it earns a position.
 - **The location tier framework is this curve made operational** (`references/tier-framework.md`): maturity (capacity + awareness) sets the goal, the goal sets the spend band. Top = harvest (0–3%), Mid = transitional (4–8%), Low/New = acquisition (8–20%), Red = off-curve.
 - **Net payout is the north star at the harvest end; new-eater acquisition is the north star at the acquisition end.** Same business, different objective function by curve position — which is why "goal" (payout vs growth) is set per location, not per client.
+- **Segment the ads to read (and cap) the curve.** Every store except brand-new ones runs ads split by audience (New / Existing / Lapsed), not one blended campaign — a blended line can't tell acquisition from cannibalization. Per-segment ROAS/CPO is the cheap, always-on read of curve position (the stepped pullback is the expensive confirmation); per-segment budget caps are how you enforce it — cap the existing-customer spend on a mature store, give the new-customer segment headroom on a scaling one. New stores run blended until they have a base, then segment at the 60-day re-tier.
 
 ---
 

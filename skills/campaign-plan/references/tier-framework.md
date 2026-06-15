@@ -85,6 +85,26 @@ can't serve incrementally (displaced orders or ops strain). The rules:
 - **Scheduling guard:** a store serving as a control for an active test never pulses during the
   test window.
 
+## Campaign segmentation + budget caps (all tiers except New)
+
+**Every non-New store runs ads SPLIT by audience (New / Existing / Lapsed), never one blended
+campaign.** Two reasons, both downstream of the Spend Maturity Curve:
+
+1. **Performance visibility** — you cannot separate acquisition from cannibalization if new- and
+   existing-customer spend share one line. Segmented campaigns are the instrument that *measures
+   where on the curve each dollar lands* — per-segment ROAS/CPO is the read.
+2. **Budget caps per segment** — cap the existing-customer spend explicitly (that's the
+   cannibalizing portion at a mature store) and let the acquisition segment scale to its CPO
+   target. On a Top/payout store the existing-segment cap is the lever that protects net payout;
+   on a Low/growth store the New-segment gets the headroom.
+
+**New tier is the exception** — run blended/awareness: you're acquiring everyone and have no base
+to segment against yet. Add segmentation at the 60-day re-tier once a base exists.
+
+This makes segment-level budget caps a standing input to every non-New tier's strategy block
+(spend band splits into per-segment caps), and it's what lets re-order rate (below) be read per
+segment rather than store-wide.
+
 ## Re-order rate logic
 
 - **High re-order** → new customers stick → justify acquisition at the top of the tier's band;
