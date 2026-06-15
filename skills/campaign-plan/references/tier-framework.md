@@ -29,7 +29,8 @@ The proof points (cross-client, why this is a law and not a single-client quirk)
   acquisition (the *other* end of the curve: spend was the acquisition engine).
 
 This is the unifying frame under the 3% north star, the cannibalization audit, and every band
-below. **The whole tier rubric is the Spend Maturity Curve made operational:** maturity (capacity
+below. **Canonical statement + proof table:** `references/playbooks/marketplace-playbook.md` §0
+(promoted there as the governing law of the marketplace practice). **The whole tier rubric is the Spend Maturity Curve made operational:** maturity (capacity
 + awareness) sets the goal, the goal sets the band. Top stores sit at the harvest end (spend ≈
 cannibalization → trim toward 0–3%); New/Low sit at the acquisition end (spend = the engine → fund
 to 8–20%); Red is off-curve until the foundations gate passes. A high ROAS at a mature store isn't

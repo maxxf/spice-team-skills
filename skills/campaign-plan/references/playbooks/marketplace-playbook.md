@@ -8,6 +8,34 @@
 
 ---
 
+## 0. The Governing Law: The Spend Maturity Curve
+
+The unifying frame under everything below — the 3% north star, the cannibalization audit, the incrementality work, and every per-location spend decision a GM makes. State it as a law:
+
+**3P marketing spend is acquisition spend wearing a conversion costume.** The ROI of a marketing dollar is a function of *where the location sits on its awareness curve*, not of how well the location performs. The same dollar does opposite things at the two ends:
+
+- **Mature location** — you already own the demand. Spend largely buys orders you'd have gotten anyway, so it **cannibalizes**; pulling it back *lifts* net payout. Harvest end of the curve.
+- **New / dark / scaling location** — spend is the only thing acquiring new eaters. Pulling it **bleeds** — you switch off the engine. Acquisition end of the curve.
+
+**The proof points (cross-client — this is a law, not one client's quirk):**
+
+| Location state | What happened | What it proves |
+|---|---|---|
+| Mature (Ahipoki) | Pulled $65–70K of 3P spend over 4 months → sales stayed flat | Spend was cannibalizing; demand was already owned |
+| Mature (Counter Service) | Held spend flat, *reallocated* it → +23% sales | On a mature base, mix beats volume |
+| Struggling accounts | Cut spend → net payout up to +11% | Cannibalization, quantified in payout |
+| Dark (Capriotti's) | Went dark on Uber Eats → −$480K/quarter + 23% drop in new-eater acquisition | The other end: spend *was* the acquisition engine |
+
+**Implications that cascade through the rest of this playbook:**
+
+- **ROAS is not a performance grade — it's a position on the curve.** A high ROAS at a mature store is harvesting demand you already own; a low ROAS at a new store is the cost of buying eaters who don't exist yet. Never rank stores on raw ROAS.
+- **Incrementality tests (§4) are how you *locate* a store on the curve** — a stepped pullback tells you whether spend is incremental (acquisition end) or cannibalizing (harvest end). That's the measurement, ROAS is not.
+- **The Cardinal Rule (§1) is the off-curve gate** — a broken store isn't anywhere on the curve yet; fix foundations before it earns a position.
+- **The location tier framework is this curve made operational** (`references/tier-framework.md`): maturity (capacity + awareness) sets the goal, the goal sets the spend band. Top = harvest (0–3%), Mid = transitional (4–8%), Low/New = acquisition (8–20%), Red = off-curve.
+- **Net payout is the north star at the harvest end; new-eater acquisition is the north star at the acquisition end.** Same business, different objective function by curve position — which is why "goal" (payout vs growth) is set per location, not per client.
+
+---
+
 ## 1. The Cardinal Rule: Fix Foundations Before Spending
 
 Every failed marketplace engagement we've seen traces back to the same mistake: throwing ad dollars at a broken storefront. The hierarchy is non-negotiable.

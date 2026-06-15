@@ -154,6 +154,8 @@ runs GH; never silently omit a platform the client is on. Iterate until approved
 
 These aren't reference reading; they're the **strategy filter**. When authoring the strategy summary, proposing new campaigns, or refreshing the plan, run the proposal through these rules:
 
+**The Governing Law (above the meta-rules) — the Spend Maturity Curve.** 3P marketing spend is acquisition spend wearing a conversion costume: a dollar's ROI depends on where the location sits on its awareness curve, not how well it performs. Mature → spend cannibalizes (pull it, payout lifts); new/dark → spend is the acquisition engine (pull it, it bleeds). ROAS is a *position on the curve, not a grade* — never rank stores on raw ROAS; locate them with incrementality tests. The whole tier framework operationalizes this. Full statement + proof points: `references/playbooks/marketplace-playbook.md` §0 and `references/tier-framework.md`.
+
 **The 7 Meta-Rules (non-negotiable):**
 1. **Fix the menu before spending on ads.** Below 20% menu conversion, the algorithm buries you. Don't propose paid acquisition for a location under threshold.
 2. **Ratings velocity > rating score.** Propose the flyer play (Sunnyvale playbook) before propose ad spend for ratings-soft locations.
