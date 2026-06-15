@@ -20,7 +20,7 @@ location performs:
 - **New / dark / scaling location** — spend is the only thing acquiring new eaters, so pulling it
   **bleeds** — you stop the one engine bringing people in.
 
-The proof points (cross-client, why this is a law and not a goop quirk):
+The proof points (cross-client, why this is a law and not a single-client quirk):
 - Ahipoki — pulled $65–70K of 3P spend over 4 months, sales stayed flat (mature → spend was
   cannibalizing).
 - Counter Service — held spend flat, reallocated it, +23% sales (mix beats volume on a mature base).
