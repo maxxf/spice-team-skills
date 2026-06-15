@@ -1,328 +1,188 @@
 ---
 name: weekly-prep
-description: Sunday evening weekly prep for Maxx. Trigger when asked to "prep for the week", "weekly prep", "Sunday prep", or "get ready for Monday". Pulls calendar events, recent meeting notes from ALL clients, pipeline database, and sales emails/calls to generate a structured weekly overview with top wins, client updates, pipeline movement, and copy/paste content for the standup doc.
+description: Sunday evening weekly prep for Maxx, plus a Monday "push to standup" sync. Trigger when asked to "prep for the week", "weekly prep", "Sunday prep", "get ready for Monday", "push prep to standup", "fill the standup", or "Monday standup sync". Pulls calendar, recent meeting notes from ALL clients, the live sales pipeline (read per-deal from the CRM), sales emails, AR, and churn signals into a tight, triaged operating brief plus a short paste-ready standup block; then (Part 4, run Monday) auto-fills the team standup doc's Pipeline / Big Wins / Onboarding+Churn sections and the MRR goal cell.
 ---
 
 # Weekly Prep
 
-Generate Maxx's Sunday evening weekly prep by pulling data from Circleback (meetings/calendar), Notion (pipeline database, client pages), Gmail, and synthesizing it into actionable output.
+Generate Maxx's Sunday operating brief by pulling from Circleback (meetings/calendar), Notion (Sales Pipeline + client pages + Task Tracker), Gmail, and Stripe, then synthesizing into a triaged, action-first brief.
 
-## Workflow
-
-### 1. Pull Calendar Events (Coming Week)
-```
-SearchCalendarEvents:
-- startDate: [tomorrow, Monday]
-- endDate: [+7 days]
-- pageIndex: 0
-```
-
-Used to populate Top Priorities and identify sales calls, client meetings, and conflicts. No separate calendar table in output.
-
-### 2. Pull Recent Meeting Notes (Last 7 Days)
-```
-SearchMeetings:
-- startDate: [7 days ago]
-- endDate: [today]
-- pageIndex: 0
-```
-
-Then `ReadMeetings` for ALL client meetings to extract:
-- Wins (metrics, milestones) — attribute to team member who owns account
-- Open action items (what's due, who owns it)
-- Churn signals or lost clients
-- Onboarding progress updates
-
-**Include ALL clients, not just ones Maxx attends:**
-- Goop Kitchen (Rodrigo, Diri)
-- Capriotti's (Rodrigo)
-- Dayglow/AWAN (David)
-- Everytable (Maxx lead, Ro + Manish supporting)
-- Teleferic (David)
-- My Big Fat Shawarma (Rodrigo, Manish)
-- Counter Service (Ro, Daniela)
-- Menya Ultra
-- Temaki
-- Gertie (David)
-- Retention clients: MBF, HealthNut, AhiPoki (Tomas, Rui)
-- Any new clients in onboarding
-
-Also pull Retention Biweekly for retention-specific updates.
-
-**CRITICAL: Exclude the Spice Team Weekly Standup meeting from all data sourcing.** The weekly prep feeds INTO the standup doc, so pulling data FROM it creates circular duplication. Only source wins, metrics, and updates from client-specific meetings, sales calls, 1:1s, and platform biweeklies. If a data point only appears in the standup and not in any client meeting, it cannot be included in the weekly prep.
-
-### 3. Pull Client Pages from Notion (Onboarding + Context)
-
-Search Notion for client pages, especially clients in onboarding:
-```
-notion-search:
-- query: "[Client Name]" — fetch client workspace pages
-```
-
-For onboarding clients, fetch the full page to get:
-- Onboarding checklist status (completed vs. pending tasks)
-- Blockers, overdue items, at-risk items
-- Service details, MRR, key contacts
-
-For active clients, look for:
-- Recent meeting notes pages (last 7 days)
-- Key updates, decisions, blockers documented by the team
-- Action items assigned in Notion
-
-### 4. Pull Sales Pipeline from Notion
-```
-notion-search:
-- query: "Pipeline" or fetch pipeline database directly (ID: 1c0d3ff0-18e7-80fa-b0b6-cc5887a502c4)
-```
-
-Check for movement since last week:
-- New prospects added
-- Status changes (cold → warm, warm → proposal sent, etc.)
-- Deals closed (won or lost)
-
-Cross-reference with sales calls/emails from the past week to capture context on next steps.
-
-### 4b. Scan Gmail for Pipeline Signals (Last 7 Days)
-```
-search_gmail_messages:
-- q: "newer_than:7d (from:*@goopkitchen.com OR from:*@capriottis.com OR from:*@brooklyndumpling.com OR from:*@everytable.com OR from:*@enjoyawan.com OR from:*@dayglow.coffee OR from:*@telefericbarcelona.com OR from:*@menya-ultra.com)"
-```
-
-Also search for active prospect threads:
-```
-search_gmail_messages:
-- q: "newer_than:7d (proposal OR agreement OR onboarding OR invoice)"
-```
-
-And hiring/team threads:
-```
-search_gmail_messages:
-- q: "newer_than:7d (hiring OR contractor OR interview OR offer OR onboard)"
-```
-
-This catches:
-- Client replies between meetings (async decisions, blockers, asks)
-- Proposal follow-ups and contract status updates
-- Scheduling signals that never reach Circleback
-- Prospect engagement that indicates deal movement
-- Hiring updates, interview scheduling, contractor follow-ups
-
-Cross-reference with Circleback notes to fill gaps. If an email thread contradicts or updates meeting notes, the email is more recent and takes precedence.
-
-### 5. Build Churn Risk Scores
-
-Score every active client on 5 dimensions (0 = healthy, 1 = yellow, 2 = red):
-
-| Dimension | What it measures |
-|-----------|-----------------|
-| **Pay** | Late payments, billing disputes, Stripe issues |
-| **Eng** | Responsiveness, meeting attendance, POC changes |
-| **Perf** | Sales trends, conversion rates, rating drops |
-| **Ops** | Platform issues, menu problems, campaign blockers |
-| **Rel** | Account lead changes, relationship tension, difficult-to-work-with signals |
-
-**Total /10. Tiers:** High (6+), Monitor (3-5), Healthy (0-2).
-
-Compare against previous week's scores (fetch prior weekly prep page). Note any score changes and why.
-
-Only surface clients scoring 3+ in the output. All others are noted as Healthy.
-
-### 6. Generate Output
-
-Structure the output in this exact section order:
+**This is an operating brief, not a status report.** Every line should either tell Maxx what to do or give him the one fact he needs to decide. If a line does neither, cut it.
 
 ---
 
-## Output Format
+## Part 1 — Data Sourcing
 
-### TL;DR (3 lines max)
-
-Three sentences, max. The single most important win, the single biggest risk, and the single most urgent action item. This is what Maxx reads on his phone before coffee.
-
-Format:
+### 1. Calendar (coming week)
 ```
-**Win:** [one line]
-**Risk:** [one line]
-**Do Monday:** [one line]
+SearchCalendarEvents: startDate=[Monday], endDate=[+7 days], pageIndex=0
 ```
+Feeds Top Priorities and surfaces sales calls, client meetings, conflicts. No standalone calendar table in the output.
+
+### 2. Meeting notes (last 7 days)
+```
+SearchMeetings: startDate=[7 days ago], endDate=[today], pageIndex=0
+```
+`ReadMeetings` for every client meeting. Extract: wins (with metrics, attributed to the account owner), open action items (what's due, who owns), churn signals, onboarding progress.
+
+Cover ALL clients, not just ones Maxx attends — goop, Capriotti's, Dayglow/AWAN, Everytable, Teleferic, MBFS, Counter Service, Menya Ultra, Temaki, Gertie, Fresh Kitchen, Westville, retention clients (HealthNut, AhiPoki, MBF), plus anyone in onboarding. Also pull the Retention Biweekly.
+
+**CRITICAL — exclude the Spice Team Weekly Standup from all sourcing.** The prep feeds INTO the standup doc; sourcing from it creates circular duplication. If a data point appears only in the standup and in no client meeting/sales call/1:1/biweekly, it cannot be used.
+
+### 3. Onboarding status — delegate to the `onboarding-status-check` skill (do NOT hand-derive from meetings)
+Onboarding status for §5 is sourced from the **onboarding-status-check** skill, never re-derived from meeting notes (that's what made the section soft). Run only its **read + categorization** logic:
+- Query the Client Onboarding Tasks DB (`collection://239d3ff0-18e7-8041-84d2-000b393bcc69`) for incomplete tasks (Status ≠ Done/N/A, has a Client assigned); fetch each task's Due Date (or compute it from SOW Start Date + Days After Start).
+- Categorize each: 🚨 **Blocker** (5+ days late) / 🔴 **Overdue** (3–4 days) / ⚠️ **At Risk** (due today/tomorrow or 1–2 days past) / ✅ **On Track** (later). Run its stale-task check too (3+ days late still "Not Started").
+- **READ-ONLY here:** do NOT trigger that skill's write side-effects during weekly-prep — no form/credential migration, no marking tasks Done, no Slack posts. Weekly-prep only consumes the status.
+- That skill runs Tue/Thu 9am on the Mac Mini and posts a rollup to **#new-client-onboarding** (`C08D4EM5UCX`). Use the latest post as a cross-check, but prefer a fresh read since Sunday is several days out from Thursday.
+
+### 3b. Active-client context (Notion)
+For active (non-onboarding) clients, look for meeting-note pages from the last 7 days and team-logged decisions/blockers. Cross-reference with meeting notes — Notion may lag reality.
+
+### 4. Sales Pipeline — read it correctly (this is the section that breaks; follow exactly)
+
+Pipeline DB: data source `collection://1c0d3ff0-18e7-805b-ba76-000b04cc35c4`.
+
+**Why this matters:** `notion-fetch` on the database — or on any of its views, even with `?v=` — returns **only the schema, never rows**. This MCP has **no `query_data_sources` tool**. `notion-search` over the data source returns an unranked, unfiltered grab-bag with **no Deal stage / Deal value / Last contact** fields and includes dead/test rows. None of these alone gives you the pipeline. You MUST read each deal's properties from its own page. Do not skip this — guessing stages from calls/emails is the exact bug that produced wrong stages before.
+
+**Procedure:**
+1. **Enumerate** candidate deals: `notion-search` with `data_source_url=collection://1c0d3ff0-18e7-805b-ba76-000b04cc35c4`, `page_size=25`, `max_highlight_length=0`. Returns page IDs, titles, last-edited dates.
+2. **Drop junk** by title/age: skip anything matching `[DUPE]`, `[DELETE]`, `TEST`, or last-edited >90 days ago — unless a call/email from this week references it.
+3. **Fetch each remaining deal page** (`notion-fetch` by ID, in parallel) and read the REAL fields: `Deal stage`, `Deal value`, `Locations`, `Last contact date`, `Account owner`, `Notes`.
+4. **Ground truth = the CRM `Deal stage` field. Never infer stage from Circleback or Gmail.** Use calls/emails only to ADD next-step context (what was said, what's owed, what's blocking). If an email implies a different stage than the CRM shows, do NOT report the email's version — report the CRM stage and append a one-line `⚠️ CRM says X; [date] email suggests Y — update CRM`.
+5. **Active pipeline** = `Deal stage` ∈ {New Lead, Reached Out, Qualified, Meeting Booked, Pitched, Proposal Shared, Agreement Sent}.
+   - **Won** → list under "Recently Won → onboarding"; cross-check Stripe/P&L that billing started. A "Won" with no recent contact and no billing → flag `verify`.
+   - **Lost / Not a Fit** → one line only if it moved this week.
+   - **Ice Box** → omit unless reactivated this week.
+6. **Stale flag:** days since `Last contact date`. Any active deal >14 days gets `⏳ N days quiet` and goes on the chase list.
+7. **Data hygiene:** if junk rows or stage-quality problems exist (junk/dupe/test rows; "Won" rows with no value/Stripe IDs that read as un-closed), surface them in the **chat summary to Maxx — NOT in the Notion doc.** The brief stays operational; CRM cleanup is housekeeping. Never include junk rows in the pipeline list. (Per-deal `verify` tags on a specific deal are fine in-doc; the broad cleanup roll-up is not.)
+
+**Banned language:** never write "verified subset," "confirm in CRM," "runs clean on the live job," or any hedge. If a deal genuinely couldn't be read, name it: `[Deal] — unread, check manually`. Nothing vaguer.
+
+### 5. Gmail signals (last 7 days)
+Catch async movement that never reaches Circleback. Three searches:
+```
+newer_than:7d (from:client-domains…)        # async decisions, blockers, asks between meetings
+newer_than:7d (proposal OR agreement OR onboarding OR invoice)   # deal/contract status
+newer_than:7d (hiring OR contractor OR interview OR offer OR onboard)  # team pipeline
+```
+Email is more recent than meeting notes — where they conflict, email wins for facts, but the CRM still wins for deal stage (see §4).
+
+### 6. AR + MRR (Stripe)
+**AR:** pull unpaid/overdue invoices. For each: client, amount, invoice ID, due date, why (failed auto-charge vs send-invoice unpaid), who to chase. Flag any client you're about to scrutinize on spend who also owes money — they pay first.
+
+**MRR (compute it — do NOT use the vault/P&L estimate; that runs ~$10K high and stale):** the goal-tracking number must come from Stripe.
+- Sum **active subscriptions** (status active/trialing), normalizing annual ÷ 12. Paginate fully — don't trust a truncated page.
+- **Also count recurring `send_invoice` subscriptions** — goop, Capriotti's, etc. bill net-30 and sit in `past_due`/non-`active` status, so a naive `status=active` query MISSES them (~$15K). Query all statuses and include clearly-recurring service fees. These count toward MRR even when delinquent (MRR = contracted recurring), but note the delinquent portion.
+- ~7 CAD subscriptions (BKDS group) add minor FX noise — state whether you counted CAD nominally or converted.
+- Report **Total MRR + gap to the $100K goal**, with the subscription / recurring-invoice split and the past-due amount. (Reference figures, Jun 2026: ~$64K subs + ~$15.5K recurring invoices = ~$79.5K; ~$20.5K from goal.)
+
+### 7. Churn scoring
+Score every active client 0/1/2 on five dimensions — **Pay** (late/disputed billing), **Eng** (responsiveness, attendance, POC churn), **Perf** (sales/conversion/rating trend), **Ops** (platform/menu/campaign blockers), **Rel** (lead changes, tension). Total /10 → High (6+), Monitor (3–5), Healthy (0–2). Compare to last week's prep (fetch the prior page) and note score changes + why. Only surface clients scoring 3+; the rest are "Healthy."
 
 ---
 
-### 🏆 Big Wins (Top 3-5)
+## Part 2 — Output Format
 
-**Select the 3-5 most impactful wins from last week.** Rank by significance (revenue impact, efficiency gains, client milestones). Call out the team member responsible.
+Section order below is fixed. **Length budgets are hard caps.** Enforce the **one-mention rule**: each client/deal lives in exactly ONE section; reference it elsewhere by name only ("see §1"), never re-describe its metrics.
 
-Format:
-1. **[Win headline]** — [Team Member], [Client]: [specific metrics/details]. *(Source: [meeting name], [date])*
-2. ...
+Open with one italic source line: dates pulled, sources used, standup excluded, departed teammates excluded from credit.
 
-Prioritize wins with concrete numbers over qualitative updates. Always include source attribution.
+**Output hygiene (clean, copy-paste-ready — no exceptions):**
+- **One representation per dataset.** Never ship the same data as both a table and a list (the old churn table + bullets was the offender). Pick one.
+- **No auto-link bait.** Notion auto-links bare domains/emails (`Agree.com`, `gong.io`, `x@gmail.com`) into ugly live links. Reword to avoid them ("your e-sign queue", "vendor/no-reply contacts") or drop them. Keep only intentional `[label](url)` links to real Notion/Circleback pages.
+- **Title = one icon.** The archive page already has a 📋 icon — do NOT prefix the title text with another 📋.
+- **Paste blocks** use a plain-text code fence (```` ```text ````), never a language-tagged one.
+- **Cross-ref, don't repeat.** If a client is both a §1 priority and a §6 churn case, §6 says "see §1" — metrics live in one place.
+
+### 1. Top Priorities This Week (triaged)
+Max **5**, ranked by leverage. Each ≤3 sentences: the move, the one number that justifies it, the deadline. Link the source meeting.
+
+**Decisions waiting on you** — sub-list, ≤6 items, **one line each**. These are calls only Maxx can make. Do not re-describe anything already in a priority above; if it's both, keep it in priorities and drop it here.
+
+**AR / cash flag** — from §6. One line per unpaid invoice.
+
+### 2. Sales Pipeline Review
+From §4. Grouped by stage, bullets (no tables). Skip empty stages. One italic line noting it's driven off the live CRM Deal stage field.
+```
+**Meeting Booked**
+- **[Deal]** ([owner], [N loc], $[value]) — [next step + date]. [⏳ if stale]
+
+**Pitched / Proposal Shared / Agreement Sent**
+- **[Deal]** ([owner]) — [context]. Next: [action]. [⏳ if stale]
+
+**Recently Won → onboarding**
+- [Deal list] — billing confirmed via Stripe/P&L. [verify flags if any]
+
+**Chase this week:** [stale + high-value deals, named].
+```
+**No hiring here** — that's the team section. Keep CRM cleanup / data-quality notes OUT of the doc — those go to Maxx in the chat summary (Part 1 §4 step 7).
+
+### 3. Content Pipeline Review
+Latest content mine + anything scheduled + up to 3 post-worthy topics, one line each. Note timely angles (events, platform news). Keep to ~8 lines.
+
+### 4. Team Highlights — last week
+One line per active member: the single best thing they shipped, with a metric. **Include EVERY active teammate** — someone being transitioned out (e.g. under performance management) is still active and gets a neutral line; only the *departed* are omitted. Cross-check the roster so no one is silently dropped. End with one "client performance wins" line for results not tied to a single person. ~1 line each, no paragraphs.
+
+*Roster check (as of Jun 2026 — verify, don't trust blindly): active — Rodrigo, Daniel, Ana, David Pliego, Manish, Harol, Santiago Lopez, Santiago Beltrán, Dilli, Omar, Diline. Departed (no credit) — Cesar, Rui, Tomas.*
+
+### 5. Onboarding Updates
+New-client onboarding only, **sourced from the onboarding-status-check read in §3 — not from meeting notes.** Lead with the real category totals from that DB: 🚨 Blockers / 🔴 Overdue / ⚠️ At Risk / ✅ On Track. One line per active onboarding: the gating task, its category, the owner to tag, and the next concrete step. Recently-won-but-not-yet-onboarding clients are a single roll-up line. Meeting notes only ADD color (e.g. a verbal "storefronts are built") — the task DB is the source of truth for status.
+
+### 6. Client Churn Risk
+**One scored bullet per client — no separate scoring table** (fold the score in): `🔴/🟡 **Client (score)** — issue + owner + this-week move`. 🔴 High (6+) first, then 🟡 Monitor (3–5); only 3+ shown. If the client is also a §1 priority, write `see §1` instead of repeating its metrics. Note score changes vs last week. End with `Lost:` if any.
+
+### Standup Summary — copy/paste (formatted, NOT code blocks)
+The ONE intentional consolidation — the body's one-mention rule doesn't apply here (its whole job is to be pasted into the standup doc). **Render it as real formatted content — proper sub-headings and bullet/numbered lists, exactly as it should look in the standup doc — NOT inside code fences.** Maxx copies a section's formatted content and drops it under the matching standup heading; no reformatting. Use the standup's exact section names as `###` sub-headings, in this order:
+- **MRR / Goal** (the Exec Summary "MRR to 100k" cell) → a single bold line: the **Stripe-computed** MRR (§6) + RAG dot + gap to $100K. Never the vault estimate.
+- **`### Pipeline Updates`** → bullets: **Recently Won** / **Proposal Shared** / **Meeting Booked** / **Pitched** / **Chase**.
+- **`### 🏆 Big Wins This Week (All)`** → a numbered list (`1.` …), top 5, `win — owner`.
+- **`### Onboarding Updates`** → bullet(s): counts + the one client needing attention.
+- **Churn Risk** (bold sub-label under Onboarding) → bullets: **Red** / **Watch** / portfolio health / Lost.
+
+Names-and-numbers, not sentences. Skip any section that maps to nothing rather than inventing a target (there is no team-level "Top Priorities" block — that's per-person in the standup). When the Part 4 sync runs it writes these same blocks directly and this manual summary becomes unnecessary.
 
 ---
 
-### 🔄 Sales Pipeline Update
+## Part 3 — Output to Notion
 
-**Grouped by deal stage. No tables.** Headers for each stage, bullets for each prospect with context.
+Write the brief to the **Weekly Prep Archive** (the page already lives under Diline's Command Center). Title: `📋 Weekly Prep | [Mon date] - [Fri date], [Year]` — exactly one 📋, no double prefix.
 
-Format:
 ```
-### Won ✅
-- **[Prospect]** ([size], $MRR) — [one-line context]. Next: [action].
-
-### Proposal Shared
-- **[Prospect]** ([size]) — [context]. Next: [action]. [status emoji]
-
-### Meeting Booked
-- **[Prospect]** ([contact name], [size], [location]) — [source]. **[Day] [Date].**
-
-### Pitched
-- **[Prospect]** ([type]) — [context]. Next: [action]. [status emoji if overdue]
-
-### Evaluating
-- **[Prospect]** ([type]) — [context]. Next: [action].
-
-### Gone Cold
-- [Prospect list] — no email or meeting activity in last 7 days.
-
-### Status Unknown
-- [Prospect list] — no signals this week. Check status.
+notion-search: "Weekly Prep [date]"
 ```
+If a page exists for this week, update it; otherwise create one under the archive data source.
 
-Only include stages that have prospects. Skip empty stages.
+**Formatting:** when using `replace_content`/`new_str`, use real newline characters — never literal `\n`, which renders as text in Notion.
 
-Do NOT include hiring updates here — this is sales pipeline only.
+Return the Notion page link in the final response.
 
 ---
 
-### Onboarding Status Check by Client
+## Part 4 — Standup Sync (run Monday morning, separate step)
 
-**Only include clients currently in onboarding.** For each:
+Trigger: "push prep to standup", "fill the standup", "Monday standup sync", or a Monday-morning schedule. **Run AFTER the standup instance has spawned (~9am Mon) — never Sunday.** Source = the latest Weekly Prep page in the archive (`collection://47524728-ae68-4019-a793-0a1032495061`). Target = this week's standup instance.
 
-```
-### [Client Name] ([Status], [location count], $[MRR]/mo)
-Blockers: [N] | Overdue: [N] | At Risk: [N] | On Track: [N]
-- [x] **[Completed task]**: [status detail]
-- [ ] **[Pending task]**: [status + due date]. [On track / ⚠️ At risk / 🚨 Overdue].
-Next milestone: [what's next and when].
-```
+The standup doc "🌶️ Spice | Weekly Standup" is a row in **DB: Team Meetings** (`collection://1ced3ff0-18e7-8088-820b-000b9f3c0729`), auto-spawned each Monday from a database template (template `1ced3ff018e780f1a66ce1e554093ff3` — reference only, NEVER write to it).
 
-Pull checklist status from Notion client pages. Cross-reference with meeting notes for real-world progress that may not be reflected in Notion yet.
-
----
-
-### Churn Risk & Churn Cases
-
-**Active Churn Cases:** [list any clients actively churning].
-
-Only clients scoring 3+ shown. All other accounts noted as Healthy (0-2/10).
-
-Scoring table (only 3+ clients):
-| Client | Score | Tier | Pay | Eng | Perf | Ops | Rel | Key Issue |
-|--------|-------|------|-----|-----|------|-----|-----|-----------|
-
-Then action items for each at-risk/churning client:
-- [ ] **[Client]**: [specific actions this week]. [Note any score changes from prior week].
+**Procedure:**
+1. **Find the target.** Search DB: Team Meetings for the row with `Category = Standup` and `Date` = this week's Monday (or `notion-search "Spice Weekly Standup"`, newest). Confirm Date is the current week. **If no instance exists for this week yet, STOP** — the template hasn't spawned; do not create one manually.
+2. **Fetch the instance.** For each target section below, **only write if it's still empty** (placeholder/empty blocks only). If a human already filled it, skip it and report the skip — never clobber teammate input.
+3. **Fill (map from the prep page):**
+   - `## Pipeline Updates` ← prep §2, condensed: stages + chase list. **Omit** the internal CRM-cleanup / data-quality note — that's for Maxx, not the team doc.
+   - `## 🏆 Big Wins This Week (All)` ← prep §4 wins, numbered with team-member attribution.
+   - `## Onboarding Updates` (+ its `Churn Risk` / `Churn Cases` sub-bullets) ← prep §5 + §6 Red/Yellow one-liners.
+   - Exec Summary toggle → **2026 Company Goals** table → `MRR to 100k` row → **Status cell** = the Stripe-computed MRR figure + RAG dot from the prep standup block (e.g. `~$79.5K — $20.5K to goal 🟡`).
+4. **NEVER touch:** the inline linked DB view in Exec Summary; any per-person toggle (Accomplishments / Top Priorities / **Something Fun**); the Announcements callout. These are human/live.
+5. **Return:** which sections were filled, which were skipped (already had content), and the standup page link.
 
 ---
 
-### 📊 Client Updates + Open Action Items
-
-**Include ALL active clients**, alphabetically. Keep each entry tight.
-
-Format:
-```
-### [Client Name] *([Owner(s)])*
-- **Wins:** [one line, metrics preferred. "None" if none.]
-- **Open:** [2-4 sentences max. What's due, what's blocked, who owns. Bold the most urgent item.]
-```
-
-Rules:
-- No repeating info already covered in Big Wins, Onboarding, or Churn sections. Reference those sections instead ("see Churn section above").
-- Bold the single most important open item per client.
-- If nothing changed for a client, say "No movement this week" and move on.
-
----
-
-### 🧑‍💼 Team & Hiring Updates
-
-Bullet list covering:
-- New hires (start dates, onboarding status, who's ramping them)
-- Departures and account transitions
-- Role changes (full-time to part-time, etc.)
-- Open roles and candidate pipeline (interviews scheduled, follow-ups overdue)
-- Contractor/partner status changes (Notice Media, design contractors, etc.)
-
-Flag overdue follow-ups with ⚠️.
-
----
-
-### 🎯 Your Top Priorities This Week
-
-- [ ] **[Priority]** — [1 sentence context, why it matters, deadline if applicable]
-
-Synthesize from: client action items, pipeline follow-ups, calendar, hiring, strategic initiatives. Order by urgency/impact. 8-12 items max.
-
----
-
-### 📝 Ready-to-Paste Content for Standup Doc
-
-**Executive Summary (Churn & Risk):**
-```
-Churn: [clients lost or actively churning, with key metric]
-At Risk: [clients 3+ score with one-line reason]
-```
-
-**Accomplishments & Shout Outs:**
-```
-1/ [win] — [team member]
-2/ [win] — [team member]
-3/ [win] — [team member]
-```
-
-**Top Priorities:**
-```
-- [priority]
-- [priority]
-...
-```
-
-**Pipeline Update:**
-```
-Closed Won: [if any]
-Likely to Close: [prospect] ([size])
-Active Convos: [prospects with recent movement]
-Gone Cold: [prospects with no response]
-Status Unknown: [prospects needing status check]
-```
-
----
-
-## Notes
-- **NEVER source data from the Spice Team Weekly Standup meeting.** This avoids duplication since the weekly prep output feeds into the standup doc. Only use client meetings, sales calls, 1:1s, platform biweeklies, Notion, and Gmail as sources.
-- Big Wins: Select TOP 3-5 only, ranked by impact, with team member callout and source attribution (meeting name + date).
-- Churn Risk: Compare against previous week's prep. Note score changes and reasons.
-- Sales Pipeline: Grouped by stage, bullets not tables. NO hiring updates.
-- Client Updates: Cover ALL accounts. Keep tight (wins one line, open 2-4 sentences). Don't repeat info from other sections.
-- Team & Hiring: Separate section. Flag overdue follow-ups.
-- Maxx fills in his own "Something Fun" from the weekend.
-- The standup doc template auto-duplicates Monday at 9am.
-
-### 7. Output to Notion
-
-After generating the markdown output, create or update a Notion page with the weekly prep content.
-
-**Location:** Create under "Maxx - Scratchpad" page in Notion (ID: 1d0d3ff0-18e7-805d-8802-fd9baee89737).
-**Title format:** "📋 Weekly Prep | [Mon date] - [Fri date], [Year]"
-
-```
-notion-search:
-- query: "Weekly Prep [date]"
-```
-
-If a page already exists for this week, update it with the latest data. If not, create a new page.
-
-**Use `notion-create-pages` or `notion-update-page`** to push the full prep content. This is the primary output.
-
-**CRITICAL formatting rule:** When using `replace_content` or `new_str`, always use actual newline characters in the string. Never use escaped `\n` sequences, which render as literal text in Notion.
-
-Provide a link to the Notion page in the final response.
+## Anti-patterns (the failures this skill exists to prevent)
+- **Pipeline read from schema/search instead of per-deal pages** → wrong stages, miscategorized deals, hedge language. Always do §4 in full.
+- **Onboarding status hand-derived from meetings** → soft, wrong counts. Always pull §5 from the onboarding-status-check DB read (§3).
+- **Duplication** → the old "Standup Exec-Summary Blocks" re-listed every section. One-mention rule + the tight standup block kill this.
+- **Status-report bloat** → if a line doesn't drive an action or a decision, cut it.
+- **Sourcing from the standup** → circular. Client meetings, sales calls, 1:1s, biweeklies, Notion, Gmail, Stripe only.
+- **Crediting departed teammates** → exclude them.
+- Maxx adds his own "Something Fun"; the standup doc auto-duplicates Monday 9am.
