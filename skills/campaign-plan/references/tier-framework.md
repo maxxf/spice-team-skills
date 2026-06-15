@@ -9,6 +9,34 @@ capacity/efficiency — the best at-capacity stores get the least spend; stores 
 get the most, provided they clear the ops/menu gate. The organizing lens is the per-location
 **goal**.
 
+## The law underneath: the Spend Maturity Curve
+
+**3P marketing spend is acquisition spend wearing a conversion costume.** The ROI of a marketing
+dollar is a function of *where the location sits on its awareness curve*, not of how well the
+location performs:
+
+- **Mature location** — you already own the demand, so spend largely buys orders you'd have
+  gotten anyway. Spend **cannibalizes**; pulling it back *lifts* net payout.
+- **New / dark / scaling location** — spend is the only thing acquiring new eaters, so pulling it
+  **bleeds** — you stop the one engine bringing people in.
+
+The proof points (cross-client, why this is a law and not a goop quirk):
+- Ahipoki — pulled $65–70K of 3P spend over 4 months, sales stayed flat (mature → spend was
+  cannibalizing).
+- Counter Service — held spend flat, reallocated it, +23% sales (mix beats volume on a mature base).
+- Struggling accounts — cutting spend lifted net payout up to 11% (cannibalization, quantified).
+- Capriotti's — went dark on Uber Eats, cost ~$480K/quarter and a 23% drop in new-eater
+  acquisition (the *other* end of the curve: spend was the acquisition engine).
+
+This is the unifying frame under the 3% north star, the cannibalization audit, and every band
+below. **The whole tier rubric is the Spend Maturity Curve made operational:** maturity (capacity
++ awareness) sets the goal, the goal sets the band. Top stores sit at the harvest end (spend ≈
+cannibalization → trim toward 0–3%); New/Low sit at the acquisition end (spend = the engine → fund
+to 8–20%); Red is off-curve until the foundations gate passes. A high ROAS at a mature store isn't
+"performance" — it's harvesting demand you already own; a low ROAS at a new store isn't "failure" —
+it's the cost of buying eaters that don't exist yet. That's why incrementality tests (stepped
+pullbacks) are how we *locate* a store on the curve rather than trusting raw ROAS.
+
 ## Per-location inputs (the overlay)
 
 | Axis | Source | Mode |
