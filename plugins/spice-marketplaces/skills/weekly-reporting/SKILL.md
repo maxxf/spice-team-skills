@@ -2,8 +2,8 @@
 name: weekly-reporting
 description: >
   Process weekly delivery marketplace reports from Uber Eats, DoorDash, and Grubhub.
-  Dispatches platform-specific extraction agents, aggregates results, produces paste-ready
-  tracker updates and Notion weekly reports. Triggers on: "weekly report", "weekly reporting",
+  Dispatches platform-specific extraction agents, aggregates results, writes weekly tracker
+  updates in place via the sheets-writer service account (paste-ready fallback) and Notion weekly reports. Triggers on: "weekly report", "weekly reporting",
   "process weekly data", "run reporting", or when multiple platform CSV exports are provided
   with context about weekly performance or client metrics.
 ---
@@ -374,7 +374,16 @@ The hard formula checks ran in Phase 4.5 (`validate_report.py`). If you're at th
    - **QA Section**: Paste the contents of `OUTPUT/validation_report.md` at the end of the report as a "Validation" section. This is visible proof that the formulas were verified.
    - All other sections remain the same (agenda, action items, key highlights, platform tables, location table, ops, campaigns).
 
-**2. Tracker Paste Columns** — Print paste-ready value blocks directly in chat. One block per sheet section, formatted so the team can copy the values and paste into the week column. Format:
+**2. Tracker update — WRITE IN PLACE (preferred).** Write the week's values directly into the client's **canonical** Campaign Tracker. **Never create a new spreadsheet and never Drive-copy the tracker** — a `_W##` copy fragments the source of truth and strands plan edits (this is the #1 failure mode of this skill). See `references/sheets-writer.md` for the recipe.
+   - Resolve the **one canonical tracker spreadsheet ID** from the Notion client profile / client registry (e.g. goop = `1C75jl5NBmGjTHOhUcf9Pky9eLzI3uYh4R6JlTT34kZA`). Do not copy it; do not snapshot it to a new file.
+   - Auth with the `spice-sheets-writer` service account (`~/.config/spice/google-sheets-writer.json`, scope `spreadsheets`); the tracker is shared with it as Editor.
+   - **Before overwriting** the current-week cells, append the outgoing week's values as a dated block to the **`History` tab** — that is the weekly-snapshot mechanism (one file, accumulating history) that replaces per-week copies.
+   - Write each section into its tab's current-week column in exact row order (UE/DD/GH platform tabs; one block per location on the location tab). OVERVIEW is formulas — don't write there.
+   - **Populate every section.** If a platform export is missing, write `n/a`/flag for that section — never leave a tab silently half-populated.
+   - Idempotent: re-running the same week overwrites that week's cells; it must not duplicate rows or create files.
+   - **If the SA cred is missing or lacks edit access:** do NOT copy the sheet as a workaround — fall back to the paste-ready columns below and flag it in Warnings.
+
+**2-fallback. Tracker Paste Columns** (use ONLY if the in-place write can't run) — Print paste-ready value blocks directly in chat. One block per sheet section, formatted so the team can copy the values and paste into the week column. Format:
 
 ```
 ### UBER EATS — paste into Platform Overview tab, UE section
