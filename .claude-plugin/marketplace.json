@@ -19,7 +19,7 @@
     {
       "name": "spice-marketplaces",
       "description": "Delivery marketplace operations \u2014 UE/DD/GH weekly reporting, campaign ops, client diagnostics, storefront audits, menu work, ratings reply, scorecard. For Growth Managers and support analysts.",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "source": "./plugins/spice-marketplaces",
       "author": {
         "name": "Maxx Freedman",

@@ -19,7 +19,7 @@ creds = service_account.Credentials.from_service_account_file(
     "/Users/<user>/.config/spice/google-sheets-writer.json",
     scopes=["https://www.googleapis.com/auth/spreadsheets"])
 svc = build("sheets","v4",credentials=creds,cache_discovery=False)
-SHEET = "<canonical tracker id from Notion profile / client registry>"   # e.g. goop = 1C75jl5N...
+SHEET = "<client reporting-tracker id — from client-registry Tracker URL / Notion Data Dashboard property>"   # NOT the campaign-plan workbook; goop reporting = 18we-M...
 
 # 1. Append the OUTGOING week to the History tab BEFORE overwriting current-week cells.
 #    (read current-week values, write them as a dated block to 'History')
