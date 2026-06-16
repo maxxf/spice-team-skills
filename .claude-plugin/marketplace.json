@@ -1,6 +1,6 @@
 {
   "name": "spice-team-skills",
-  "description": "Spice Digital team skills marketplace — per-function plugins for marketplaces, retention, design, operations, and the shared org context.",
+  "description": "Spice Digital team skills marketplace \u2014 per-function plugins for marketplaces, retention, design, operations, and the shared org context.",
   "owner": {
     "name": "Maxx Freedman",
     "email": "maxx@spicedigital.co"
@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "spice-team-skills",
-      "description": "Shared Spice org context + utility skills. Keep installed by every teammate. (The per-function plugins below are siblings, not replacements yet — soft migration.)",
-      "version": "1.14.0",
+      "description": "Shared Spice org context + utility skills. Keep installed by every teammate. (The per-function plugins below are siblings, not replacements yet \u2014 soft migration.)",
+      "version": "1.15.0",
       "source": "./",
       "author": {
         "name": "Maxx Freedman",
@@ -18,8 +18,8 @@
     },
     {
       "name": "spice-marketplaces",
-      "description": "Delivery marketplace operations — UE/DD/GH weekly reporting, campaign ops, client diagnostics, storefront audits, menu work, ratings reply, scorecard. For Growth Managers and support analysts.",
-      "version": "0.1.0",
+      "description": "Delivery marketplace operations \u2014 UE/DD/GH weekly reporting, campaign ops, client diagnostics, storefront audits, menu work, ratings reply, scorecard. For Growth Managers and support analysts.",
+      "version": "0.2.0",
       "source": "./plugins/spice-marketplaces",
       "author": {
         "name": "Maxx Freedman",
@@ -48,7 +48,7 @@
     },
     {
       "name": "spice-operations",
-      "description": "Back-office operations — client onboarding, onboarding status tracking. Designed to grow: finance, HR, sales, admin skills will land here as they get extracted.",
+      "description": "Back-office operations \u2014 client onboarding, onboarding status tracking. Designed to grow: finance, HR, sales, admin skills will land here as they get extracted.",
       "version": "0.1.0",
       "source": "./plugins/spice-operations",
       "author": {

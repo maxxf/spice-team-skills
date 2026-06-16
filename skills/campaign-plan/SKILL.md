@@ -53,7 +53,7 @@ flows from `clients/<slug>.json`. A new client is a config file, nothing else.
 ### S1. Read
 
 ```bash
-.venv/bin/python references/strategy_read.py --client <slug>
+python3 references/strategy_read.py --client <slug>
 ```
 
 Returns per-location merged data: `saved` (last session's tier/goal/re-order from config
@@ -265,7 +265,7 @@ Each client has a config at `clients/<slug>.json` (display name, data dir, input
 
 ```bash
 cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
-.venv/bin/python references/refresh.py --client <slug> [--as-of YYYY-MM-DD]
+python3 references/refresh.py --client <slug> [--as-of YYYY-MM-DD]
 ```
 
 `refresh.py` runs three steps: `db_to_tracker.py` (planning) → `build_campaign_plan_xlsx.py` (reporting) → `push_to_sheet.py` (publish). It skips any optional input (perf, ads) that isn't present. The only thing it can't do itself is the Notion pull — the skill writes the DB rows to `<data_dir>/<campaigns_json>` first (Phase 0 Step A), because querying Notion needs the MCP. After that, one command, every time.
@@ -275,7 +275,7 @@ cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
 **Onboarding a new client** = one command (writes config, creates data folder, runs first refresh, creates the live Sheet, records sheet_id):
 
 ```bash
-.venv/bin/python references/new_client.py \
+python3 references/new_client.py \
   --slug <slug> --display-name "<Display Name>" \
   --drive-folder-id <client's Drive folder under 1. Active> \
   --slack-channel '#ext-<client>-spice'
@@ -294,7 +294,7 @@ The **Notion Campaign Planning DB** (`collection://1c8d3ff0-18e7-8067-abff-000b5
 **Step B — run the bridge** to produce the tracker CSV:
 
 ```bash
-.venv/bin/python references/db_to_tracker.py \
+python3 references/db_to_tracker.py \
   --db-json /tmp/campaign-data-<client>/<client>_campaigns.json \
   --as-of <YYYY-MM-DD; default today> \
   --output /tmp/campaign-data-<client>/<client>_tracker.csv
@@ -484,13 +484,13 @@ If only platform exports without the wizard's structure are available, the skill
 
 ## Phase 2: Run the update
 
-First-time setup (once per machine): `python3 -m venv .venv && .venv/bin/pip install openpyxl google-auth google-api-python-client`. (The two google packages are only needed for the live-Sheet publish step; openpyxl alone suffices for file-only output.)
+First-time setup (once per machine): `python3 -m pip install --user openpyxl google-auth google-api-python-client` (matches `SETUP-per-GM.md`; run commands with plain `python3`). (The two google packages are only needed for the live-Sheet publish step; openpyxl alone suffices for file-only output.)
 
 The render takes the Phase 0 tracker CSV and (optionally) the performance CSV:
 
 ```bash
 cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
-.venv/bin/python references/build_campaign_plan_xlsx.py \
+python3 references/build_campaign_plan_xlsx.py \
   --client "<display name>" \
   --tracker-csv /tmp/campaign-data-<client>/<client>_tracker.csv \
   --campaign-perf-csv <weekly-reporting OUTPUT/campaign_performance.csv> \
