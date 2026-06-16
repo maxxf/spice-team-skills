@@ -137,11 +137,20 @@ runs GH; never silently omit a platform the client is on. Iterate until approved
    non-empty, show the user what's there and get an explicit confirm, then re-run with
    `--overwrite`. Empty tabs write directly (no `--overwrite` needed). This is the ONE authorized
    writer for Q-plan tabs; the weekly refresh never touches them.
-2. **Notion strategy page** (client-shareable) via Notion MCP: why-this-quarter summary → per-tier
-   sections (posture, goal, locations, spend %/$, campaign types, segmentation, key plays) →
-   roadmap-at-a-glance table. First run: resolve the client's Documents Hub via Notion search,
-   confirm destination with the user, cache `notion_parent_page_id` + `notion_strategy_page_id`
-   via `--config`. Later runs update the cached page.
+2. **Notion strategy page** (client-shareable) via Notion MCP. **Keep it tight and scannable — a
+   client reads it in 2 minutes, it is NOT the full plan (that's the sheet).** Canonical structure,
+   in this order, nothing more by default:
+   1. **Why this quarter** — 3–4 sentences. The thesis + the ≤X% guardrail.
+   2. **Strategy by tier** — ONE table, one row per tier: `Tier · Locations · Goal · Spend band ·
+      What runs`. Do **not** write a prose section per tier (that's what bloated goop v4).
+   3. **What we're testing** — short list, only the live experiments (skip if none).
+   4. **Roadmap** — one line pointing to the sheet's Q-plan tabs for week-by-week detail. Don't
+      restate the grid.
+   Optional, one line each, only if they apply: a holiday-scheme line; a "vs client forecast" line.
+   Everything granular (per-platform cells, $ by week, campaign briefs) lives in the sheet + DB,
+   not the page. First run: resolve the client's Documents Hub via Notion search, confirm
+   destination with the user, cache `notion_parent_page_id` + `notion_strategy_page_id` via
+   `--config`. Later runs update the cached page.
 3. **Planning DB**: push each planned campaign through `references/add_campaign.py` with status
    `Not started` and `--notes "Roadmap <window>"` (lands in the "Performance Notes" property) so
    campaign-ops picks them up — no double-entry.
