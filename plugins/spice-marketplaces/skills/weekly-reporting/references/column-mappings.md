@@ -1,5 +1,20 @@
 # Column Mappings
 
+## ⚠ ENFORCE — canonical metric definitions (per Notion "Delivery Marketplaces | Weekly Reporting Skill")
+These must be identical across the weekly tracker AND the campaign dashboard. Two recurring violations:
+
+**1. Total Sales = food subtotal EXCLUDING tax, Completed orders only.**
+- UE → `Sales (excl. tax)` column. **NEVER** `Total item sales incl. tax`.
+- DD → `Subtotal`. Do **not** add `Subtotal tax passed to merchant`.
+- GH → `subtotal_sales` (excl tax).
+- *goop W24 bug:* UE was pulled tax-inclusive → UE overstated $787,639 → $859,913 (+$72K), inflating the Overview. Tell: UE AOV jumped to ~$51 vs the usual ~$47.
+
+**2. Marketing-Driven Sales = per Completed order, offer-driven OR ad-driven, deduped (count once).**
+- Offer-driven: discount columns < 0 (UE `Merchant promotions` < 0; DD `Customer discounts (funded by you)` < 0).
+- Ad-driven: **DD `Marketing fees` < 0**; UE via Ads-Manager cross-ref (Tier 2).
+- Apply ad attribution whenever ad data exists — do **not** default to offer-only (Tier 1). *goop W24: offer-only gave $430,869; offer-OR-ad gives ~$517,755.*
+
+
 ## UE Transaction: Total=Net Sales, Order ID=orders, Total Payout=payout, Store Name=location
 ## UE Ads (ads-campaigns-list*.csv): Spend, Sales/Attributed Sales, Orders/Attributed Orders
 ## UE Offers (offers-campaigns*.csv): Funded by You (pct only), Redemptions=orders
