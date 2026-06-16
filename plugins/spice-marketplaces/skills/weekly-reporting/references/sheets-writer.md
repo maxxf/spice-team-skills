@@ -19,16 +19,19 @@ creds = service_account.Credentials.from_service_account_file(
     "/Users/<user>/.config/spice/google-sheets-writer.json",
     scopes=["https://www.googleapis.com/auth/spreadsheets"])
 svc = build("sheets","v4",credentials=creds,cache_discovery=False)
-SHEET = "<client reporting-tracker id — from client-registry Tracker URL / Notion Data Dashboard property>"   # NOT the campaign-plan workbook; goop reporting = 18we-M...
+SHEET = "<client Campaign Tracker id — registry / Notion Data Dashboard property>"   # goop = 1C75jl5N... ("goop kitchen — Campaign Tracker")
 
-# 1. Append the OUTGOING week to the History tab BEFORE overwriting current-week cells.
-#    (read current-week values, write them as a dated block to 'History')
-# 2. Write each section's values into its tab's current-week column, exact row order:
-svc.spreadsheets().values().update(
-    spreadsheetId=SHEET, range="'Weekly Platform Overview'!<col>2",
-    valueInputOption="RAW", body={"values": [[v] for v in ue_values]}).execute()
-#    Repeat for DD/GH platform sections and each location block on the location tab.
-#    OVERVIEW tabs are formulas — do not write values there.
+# Campaign Tracker tabs — each updated by its OWN rule (not a single paste column):
+# History          → APPEND this week's campaign×location rows (Weekstart, Campaign, Platform, Location, Spend, Sales, Orders, ROAS)
+svc.spreadsheets().values().append(
+    spreadsheetId=SHEET, range="'History'!A1",
+    valueInputOption="RAW", insertDataOption="INSERT_ROWS",
+    body={"values": history_rows}).execute()
+# Active Campaigns → REPLACE with this week's live campaigns grouped by location (label the week)
+# Ads Reporting / Offers Reporting → refresh the "This Week" column (shift prior → Last Week);
+#     platform-reported, intentionally differ from the Dashboard's settled figures
+# Dashboard / _ChartData → formulas/charts, recompute automatically — DO NOT write
+# Q2 / Q3 / Q4 Plan → the campaign PLAN — DO NOT touch
 ```
 
 ## Rules

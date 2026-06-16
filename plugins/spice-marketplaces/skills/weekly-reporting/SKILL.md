@@ -375,12 +375,15 @@ The hard formula checks ran in Phase 4.5 (`validate_report.py`). If you're at th
    - All other sections remain the same (agenda, action items, key highlights, platform tables, location table, ops, campaigns).
 
 **2. Tracker update — WRITE IN PLACE (preferred).** Write the week's values directly into the client's **canonical** Campaign Tracker. **Never create a new spreadsheet and never Drive-copy the tracker** — a `_W##` copy fragments the source of truth and strands plan edits (this is the #1 failure mode of this skill). See `references/sheets-writer.md` for the recipe.
-   - Resolve the client's **reporting tracker** from the client-registry **Tracker URL** (or the Notion **Data Dashboard** property) — never hardcode an ID. This is the client's weekly-metrics/reporting sheet (goop = the `18we-M…` "weekly metrics" sheet), which for some clients is a **separate file from the campaign-plan workbook** (goop's plan lives in a different sheet — don't write reporting there). Do not copy it; do not snapshot it to a new file.
-   - Auth with the `spice-sheets-writer` service account (`~/.config/spice/google-sheets-writer.json`, scope `spreadsheets`); the tracker is shared with it as Editor.
-   - **Before overwriting** the current-week cells, append the outgoing week's values as a dated block to the **`History` tab** — that is the weekly-snapshot mechanism (one file, accumulating history) that replaces per-week copies.
-   - Write each section into its tab's current-week column in exact row order (UE/DD/GH platform tabs; one block per location on the location tab). OVERVIEW is formulas — don't write there.
-   - **Populate every section.** If a platform export is missing, write `n/a`/flag for that section — never leave a tab silently half-populated.
-   - Idempotent: re-running the same week overwrites that week's cells; it must not duplicate rows or create files.
+   - Resolve the client's **Campaign Tracker** from the registry / Notion `Data Dashboard` property — goop = `1C75jl5NBmGjTHOhUcf9Pky9eLzI3uYh4R6JlTT34kZA` ("goop kitchen — Campaign Tracker"). Auth with the `spice-sheets-writer` service account (`~/.config/spice/google-sheets-writer.json`, scope `spreadsheets`); the tracker is shared with it as Editor.
+   - Update each tab by its own rule (do NOT treat it like a single paste column):
+     - **History** — *append* this week's campaign × location rows (Weekstart, Campaign, Platform, Location, Spend, Sales, Orders, ROAS). Append-only; never overwrite prior weeks.
+     - **Active Campaigns** — *replace* with this week's live campaigns grouped by location; label the week in the title (e.g. "W25 (Jun 15–21)").
+     - **Ads Reporting / Offers Reporting** — refresh the **This Week** column (shift prior → Last Week). These are platform-reported and intentionally differ from the Dashboard's *settled* figures — do not force them to match.
+     - **Dashboard / _ChartData** — formula/chart tabs that recompute from the above. **Do NOT hand-write them.**
+     - **Q2 / Q3 / Q4 Plan** — the campaign PLAN; reporting must **NOT** touch these.
+   - **Populate every location × platform.** If a source export is missing, flag it — never leave a tab silently half-populated (the W24 failure: 9 stores' offers + SoMa missing).
+   - Idempotent: re-running a week overwrites that week's cells / re-appends cleanly; never duplicate rows or create files.
    - **If the SA cred is missing or lacks edit access:** do NOT copy the sheet as a workaround — fall back to the paste-ready columns below and flag it in Warnings.
 
 **2-fallback. Tracker Paste Columns** (use ONLY if the in-place write can't run) — Print paste-ready value blocks directly in chat. One block per sheet section, formatted so the team can copy the values and paste into the week column. Format:
