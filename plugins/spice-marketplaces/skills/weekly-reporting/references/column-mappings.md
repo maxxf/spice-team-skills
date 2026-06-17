@@ -9,10 +9,11 @@ These must be identical across the weekly tracker AND the campaign dashboard. Tw
 - GH → `subtotal_sales` (excl tax).
 - *goop W24 bug:* UE was pulled tax-inclusive → UE overstated $787,639 → $859,913 (+$72K), inflating the Overview. Tell: UE AOV jumped to ~$51 vs the usual ~$47.
 
-**2. Marketing-Driven Sales = per Completed order, offer-driven OR ad-driven, deduped (count once).**
-- Offer-driven: discount columns < 0 (UE `Merchant promotions` < 0; DD `Customer discounts (funded by you)` < 0).
-- Ad-driven: **DD `Marketing fees` < 0**; UE via Ads-Manager cross-ref (Tier 2).
-- Apply ad attribution whenever ad data exists — do **not** default to offer-only (Tier 1). *goop W24: offer-only gave $430,869; offer-OR-ad gives ~$517,755.*
+**2. Marketing-Driven Sales = NET sales per Completed order, offer-driven OR ad-driven, deduped (count once).** Net = Total Sales − that order's offer discount.
+- **Offer-driven** (order-level, both platforms): discount columns < 0 — UE `Offers on items (incl. tax)` < 0; DD `Customer discounts (funded by you)` < 0.
+- **Ad-driven — DoorDash:** `Marketing fees` < 0 (order-level → dedupes cleanly against offers).
+- **Ad-driven — Uber Eats:** the order-level signal is the `Marketing Adjustment` / co-funding column, but it ONLY populates when **Uber co-funding % > 0**. When co-funding = 0 (e.g. goop's current sponsored listings), that column is empty → there is **no order-level UE ad signal**; UE ad attribution must then come from the **Ads-Manager export (campaign-level)**, which can't be order-deduped against UE offers. So: co-funded → order-level; not co-funded → campaign-level from Ads Manager.
+- Apply ad attribution whenever ad data exists — do **not** default to offer-only (Tier 1). *goop W24: offer-only $430,869 vs offer+DD-ad ~$469K net; UE ad ($336K Ads-Mgr attributed) is campaign-level only because co-funding is off.*
 
 
 ## UE Transaction: Total=Net Sales, Order ID=orders, Total Payout=payout, Store Name=location
