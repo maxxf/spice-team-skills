@@ -18,7 +18,8 @@ Incomplete extractions must never silently publish. Extends `validate_report.py`
 1. **Coverage** — every expected location × platform (from client registry / store map) present with data. Expected-but-$0 / no-rows → CRITICAL (halt), unless registry marks it inactive.
 2. **Offer-export completeness** — a store with offer-driven sales last week but $0 offer attribution this week → flag "offer export likely incomplete" (DD Promotion / UE Offers export missing or partial).
 3. **WoW guardrails** — any of {Total Orders, New Customers, Marketing-Driven Sales, Mkt-Driven %} moving beyond ±25% (±10pts for a %) WoW → hard flag requiring reviewer sign-off before publish.
-4. **Reconciliation** — tier/location MDS sum == headline MDS (±$2); location sales sum == platform totals == overall.
+4. **Reconciliation** — tier/location MDS sum == headline MDS (±$2); location sales sum == platform totals == overall. **Per-store Marketing-Driven Sales must be ≤ that store's Total Sales** — a value >100% means the attribution is double-counting (see UE full-overlap dedup in `column-mappings.md`).
+5b. **Trend method-consistency** — never splice weeks computed with different attribution methods into one trend line. If the current week uses a corrected method vs prior weeks, either recompute the prior weeks the same way or **remove the trend** — don't show a line that spikes on a methodology change.
 5. **Output gating** — any CRITICAL failure → mark output **"DRAFT — INCOMPLETE, do not publish,"** block the in-place write, fall back to flagged paste.
 
 This is what would have caught W24: coverage (9 stores missing offers, SoMa missing entirely), WoW (new customers −46%, Mkt-Driven % −15pts), and reconciliation (the $139K tier gap).
