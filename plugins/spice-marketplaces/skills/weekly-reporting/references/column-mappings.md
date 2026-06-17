@@ -20,6 +20,8 @@ These must be identical across the weekly tracker AND the campaign dashboard. Tw
 ## UE Transaction: Total=Net Sales, Order ID=orders, Total Payout=payout, Store Name=location
 ## UE Ads (ads-campaigns-list*.csv): Spend, Sales/Attributed Sales, Orders/Attributed Orders
 ## UE Offers (offers-campaigns*.csv): Funded by You (pct only), Redemptions=orders
+### ⚠ UE Offers export has NO store/location field (just a store COUNT) — unlike DoorDash's promotion export which names the store.
+So UE offers **cannot be placed per-location from the offers export**. For any per-location view (e.g. Active Campaigns), **locate UE offers from the transaction CSV** instead: per Completed order, `Offers on items (incl. tax) < 0` → that order's store gets the redemption (sum the discount as cost, the order's excl-tax sales as attributed sales, count orders). The offers export is a **name-only roster** — use it for Offers Reporting (campaign list), not for per-store attribution. (goop W24: all UE offers were wrongly lumped in an "(all locations)" bucket until sourced from transactions.)
 ## DD: Sales=net sales, Marketing spend=ad spend, Promotion=offers, Merchant fees, Net payout, Store Name=location, Timestamp (UTC)
 
 ### ⚠ DoorDash — map columns by HEADER NAME, never by fixed index
