@@ -1,6 +1,8 @@
 {
   "client_slug": "goop-kitchen",
   "client_display_name": "goop Kitchen",
+  "reporting_day": "tuesday_complete",
+  "_comment_reporting_day": "Monday = forward planning (Phase S). Tuesday = data update folded into the weekly-reporting run (DD settled): reporting tabs + Experiments readings/Data-thru stamped for the just-closed Mon-Sun week.",
   "data_dir": "/tmp/campaign-data-goop",
   "campaigns_json": "goop_campaigns.json",
   "campaign_perf_csv": "campaign_performance.csv",
@@ -46,7 +48,7 @@
       "Pico-Robertson": {
         "tier": "Mid",
         "goal": "growth",
-        "overrides": "moved Top\u2192Mid 2026-06-12 (Maxx): Bev Hills reopen will steal volume \u2014 fund to defend/backfill during redistribution",
+        "overrides": "moved Top→Mid 2026-06-12 (Maxx): Bev Hills reopen will steal volume — fund to defend/backfill during redistribution",
         "reorder_rate": 0.743,
         "reorder_captured": "2026-05-08",
         "reorder_note": "May 8 analysis (Feb-May window, volume-weighted UE+DD+GH)"
@@ -68,23 +70,23 @@
       "Midtown West": {
         "tier": "Top",
         "goal": "payout",
-        "overrides": "NYC organic engine \u2014 keep spend ~0, protect",
+        "overrides": "NYC organic engine — keep spend ~0, protect",
         "reorder_rate": null,
         "reorder_captured": "2026-05-08",
-        "reorder_note": "31.9% as 'NYC' \u2014 live Apr 18, not comparable; revisit 60-90d"
+        "reorder_note": "31.9% as 'NYC' — live Apr 18, not comparable; revisit 60-90d"
       },
       "Larchmont": {
         "tier": "Mid",
         "goal": "growth",
-        "overrides": "moved Top\u2192Mid 2026-06-12 (Maxx): Bev Hills reopen will steal volume \u2014 fund to defend/backfill during redistribution",
+        "overrides": "moved Top→Mid 2026-06-12 (Maxx): Bev Hills reopen will steal volume — fund to defend/backfill during redistribution",
         "reorder_rate": 0.452,
         "reorder_captured": "2026-05-08",
-        "reorder_note": "45.2% \u2014 ONLY retention outlier (floor of industry healthy); retention-first, investigate before major acquisition"
+        "reorder_note": "45.2% — ONLY retention outlier (floor of industry healthy); retention-first, investigate before major acquisition"
       },
       "South Bay": {
         "tier": "Top",
         "goal": "payout",
-        "overrides": "promoted Mid\u2192Top 2026-06-12: 8.8x at 6% \u2014 trim into 0-3% band",
+        "overrides": "promoted Mid→Top 2026-06-12: 8.8x at 6% — trim into 0-3% band",
         "reorder_rate": 0.798,
         "reorder_captured": "2026-05-08",
         "reorder_note": "May 8 analysis (Feb-May window, volume-weighted UE+DD+GH)"
@@ -128,7 +130,7 @@
       "San Jose": {
         "tier": "Low",
         "goal": "growth",
-        "overrides": "GM override of diagnostic Red \u2014 deliberate growth program (May 16 tweak), walk 21%\u219215%",
+        "overrides": "GM override of diagnostic Red — deliberate growth program (May 16 tweak), walk 21%→15%",
         "reorder_rate": 0.606,
         "reorder_captured": "2026-05-08",
         "reorder_note": "May 8 analysis (Feb-May window, volume-weighted UE+DD+GH)"
@@ -136,7 +138,7 @@
       "Pasadena": {
         "tier": "Low",
         "goal": "growth",
-        "overrides": "GM override of diagnostic Red \u2014 paired with San Jose program, walk 19%\u219215%",
+        "overrides": "GM override of diagnostic Red — paired with San Jose program, walk 19%→15%",
         "reorder_rate": 0.717,
         "reorder_captured": "2026-05-08",
         "reorder_note": "May 8 analysis (Feb-May window, volume-weighted UE+DD+GH)"
@@ -150,16 +152,16 @@
         "tier": "New",
         "goal": "growth",
         "opened": "2026-06-08",
-        "overrides": "REOPENED \u2014 geo-capped 10-12%, Lapsed win-back; overlaps Pico/Larchmont",
+        "overrides": "REOPENED — geo-capped 10-12%, Lapsed win-back; overlaps Pico/Larchmont",
         "reorder_rate": null,
         "reorder_captured": "2026-05-08",
-        "reorder_note": "82.7% pre-closure (UE 82.8/GH 81.7) \u2014 understates loyalty; expect pent-up return surge; clean read 30d post-reopen"
+        "reorder_note": "82.7% pre-closure (UE 82.8/GH 81.7) — understates loyalty; expect pent-up return surge; clean read 30d post-reopen"
       },
       "Williamsburg": {
         "tier": "New",
         "goal": "growth",
         "opened": "2026-06-15",
-        "overrides": "1P 6/15, 3P 6/22 \u2014 Spice ramp starts at 3P"
+        "overrides": "1P 6/15, 3P 6/22 — Spice ramp starts at 3P"
       }
     },
     "updated": "2026-06-12",
@@ -206,14 +208,14 @@
           0
         ],
         "goal": "fix-first",
-        "notes": "none currently \u2014 SJ/Pas overridden to Low by GM 2026-06-11"
+        "notes": "none currently — SJ/Pas overridden to Low by GM 2026-06-11"
       }
     },
     "portfolio_guardrail": {
       "blended_mkt_spend_pct_max": 6,
       "note": "tiers are %-based; portfolio must stay balanced at <=6% blended"
     },
-    "reorder_rates": "CANONICAL = May 8 2026 analysis (Notion 35ad3ff0\u2026): portfolio 74.5% blended, retention-rich. Jun 12 capture INVALIDATED (truncated exports, n=1-63, contradicted by May 8 full pulls). Quarterly re-confirm; next at Aug re-tier incl. BH 30d-post-reopen + NYC 60-90d reads",
+    "reorder_rates": "CANONICAL = May 8 2026 analysis (Notion 35ad3ff0…): portfolio 74.5% blended, retention-rich. Jun 12 capture INVALIDATED (truncated exports, n=1-63, contradicted by May 8 full pulls). Quarterly re-confirm; next at Aug re-tier incl. BH 30d-post-reopen + NYC 60-90d reads",
     "roadmap": {
       "window_start": "2026-06-15",
       "window_end": "2026-09-07"
@@ -224,12 +226,12 @@
   },
   "client_forecast": {
     "sheet_id": "1Yk5CmwsQE0BoRp9e9KXsgIIGWr4n70RTxjMqAjyxSMI",
-    "owner": "Kelly Burke (client) \u2014 shared 2026-06-12, edit access; we READ ONLY, never write",
+    "owner": "Kelly Burke (client) — shared 2026-06-12, edit access; we READ ONLY, never write",
     "cadence": "per fiscal period (P7 incoming); total-year forecast outdated per Kelly (BH closure + NYC)",
-    "caveat": "WHOLE-RESTAURANT net sales (lunch+dinner, all channels incl 1P) \u2014 NOT directly comparable to our 3P Total Sales levels; use trajectory/YoY direction + demand notes (school calendars), not levels",
+    "caveat": "WHOLE-RESTAURANT net sales (lunch+dinner, all channels incl 1P) — NOT directly comparable to our 3P Total Sales levels; use trajectory/YoY direction + demand notes (school calendars), not levels",
     "p6_reads": {
       "window": "2026-06-01..2026-07-05 (5 wks)",
-      "shape": "every store declines W1\u2192W5 (~-15-25%); trough = July 4 week \u2014 forecasted demand dip, aligns with clean-baseline exclusion",
+      "shape": "every store declines W1→W5 (~-15-25%); trough = July 4 week — forecasted demand dip, aligns with clean-baseline exclusion",
       "yoy": {
         "Venice": "+24%",
         "South Bay": "+14%",
@@ -241,13 +243,13 @@
         "Studio City": "-15%",
         "Pico-Robertson": "-16%",
         "Beverly Hills": "-31% (reopen ramp $74-89K/wk from W2)",
-        "Midtown West": "new (~$390-405K/wk total \u2014 1P-heavy)"
+        "Midtown West": "new (~$390-405K/wk total — 1P-heavy)"
       },
-      "note": "client PRICES IN Robertson/Larchmont declines \u2014 beating her forecast = defense success bar"
+      "note": "client PRICES IN Robertson/Larchmont declines — beating her forecast = defense success bar"
     },
     "threeP_share": {
       "client_stated": "75-80% of sales from 3P (Kelly, 2026-06-12)",
-      "validated": "portfolio reconciliation W23(=P6W1): our 3P $1,455K / Kelly whole-restaurant $1,751K = 83% \u2014 confirms our 'Total Sales' IS 3P-only and the 75-80% holds (we run slightly hot of it)",
+      "validated": "portfolio reconciliation W23(=P6W1): our 3P $1,455K / Kelly whole-restaurant $1,751K = 83% — confirms our 'Total Sales' IS 3P-only and the 75-80% holds (we run slightly hot of it)",
       "default_factor": 0.775,
       "per_store_w23_share": {
         "Sherman Oaks": 1.12,
