@@ -29,4 +29,5 @@ The Campaign Performance Dashboard must compute from a **settled-inputs block** 
 - **WoW deltas** compute from the prior week's stored values — never placeholder them. If a prior value is missing (new store), show `new`, not a guessed number.
 - **Trend** series must be method-consistent — if the current week uses a different attribution method than prior weeks, label it, don't silently splice.
 - Tier/location/platform breakdowns are SUMIF rollups off the inputs block, so they **reconcile to the headline by construction**.
+- **Top/Bottom performers must rank BOTH Sponsored Listings AND Offers** (separate sub-sections) — not SL-only. Note: UE offers have no per-offer cost in the export, so their ROAS is *estimated* ($-off parsed from the offer name × redemptions) and flagged; DD promos have real cost. Rank what you can, flag the estimate.
 This is what makes "no fabricated values" enforceable rather than a manual check.

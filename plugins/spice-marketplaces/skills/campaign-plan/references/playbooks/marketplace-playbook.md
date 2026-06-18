@@ -73,8 +73,12 @@ A 4.3-star store with 3% inaccuracy will waste ad dollars every time. We've watc
 - Better ad platform than DoorDash. More targeting options, better ROAS tracking, audience segmentation for new customer acquisition
 - Photo quality matters more on UE than DD. Invest in professional hero image
 - Prep time accuracy directly impacts algorithm ranking. Work with kitchen to set realistic times, not aspirational ones
-- Restaurant Ads (auto-bidding) for launch, manual bidding after 14 days of data
 - Geo-targeted ads show promise for location-specific acquisition
+
+**UE Ads — bid strategy & creative tests (2026 tool):**
+- **Pick the bid strategy by goal, not by habit.** *Spend-based (Auto)* when the goal is **traffic + conversion** — spends the full daily budget and optimizes for orders; default for launch/growth stores. *Goal-based (Auto, target ROAS)* once the goal shifts to **efficiency** on a mature store — set the target near AOV ÷ target-CPO. **Avoid Set-manually (bid cap)** except to cap a known runaway: at low conversion a fixed cap lets CPO blow out, because it keeps buying clicks that don't convert. The lever is the *strategy* (or the audience), not lowering the cap.
+- **Audience targeting is now finer than New/Lapsed/All:** All / Customers new to brand (true acquisition, 365d brand-wide) / Customers new to location (cross-store capture) / Existing (42d) / Lapsed (365d-not-42d, win-back) / Custom / Cuisine. Biggest unlock = separating **new-to-brand** from **new-to-location** for launch/growth stores.
+- **Creative A/B tests: never rebuild the campaign** — a rebuild resets the learning phase and discards spend history. Add each creative as its own **ad group** (one creative per group) under the existing campaign, hold the audience constant (usually All for volume), and let them run. Judge by the **goal-appropriate** metric — CTR→conversion when the goal is traffic/growth, CPO/ROAS when it's efficiency — then roll the winner across the audience segments above. **DoorDash has no creative-test capability — this is Uber-only.**
 
 ### Grubhub
 - Declining market share but still relevant in legacy markets (NYC, Chicago)

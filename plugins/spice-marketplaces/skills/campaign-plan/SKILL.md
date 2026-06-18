@@ -12,7 +12,7 @@ description: >
   [client] roadmap", "tier strategy for [client]", "analyze [client] campaigns" —
   see the Mode router. EXECUTION of new campaigns stays with campaign-ops; this
   skill is the planning + performance-tracking + strategy layer.
-version: 0.2.0
+version: 0.2.1
 ---
 
 # Campaign Plan & Performance Tracker
