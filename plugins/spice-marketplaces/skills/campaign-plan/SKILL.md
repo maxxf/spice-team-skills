@@ -12,7 +12,7 @@ description: >
   [client] roadmap", "tier strategy for [client]", "analyze [client] campaigns" —
   see the Mode router. EXECUTION of new campaigns stays with campaign-ops; this
   skill is the planning + performance-tracking + strategy layer.
-version: 0.2.1
+version: 0.2.2
 ---
 
 # Campaign Plan & Performance Tracker
@@ -339,7 +339,7 @@ If Santi wants a section his hand-built version has that the skill doesn't (e.g.
 
 ## Canonical structure: the 9 tabs (target deliverable)
 
-The canonical campaign plan Sheet has **11 tabs** in this order (9 visible + History hidden + Account Learnings). **Reference instance: goop Sheet** (`1YaKsQnbRuKcEGdwfeFRU34HPhLNda8YyQ3HtHdI5yYU`, built by Santi + Ro — this is the spec to match for tabs 1-9).
+The canonical campaign plan Sheet has **12 tabs** in this order (9 visible + History hidden + Account Learnings + Experiments). **Reference instance: goop Sheet** (`1YaKsQnbRuKcEGdwfeFRU34HPhLNda8YyQ3HtHdI5yYU`, built by Santi + Ro — this is the spec to match for tabs 1-9).
 
 | # | Tab | Source | Auto / Human | Refresh |
 |---|---|---|---|---|
@@ -354,6 +354,13 @@ The canonical campaign plan Sheet has **11 tabs** in this order (9 visible + His
 | 9 | **Notes / Triggers / Definitions** | Static (trigger-action automation rules + glossary + status legend + tab index) | One-time template | As needed |
 | 10 | **History** (hidden) | Append-only snapshot per (week × campaign) — Spend/Sales/Orders/ROAS/Status per weekstart | **Auto, append-only** | Every refresh |
 | 11 | **Account Learnings** | Per-client institutional memory — patterns, client preferences, failed tests, strategic decisions | **Human-authored, never touched by skill** | As insights emerge |
+| 12 | **Experiments** | In-flight register of every live test/checkpoint — control, start, **read/decide week**, decision rule, status, result | **Phase S registers rows; weekly run advances status + flags reads-due** | Per strategy session + weekly |
+
+### Tab 12 — Experiments (so reads never hide in a week-column)
+
+Tests are *designed* in the Q-plan tabs (the `TEST:` / `READ:` cells) but those bury the decision date inside one week's cell. The **Experiments** tab is the rollup: one row per test with its `Control`, `Start`, `Read / decide` week, `Decision rule`, `Status` (⚪ Planned · 🟡 Running · 🔵 Read due · 🟢 Concluded), and `Result`. The lifecycle is **Q-plan (designed) → Experiments (in-flight + read date) → Account Learnings (result)**:
+- **Phase S6 write:** every `TEST:`/`READ:` (and every 60-day re-tier `CHECK`) you put in a roadmap also gets a row here — `EXP-##` for spend/offer/creative tests, `CHK-##` for re-tier checkpoints. A stepped-pullback test names its control store; record it.
+- **Weekly run (weekly-reporting):** advances Planned→Running when Start passes, flags any row whose `Read / decide` week ≤ current week as 🔵 **Read due** in the report, and on a concluded test writes the `Result` + appends the durable finding to **Account Learnings** (the →Learning link closes the loop).
 
 ### Tab 10 — History (the source of truth for trend math)
 
