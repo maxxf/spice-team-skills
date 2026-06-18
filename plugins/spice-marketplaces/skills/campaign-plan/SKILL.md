@@ -12,7 +12,7 @@ description: >
   [client] roadmap", "tier strategy for [client]", "analyze [client] campaigns" —
   see the Mode router. EXECUTION of new campaigns stays with campaign-ops; this
   skill is the planning + performance-tracking + strategy layer.
-version: 0.2.2
+version: 0.2.3
 ---
 
 # Campaign Plan & Performance Tracker
@@ -354,13 +354,14 @@ The canonical campaign plan Sheet has **12 tabs** in this order (9 visible + His
 | 9 | **Notes / Triggers / Definitions** | Static (trigger-action automation rules + glossary + status legend + tab index) | One-time template | As needed |
 | 10 | **History** (hidden) | Append-only snapshot per (week × campaign) — Spend/Sales/Orders/ROAS/Status per weekstart | **Auto, append-only** | Every refresh |
 | 11 | **Account Learnings** | Per-client institutional memory — patterns, client preferences, failed tests, strategic decisions | **Human-authored, never touched by skill** | As insights emerge |
-| 12 | **Experiments** | In-flight register of every live test/checkpoint — control, start, **read/decide week**, decision rule, status, result | **Phase S registers rows; weekly run advances status + flags reads-due** | Per strategy session + weekly |
+| 12 | **Experiments** | In-flight register of every live test/checkpoint — owner, control, start, **read/decide week**, decision rule, status, **weekly readings**, result | **Phase S registers rows; weekly run logs readings + stamps data freshness + flags reads-due** | Per strategy session + weekly |
 
-### Tab 12 — Experiments (so reads never hide in a week-column)
+### Tab 12 — Experiments (so reads never hide in a week-column, and the data behind them is accountable)
 
-Tests are *designed* in the Q-plan tabs (the `TEST:` / `READ:` cells) but those bury the decision date inside one week's cell. The **Experiments** tab is the rollup: one row per test with its `Control`, `Start`, `Read / decide` week, `Decision rule`, `Status` (⚪ Planned · 🟡 Running · 🔵 Read due · 🟢 Concluded), and `Result`. The lifecycle is **Q-plan (designed) → Experiments (in-flight + read date) → Account Learnings (result)**:
-- **Phase S6 write:** every `TEST:`/`READ:` (and every 60-day re-tier `CHECK`) you put in a roadmap also gets a row here — `EXP-##` for spend/offer/creative tests, `CHK-##` for re-tier checkpoints. A stepped-pullback test names its control store; record it.
-- **Weekly run (weekly-reporting):** advances Planned→Running when Start passes, flags any row whose `Read / decide` week ≤ current week as 🔵 **Read due** in the report, and on a concluded test writes the `Result` + appends the durable finding to **Account Learnings** (the →Learning link closes the loop).
+Tests are *designed* in the Q-plan tabs (the `TEST:` / `READ:` cells) but those bury the decision date inside one week's cell — and nothing guarantees the measurement data is captured each week. The **Experiments** tab fixes both: one row per test with `Owner`, `Control`, `Start`, `Read / decide` week, `Decision rule`, `Status` (⚪ Planned · 🟡 Running · 🔵 Read due · 🟢 Concluded), **`Data thru (wk)`**, **`Weekly readings`**, and `Result`. The lifecycle is **Q-plan (designed) → Experiments (in-flight + weekly readings) → Account Learnings (result)**:
+- **Phase S6 write:** every `TEST:`/`READ:` (and every 60-day re-tier `CHECK`) you put in a roadmap also gets a row here — `EXP-##` for spend/offer/creative tests, `CHK-##` for re-tier checkpoints. A stepped-pullback test names its control store. **Assign an owner** — the person accountable for the read (default: analysis/reads → the GM running reporting; ops-execution tests → the ops analyst). Accountability is a name, not a process.
+- **Weekly run (weekly-reporting):** advances Planned→Running when Start passes; **for every Running/Read-due row, logs that week's test-vs-control reading into `Weekly readings` and stamps `Data thru (wk)` = current week**; flags any row whose `Read / decide` week ≤ current week as 🔵 **Read due**; and on a concluded test writes the `Result` + appends the finding to **Account Learnings**.
+- **Accountability gate (CRITICAL):** a Running experiment whose `Data thru (wk)` ≠ current week after the run = the read is being built on missing data → flagged against its owner with the validation failures (see `weekly-reporting/references/attribution-and-completeness.md` §6). The read at the decision week is only as good as the interim weekly readings behind it.
 
 ### Tab 10 — History (the source of truth for trend math)
 
