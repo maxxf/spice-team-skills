@@ -441,6 +441,8 @@ If `scorecard_rows.csv` was not generated (Phase 4.6 was skipped or errored), in
 - **👀 Watch** — the one flag worth surfacing: a metric moving >25% WoW, spend over the client's target %, an offer-ROAS slide, or a completeness-gate flag.
 - **➡️ Next** — the key planned move for next week (from the Q-plan / Notion).
 
+**Close with the sheet link** — end every briefing with `📊 Dashboard: <url>` pointing to the client's **campaign tracker, Dashboard tab** (resolve `sheet_id` from the client config/registry; link the Dashboard gid). One click from the briefing to the live numbers.
+
 Rules: bold lead-ins, real numbers, active verbs, ≤25 words per bullet — strategist voice, not a data dump. Post to `#int-[client]` at end of run, and echo it as a copy-ready block in chat. **Never post to the client `#ext-` channel** — the GM owns the external share.
 
 ---
