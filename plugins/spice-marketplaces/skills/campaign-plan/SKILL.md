@@ -12,7 +12,7 @@ description: >
   [client] roadmap", "tier strategy for [client]", "analyze [client] campaigns" —
   see the Mode router. EXECUTION of new campaigns stays with campaign-ops; this
   skill is the planning + performance-tracking + strategy layer.
-version: 0.2.4
+version: 0.2.5
 ---
 
 # Campaign Plan & Performance Tracker
@@ -208,6 +208,10 @@ Run Phase 0 first (rows exist), then layer reporting on top. A brand-new client 
 This Sheet is the **campaign performance** deliverable — what's running, ad/offer spend, attributed sales, ROAS, orders, new-customer acquisition, by-platform, by-segment, the ads funnel, the forward calendar. **Payout, net-payout %, and profitability live in the separate weekly reporting sheet** — not here. The Dashboard carries a subtitle saying so. When refocusing or adding sections, keep this line: campaign metrics here, profitability there.
 
 This scope split also resolves the DoorDash data-settlement timing problem (below).
+
+## Where the implementation plan lives: Notion, NOT the sheet (clarified 2026-06-23)
+
+The sheet holds **reporting** (Dashboard/Active Campaigns/Ads/Offers/History/Experiments) and the **strategy plan grid** (Q-plan tabs). It does **NOT** hold the tactical *implementation / setup plan* — the per-location × platform execution checklist (set up / adjust / pause, in-platform campaign names, budgets, who-does-what). **That lives in Notion**, authored via the **campaign-ops** skill: the Task Tracker ticket (the brief + checklist, assigned to ops with an approval contact) plus the Campaign Planning registry entries. Do **not** create a "Setup"/"Implementation" tab in the campaign tracker — execution belongs in Notion where it's assignable, status-trackable, and notifiable; the sheet stays a clean reporting + plan artifact. The weekly Slack briefing's "changes shipped" bullet (weekly-reporting skill) is the read-out of those Notion records.
 
 ## The cadence + the DoorDash settlement timing (refined 2026-06-05)
 

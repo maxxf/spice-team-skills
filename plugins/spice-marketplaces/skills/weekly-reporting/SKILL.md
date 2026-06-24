@@ -431,6 +431,17 @@ If `scorecard_rows.csv` was not generated (Phase 4.6 was skipped or errored), in
 ⚠️ Scorecard rows not generated — [reason from Phase 4.6 stderr or "skill not installed"]. Run generate_scorecard_rows.py manually or flag to Santi.
 ```
 
+**6. Slack Weekly Briefing (DRAFT — the GM reviews, picks the channel, and sends; NEVER auto-send).** A short **3–6 bullet** weekly briefing that synthesizes this run + the Notion campaign record into something shareable. Default channel = the internal `#delivery-marketplaces` (or `#int-[client]`); the GM can adapt it for the client channel `#ext-[client]`. Use these bullet roles — include 3–6, drop any that are empty for the week:
+
+- **📊 Headline** — total sales + WoW %, marketing-driven %, blended/marketing ROAS.
+- **🏆 Standout** — the single best store or campaign this week, named, with its number.
+- **🔧 Changes shipped this week** — the campaign moves implemented since last week, pulled from **Notion** (campaign-ops Task Tracker + Campaign Planning entries that went live in the last 7 days). The tactical implementation plan lives in Notion, **not** the sheet — this bullet is its weekly digest (e.g. "Launched Williamsburg 3P; re-segmented 6 stores to New+Lapsed; paused 2 off-plan offers").
+- **⏰ Reads due** — any experiment with a decision owed this/next week (from the Experiments read-watch), named with its rule.
+- **👀 Watch** — the one flag worth surfacing: a metric moving >25% WoW, spend over the client's target %, an offer-ROAS slide, or a completeness-gate flag.
+- **➡️ Next** — the key planned move for next week (from the Q-plan / Notion).
+
+Rules: bold lead-ins, real numbers, active verbs, ≤25 words per bullet — strategist voice, not a data dump. Print it as a copy-ready block in chat. **Do not send it** — the GM edits and sends from their own account.
+
 ---
 
 ## Output Formatting Rules
