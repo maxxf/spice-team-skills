@@ -431,7 +431,7 @@ If `scorecard_rows.csv` was not generated (Phase 4.6 was skipped or errored), in
 ⚠️ Scorecard rows not generated — [reason from Phase 4.6 stderr or "skill not installed"]. Run generate_scorecard_rows.py manually or flag to Santi.
 ```
 
-**6. Slack Weekly Briefing (DRAFT — the GM reviews, picks the channel, and sends; NEVER auto-send).** A short **3–6 bullet** weekly briefing that synthesizes this run + the Notion campaign record into something shareable. Default channel = the internal `#delivery-marketplaces` (or `#int-[client]`); the GM can adapt it for the client channel `#ext-[client]`. Use these bullet roles — include 3–6, drop any that are empty for the week:
+**6. Slack Weekly Briefing — post to the client's internal `#int-[client]` channel.** A short **3–6 bullet** weekly briefing synthesizing this run + the Notion campaign record. **When the run completes, post it to the client's internal `#int-[client]` channel** (e.g. `#int-goop-kitchen`; resolve via `slack_search_channels` by client name) so the GM and pod see it. The GM then shares it — or an adapted version — with the client on their own. ⚠ **Post to `#int-[client]` ONLY. NEVER post to the client-facing `#ext-[client]` channel** — the external share is always the GM's manual action. If the `#int-` channel can't be resolved, print the briefing as a copy-ready block in chat and flag it. Use these bullet roles — include 3–6, drop any that are empty for the week:
 
 - **📊 Headline** — total sales + WoW %, marketing-driven %, blended/marketing ROAS.
 - **🥊 Ads vs Offers** — the channel split: ad ROAS vs offer ROAS and spend on each, which is carrying efficiency, and any WoW shift (e.g. offer ROAS sliding as discount depth rises). From the Dashboard "Ads vs Promos" + the Ads/Offers Reporting tabs.
@@ -441,7 +441,7 @@ If `scorecard_rows.csv` was not generated (Phase 4.6 was skipped or errored), in
 - **👀 Watch** — the one flag worth surfacing: a metric moving >25% WoW, spend over the client's target %, an offer-ROAS slide, or a completeness-gate flag.
 - **➡️ Next** — the key planned move for next week (from the Q-plan / Notion).
 
-Rules: bold lead-ins, real numbers, active verbs, ≤25 words per bullet — strategist voice, not a data dump. Print it as a copy-ready block in chat. **Do not send it** — the GM edits and sends from their own account.
+Rules: bold lead-ins, real numbers, active verbs, ≤25 words per bullet — strategist voice, not a data dump. Post to `#int-[client]` at end of run, and echo it as a copy-ready block in chat. **Never post to the client `#ext-` channel** — the GM owns the external share.
 
 ---
 
