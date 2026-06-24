@@ -1,6 +1,6 @@
 {
   "name": "spice-marketplaces",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "description": "Delivery marketplace operations for Spice Digital \u2014 Uber Eats, DoorDash, Grubhub. Used by Growth Managers (Manish, Dulari, Rodrigo, Ana, Santi) and the support analyst team for weekly reporting, campaign ops, client diagnostics, storefront audits, hero image reviews, menu work, and the store-ops leaderboard.",
   "author": {
     "name": "Maxx Freedman",
