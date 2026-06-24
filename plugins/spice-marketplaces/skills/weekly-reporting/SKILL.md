@@ -434,7 +434,8 @@ If `scorecard_rows.csv` was not generated (Phase 4.6 was skipped or errored), in
 **6. Slack Weekly Briefing (DRAFT — the GM reviews, picks the channel, and sends; NEVER auto-send).** A short **3–6 bullet** weekly briefing that synthesizes this run + the Notion campaign record into something shareable. Default channel = the internal `#delivery-marketplaces` (or `#int-[client]`); the GM can adapt it for the client channel `#ext-[client]`. Use these bullet roles — include 3–6, drop any that are empty for the week:
 
 - **📊 Headline** — total sales + WoW %, marketing-driven %, blended/marketing ROAS.
-- **🏆 Standout** — the single best store or campaign this week, named, with its number.
+- **🥊 Ads vs Offers** — the channel split: ad ROAS vs offer ROAS and spend on each, which is carrying efficiency, and any WoW shift (e.g. offer ROAS sliding as discount depth rises). From the Dashboard "Ads vs Promos" + the Ads/Offers Reporting tabs.
+- **🏆 Standout campaigns** — name the week's best campaign(s) with their number (top ad + top offer), plus a notable laggard if it's a real drag (e.g. a deep $-off offer killing efficiency). Specific campaigns, not platform-wide vagueness.
 - **🔧 Changes shipped this week** — the campaign moves implemented since last week, pulled from **Notion** (campaign-ops Task Tracker + Campaign Planning entries that went live in the last 7 days). The tactical implementation plan lives in Notion, **not** the sheet — this bullet is its weekly digest (e.g. "Launched Williamsburg 3P; re-segmented 6 stores to New+Lapsed; paused 2 off-plan offers").
 - **⏰ Reads due** — any experiment with a decision owed this/next week (from the Experiments read-watch), named with its rule.
 - **👀 Watch** — the one flag worth surfacing: a metric moving >25% WoW, spend over the client's target %, an offer-ROAS slide, or a completeness-gate flag.
