@@ -112,6 +112,15 @@ Track in Notion Sales Pipeline. Active prospects include Curry Up Now (13 locati
 - **Friday**: Gertie (6am), lighter schedule
 - **Sunday evening**: Weekly prep
 
+## Deliverable Formats (org standard — applies to every skill)
+
+Client-facing deliverables are **styled HTML / PDF** built on the Spice Design System (Geist, spice `#fa4803`, design tokens). The diagnostic report, audits, action plans, and any client report render through that system — never as flat documents.
+
+- **Never produce `.docx` / Word docs.** They're off-brand and flat. If you're tempted to make one, the content belongs in the HTML report, a Notion page, or a design brief instead.
+- **Notion** = internal data home + searchable record. Client gets the HTML/PDF, not the Notion link.
+- **Spreadsheets (`.xlsx` / Google Sheets)** only where a grid is the right tool: optimized menu sheets, trackers, scorecards.
+- **Design work for Dilli** (photos, flyers, hero images, email templates, landing pages) routes through the design-brief flow — a Campaign Planning DB entry + Slack ping to #design-campaigns. Not a Word brief.
+
 ## Communication Defaults
 
 ### Client Emails

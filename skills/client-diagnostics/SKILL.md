@@ -31,6 +31,14 @@ When invoked, run this entire flow yourself. Do not make the user write code, ed
 
 **Always generate the HTML.** The runner produces both when you pass `--publish --pdf`. If you only ran `--publish`, you shipped half the deliverable — re-run with `--pdf` and share the report, not the Notion link.
 
+**Deliverable formats — NEVER produce .docx.** The diagnostic ships exactly: `report.html` + `report.pdf` (client-facing) and the Notion page (internal). That's the whole package. Do NOT spin off Word docs:
+- **Action plan** is a *section of the HTML report*, not a standalone `.docx`. It's already in there.
+- **Storefront audit** belongs in the report's Menu & Storefront section (or run the `storefront-audit` skill, which outputs Markdown-for-Notion — never Word).
+- **Optimized menu sheet** is the one legitimate spreadsheet (`.xlsx` via the `optimized-menu-sheet` skill) — a spreadsheet is the right tool there. Trackers (Sheets) are fine too.
+- **Photo gaps / Dilli briefs** route through the design-brief flow — a Campaign Planning DB entry + Slack ping to Dilli in #design-campaigns (same pattern as `ratings-flyer` / `hero-image-review`). NOT a `.docx` photo brief.
+
+If you find yourself reaching for the generic `docx` skill during a diagnostic, stop — the content already has a home above.
+
 ## Triggers
 
 - "diagnose [client]"
