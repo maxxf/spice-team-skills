@@ -1,0 +1,13 @@
+{
+  "client_slug": "",
+  "client_display_name": "",
+  "platform": "ezCater",
+  "cadence": "monthly",
+  "notion": {
+    "parent_page_id": null
+  },
+  "data_quirks": {
+    "self_delivery": false,
+    "notes": ""
+  }
+}
