@@ -1,0 +1,13 @@
+{
+  "client_slug": "pret",
+  "client_display_name": "PRET A Manger",
+  "data_dir": "/tmp/campaign-data-pret",
+  "campaigns_json": "pret_campaigns.json",
+  "campaign_perf_csv": "campaign_performance.csv",
+  "ads_detail_csv": "ads_detail.csv",
+  "output": "/Users/maxx/Downloads/pret_Campaign_Plan.xlsx",
+  "drive_folder_id": "1i1PHXTOCScJaZAknD_k_dBOiACd0R9rf",
+  "slack_channel": "#int-pret",
+  "sheet_id": "15VkNzhcWWcYSu2JuSwf58Z4-2Pxr1ipN_wfKQmXuPxg",
+  "v2": true
+}

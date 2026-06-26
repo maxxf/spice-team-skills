@@ -1,0 +1,13 @@
+{
+  "client_slug": "westville",
+  "client_display_name": "Westville",
+  "data_dir": "/tmp/campaign-data-westville",
+  "campaigns_json": "westville_campaigns.json",
+  "campaign_perf_csv": "campaign_performance.csv",
+  "ads_detail_csv": "ads_detail.csv",
+  "output": "/Users/maxx/Downloads/westville_Campaign_Plan.xlsx",
+  "drive_folder_id": "1Cxr5NEkywj1WPfmGpjd1Q-uUimeX6nq4",
+  "slack_channel": "#int-westville",
+  "sheet_id": "19A7eb_CT0XxxOiI4xD-Rh5tyzQ5wbIOZBHnRkoEqquc",
+  "v2": true
+}

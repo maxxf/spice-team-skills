@@ -1,0 +1,16 @@
+{
+  "client_slug": "tiffs-treats",
+  "client_display_name": "Tiff's Treats",
+  "data_dir": "/tmp/campaign-data-tiffs-treats",
+  "campaigns_json": "tiffs-treats_campaigns.json",
+  "campaign_perf_csv": "campaign_performance.csv",
+  "ads_detail_csv": "ads_detail.csv",
+  "output": "/Users/maxx/Downloads/tiffs_treats_Campaign_Plan.xlsx",
+  "drive_folder_id": "1XAzcexkVwm-sCo0VASAqnl0v1wS0JMut",
+  "slack_channel": "#int-tiffs-treats",
+  "sheet_id": "1Bbcc_tCDg8Im6RKwpLPS1jlU2Zg66-ESazw-li31J6c",
+  "net_sales_sheet_id": "1RjBM0kfdspOHp4ytvysxQWucIWGSgf-WqH0ux3kzuFU",
+  "net_sales_platform_tab": "Weekly Platform Overview 2.0",
+  "net_sales_location_tab": "By Location",
+  "v2": true
+}

@@ -9,7 +9,7 @@
     {
       "name": "spice-team-skills",
       "description": "Shared Spice org context + utility skills. Keep installed by every teammate. (The per-function plugins below are siblings, not replacements yet \u2014 soft migration.)",
-      "version": "1.17.0",
+      "version": "1.17.1",
       "source": "./",
       "author": {
         "name": "Maxx Freedman",
@@ -19,7 +19,7 @@
     {
       "name": "spice-marketplaces",
       "description": "Delivery marketplace operations \u2014 UE/DD/GH weekly reporting, campaign ops, client diagnostics, storefront audits, menu work, ratings reply, scorecard. For Growth Managers and support analysts.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "source": "./plugins/spice-marketplaces",
       "author": {
         "name": "Maxx Freedman",
