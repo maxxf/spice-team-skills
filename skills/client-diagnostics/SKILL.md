@@ -10,23 +10,26 @@ description: >
   checklist, creates the Drive folder for them to drop files into, waits for
   confirmation, runs the multi-skill orchestrator, uploads charts, creates
   the Notion page, returns one URL.
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Client Diagnostics
 
-**Goal: the user types one sentence at the start, drops files into one Drive folder, and gets one Notion URL back.**
+**Goal: the user types one sentence at the start, drops files into one Drive folder, and gets back a styled HTML report (the client-facing deliverable) plus a Notion page (the internal data home).**
 
 When invoked, run this entire flow yourself. Do not make the user write code, edit JSON, or copy MCP payloads. Use Drive as the canonical data store. Tell them exactly what to fetch.
 
+> **The deliverable is the HTML report — always produce it.** The client-facing artifact is `report.html`: a styled, self-contained report built by `references/build_report.py` using the Spice Design System stylesheet (`references/report_style.css` — Geist, spice `#fa4803`, design tokens). It has real visual hierarchy: 6-slot hero band, /10 radar, color-blocked cards, inline charts. **Always run the diagnostic with `--pdf`** (which implies `--html` and renders `report.pdf` via headless Chrome). A Notion-page-only run is half the deliverable — the runner itself warns `XX Visual deliverable -> text-only` when you skip it. Never hand a client the Notion page as the primary artifact; the Notion page is the internal, searchable data home that *links to* the HTML/PDF.
+
 > **Strategy filter — route the action plan through the playbooks.** When generating recommendations, consult `Cowork/Skills/campaign-plan/references/playbooks/what-works.md` + `marketplace-playbook.md`. Apply these specifically: (1) **Foundations gate first** — if rating <4.5, error >2%, uptime <95%, or menu conversion <20%, the action plan leads with foundations work, NOT ad spend. (2) **Cite proven precedent** — when proposing a tactic, name the playbook play it applies (e.g., "Sunnyvale flyer at low-ratings location", "Spend X Save Y aggressive at sub-20% conversion", "Friday-depth tweak at high-weekend-competition location"). (3) **DoorDash priority** for new clients (89% payout vs 78% UE). (4) **Location-based, not keyword** for any paid recommendation. (5) **Segment offers** by New/Existing/Lapsed/All; never recommend a blanket promo for established locations. The diagnostic's job isn't to invent strategy each time — it's to apply the proven playbook to this client's specific shape.
 
-**Output shape.** The Notion page is dashboard-first: Half 1 is skim-in-60s and
-flat — foundation banner (if gated), 4 hero metric cards, 7-dim Brand Health
-radar, Win/Risk/Opportunity/Decision cards, a This Week / Next 30 / Watch
-action kanban, and the tier-health donut. Half 2 holds all analyst depth, each
-section collapsed under a Notion `toggle`. The block builder is
-`orchestrator/notion_assembly.py`.
+**Output shape — two artifacts from one orchestrator pass:**
+
+1. **`report.html` (client-facing, primary).** Styled, self-contained, charts inlined. Built by `references/build_report.py` from `findings.json` + `metrics.json` (zero per-client literals — data-driven; see `references/report-data-contract.md`). Styling is the Spice Design System (`references/report_style.css`). This is what the client sees. Dashboard-first: 6-slot hero, /10 radar, Foothold/Risk/Opportunity cards, action plan, then analyst depth. `--pdf` also renders `report.pdf` (exact-format, emailable).
+
+2. **Notion page (internal data home).** Same content, Notion-native blocks via `orchestrator/notion_assembly.py`. Half 1 skim-in-60s, Half 2 analyst depth under toggles. Created with `--publish`. It links to the HTML/PDF deliverable. Use it for internal search + the team's running record, not as the client artifact.
+
+**Always generate the HTML.** The runner produces both when you pass `--publish --pdf`. If you only ran `--publish`, you shipped half the deliverable — re-run with `--pdf` and share the report, not the Notion link.
 
 ## Triggers
 
