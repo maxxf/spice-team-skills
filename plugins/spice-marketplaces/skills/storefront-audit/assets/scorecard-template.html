@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<!--
+  SPICE DELIVERY SCORECARD — fillable template. Brand-compliant per spice-brand.design.md
+  (Monocle-not-McKinsey editorial: off-white base, rich black, tan; ONE accent = Spice Orange #fa4803,
+   used scarce, NEVER as a background. Geist/Inter for words, mono for numbers. Max 3 colors.)
+  Replace every {{TOKEN}}, open in a browser, screenshot the .card.
+  Ring: RING_OFFSET = 527.8 * (1 - SCORE/100).  (score 78 -> 116.1)
+  Bars are MONOCHROME (black fill on tan). Add class "alert" (red) to AT MOST the single worst dimension
+   — the one red bar is the eye-magnet. Do not color the others (max 3 colors: base + orange + one status).
+  Bar fill % = round(dimScore / dimMax * 100).
+  Band -> grade: 85-100 A / 70-84 B / 50-69 C / <50 D; +/- by thirds within band.
+  Logo: real pepper mark inlined below (never recolor/stretch). ≥32px.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spice Delivery Scorecard — {{BRAND}}</title>
+<style>
+  :root{
+    --orange:#fa4803;--off:#f5f0eb;--black:#1a1a1a;--tan:#e8ddd0;--warm:#6b6560;--red:#c0392b;
+    --sans:"Inter",-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#0F0E0D;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;font-family:var(--sans);}
+  .card{width:680px;max-width:100%;background:var(--off);position:relative;overflow:hidden;box-shadow:0 40px 90px -34px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.05);}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:26px 38px 0;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .pep{width:34px;height:34px;display:block;}
+  .wordmark{font-size:22px;font-weight:800;letter-spacing:-.6px;color:var(--black);}
+  .kicker{font-size:10px;letter-spacing:3.4px;text-transform:uppercase;font-weight:700;color:var(--orange);}
+  .rule{height:2px;background:var(--orange);margin:18px 38px 0;}
+  .head{padding:22px 38px 24px;display:flex;justify-content:space-between;align-items:flex-end;}
+  .rest-name{font-size:34px;line-height:1.0;color:var(--black);font-weight:800;letter-spacing:-1px;}
+  .rest-meta{font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:var(--warm);margin-top:10px;font-weight:700;}
+  .date-chip{text-align:right;font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--warm);line-height:1.7;font-weight:700;}
+  .hero{display:flex;align-items:center;gap:34px;padding:4px 38px 30px;}
+  .score-ring{flex:0 0 auto;position:relative;width:180px;height:180px;}
+  .score-ring svg{transform:rotate(-90deg);display:block;}
+  .score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .score-num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:70px;font-weight:700;color:var(--black);line-height:.82;letter-spacing:-3px;}
+  .score-den{font-size:9px;letter-spacing:2.6px;color:var(--warm);text-transform:uppercase;margin-top:8px;font-weight:700;}
+  .hero-right{flex:1;}
+  .grade-row{display:flex;align-items:baseline;gap:13px;margin-bottom:14px;}
+  .grade{font-family:var(--mono);font-size:48px;font-weight:700;color:var(--orange);line-height:1;letter-spacing:-2px;}
+  .grade-label{font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:var(--warm);font-weight:700;line-height:1.45;}
+  .percentile{display:inline-block;border:1.5px solid var(--black);padding:8px 13px;font-size:11.5px;letter-spacing:.2px;font-weight:700;color:var(--black);margin-bottom:14px;}
+  .percentile b{color:var(--orange);font-family:var(--mono);}
+  .verdict{font-size:14px;line-height:1.5;color:var(--warm);font-weight:500;}
+  .breakdown{padding:2px 38px 16px;}
+  .bd-title{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--warm);font-weight:700;padding:18px 0 6px;border-top:2px solid var(--black);display:flex;justify-content:space-between;}
+  .row{display:grid;grid-template-columns:214px 1fr 48px;align-items:center;gap:18px;padding:12px 0;border-bottom:1px solid var(--tan);}
+  .row:last-child{border-bottom:none;}
+  .r-label{font-size:13px;font-weight:700;color:var(--black);letter-spacing:-.1px;}
+  .r-note{font-size:11px;color:var(--warm);margin-top:2px;font-weight:500;line-height:1.35;}
+  .bar{height:7px;background:var(--tan);position:relative;overflow:hidden;}
+  .bar span{position:absolute;left:0;top:0;bottom:0;background:var(--black);}
+  .bar.alert span{background:var(--red);}
+  .r-score{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:17px;font-weight:700;color:var(--black);letter-spacing:-1px;}
+  .r-score.alert{color:var(--red);}
+  .r-score small{font-size:10px;color:var(--warm);font-weight:500;}
+  .foot{display:flex;align-items:center;justify-content:space-between;padding:18px 38px 24px;border-top:2px solid var(--black);margin-top:2px;}
+  .foot-l{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;letter-spacing:-.3px;color:var(--black);}
+  .foot-l .pep{width:18px;height:18px;}
+  .foot-r{text-align:right;font-size:10.5px;letter-spacing:.2px;color:var(--warm);line-height:1.5;font-weight:600;}
+  .foot-cta{color:var(--orange);font-weight:800;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="top">
+      <div class="brand">
+        <svg class="pep" viewBox="0 0 720 720" xmlns="http://www.w3.org/2000/svg"><path d="M291.367 623.504C418.935 623.504 498.017 545.854 498.017 460.007C498.017 374.16 421.913 316.664 421.913 253.951C421.913 222.587 440.563 209.157 461.446 209.157C488.303 209.157 501.74 232.307 501.74 258.439C501.74 271.124 498.761 289.042 489.809 295.765C537.55 321.897 607.679 301.743 607.679 242.012C607.679 192.729 556.199 158.4 481.601 158.4C381.636 158.4 305.532 220.368 305.532 306.976C305.532 388.352 371.922 433.892 371.922 490.643C371.922 532.456 335.368 555.591 295.819 555.591C256.27 555.591 215.992 532.44 215.992 488.391C215.992 456.281 236.876 449.574 249.568 449.574C271.957 449.574 283.143 458.533 291.351 467.492C301.048 452.555 306.277 436.889 306.277 421.207C306.277 386.861 280.909 357.749 233.913 357.749C177.22 357.716 112.319 395.804 112.319 485.394C112.319 562.298 176.475 623.504 291.367 623.504Z" fill="#FF4A1C"/><path d="M251.309 109.299L252.132 113.173C251.347 109.476 251.311 109.307 251.31 109.299L251.319 109.297L251.384 109.283C251.694 109.222 251.895 109.183 252.148 109.137C252.655 109.046 253.372 108.924 254.244 108.8C255.979 108.554 258.375 108.293 260.965 108.244C277.091 107.941 311.962 118.067 332.782 157.721L333.324 158.767L333.37 158.874C347.679 191.323 348.394 220.65 337.695 244.005C326.995 267.365 305.198 284.043 275.929 291.824C261.075 295.864 245.86 293.084 233.474 284.132C221.095 275.185 211.775 260.259 208.218 240.354L208.213 240.319C205.049 221.664 207.921 208.41 214.043 198.193C220.057 188.157 228.999 181.461 236.891 175.592C245.053 169.522 251.831 164.485 255.507 157.578C258.983 151.048 259.956 142.177 254.437 127.819C253.072 124.266 251.618 121.061 250.503 118.741C249.947 117.583 249.477 116.652 249.149 116.015L248.649 115.057L246.128 110.398L251.309 109.299ZM284.36 208.498C275.521 201.197 264.976 201.9 260.401 207.435C255.829 212.966 257.132 223.459 265.973 230.762C274.814 238.064 285.359 237.365 289.931 231.827C294.505 226.295 293.202 215.801 284.36 208.498Z" fill="#FF4A1C"/></svg>
+        <span class="wordmark">spice</span>
+      </div>
+      <div class="kicker">Delivery Scorecard</div>
+    </div>
+    <div class="rule"></div>
+
+    <div class="head">
+      <div>
+        <div class="rest-name">{{BRAND}}</div>
+        <div class="rest-meta">{{LOCATIONS}} · {{PLATFORMS}}</div>
+      </div>
+      <div class="date-chip">Graded<br>{{DATE}}</div>
+    </div>
+
+    <div class="hero">
+      <div class="score-ring">
+        <svg width="180" height="180" viewBox="0 0 188 188">
+          <circle cx="94" cy="94" r="84" fill="none" stroke="#e8ddd0" stroke-width="11"></circle>
+          <circle cx="94" cy="94" r="84" fill="none" stroke="#fa4803" stroke-width="11" stroke-dasharray="527.8" stroke-dashoffset="{{RING_OFFSET}}"></circle>
+        </svg>
+        <div class="score-center">
+          <div class="score-num">{{SCORE}}</div>
+          <div class="score-den">out of 100</div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="grade-row">
+          <div class="grade">{{GRADE}}</div>
+          <div class="grade-label">{{BAND}}</div>
+        </div>
+        <div class="percentile">{{PERCENTILE}}</div>
+        <div class="verdict">{{VERDICT}}</div>
+      </div>
+    </div>
+
+    <div class="breakdown">
+      <div class="bd-title"><span>The Breakdown</span><span>Score</span></div>
+
+      <div class="row">
+        <div><div class="r-label">Hero Image</div><div class="r-note">{{HERO_NOTE}}</div></div>
+        <div class="bar {{HERO_ALERT}}"><span style="width:{{HERO_PCT}}%"></span></div>
+        <div class="r-score {{HERO_ALERT}}">{{HERO_SCORE}}<small>/15</small></div>
+      </div>
+
+      <div class="row">
+        <div><div class="r-label">Menu Images</div><div class="r-note">{{MENUIMG_NOTE}}</div></div>
+        <div class="bar {{MENUIMG_ALERT}}"><span style="width:{{MENUIMG_PCT}}%"></span></div>
+        <div class="r-score {{MENUIMG_ALERT}}">{{MENUIMG_SCORE}}<small>/25</small></div>
+      </div>
+
+      <div class="row">
+        <div><div class="r-label">Menu Structure</div><div class="r-note">{{MENUSTRUCT_NOTE}}</div></div>
+        <div class="bar {{MENUSTRUCT_ALERT}}"><span style="width:{{MENUSTRUCT_PCT}}%"></span></div>
+        <div class="r-score {{MENUSTRUCT_ALERT}}">{{MENUSTRUCT_SCORE}}<small>/20</small></div>
+      </div>
+
+      <div class="row">
+        <div><div class="r-label">Customer Sentiment</div><div class="r-note">{{SENTIMENT_NOTE}}</div></div>
+        <div class="bar {{SENTIMENT_ALERT}}"><span style="width:{{SENTIMENT_PCT}}%"></span></div>
+        <div class="r-score {{SENTIMENT_ALERT}}">{{SENTIMENT_SCORE}}<small>/15</small></div>
+      </div>
+
+      <div class="row">
+        <div><div class="r-label">Promotions</div><div class="r-note">{{PROMOS_NOTE}}</div></div>
+        <div class="bar {{PROMOS_ALERT}}"><span style="width:{{PROMOS_PCT}}%"></span></div>
+        <div class="r-score {{PROMOS_ALERT}}">{{PROMOS_SCORE}}<small>/10</small></div>
+      </div>
+
+      <div class="row">
+        <div><div class="r-label">Competitive Position</div><div class="r-note">{{COMPETITIVE_NOTE}}</div></div>
+        <div class="bar {{COMPETITIVE_ALERT}}"><span style="width:{{COMPETITIVE_PCT}}%"></span></div>
+        <div class="r-score {{COMPETITIVE_ALERT}}">{{COMPETITIVE_SCORE}}<small>/15</small></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="foot-l">
+        <svg class="pep" viewBox="0 0 720 720" xmlns="http://www.w3.org/2000/svg"><path d="M291.367 623.504C418.935 623.504 498.017 545.854 498.017 460.007C498.017 374.16 421.913 316.664 421.913 253.951C421.913 222.587 440.563 209.157 461.446 209.157C488.303 209.157 501.74 232.307 501.74 258.439C501.74 271.124 498.761 289.042 489.809 295.765C537.55 321.897 607.679 301.743 607.679 242.012C607.679 192.729 556.199 158.4 481.601 158.4C381.636 158.4 305.532 220.368 305.532 306.976C305.532 388.352 371.922 433.892 371.922 490.643C371.922 532.456 335.368 555.591 295.819 555.591C256.27 555.591 215.992 532.44 215.992 488.391C215.992 456.281 236.876 449.574 249.568 449.574C271.957 449.574 283.143 458.533 291.351 467.492C301.048 452.555 306.277 436.889 306.277 421.207C306.277 386.861 280.909 357.749 233.913 357.749C177.22 357.716 112.319 395.804 112.319 485.394C112.319 562.298 176.475 623.504 291.367 623.504Z" fill="#FF4A1C"/></svg>
+        graded by spice
+      </div>
+      <div class="foot-r">Want your number? It&rsquo;s free. <span class="foot-cta">spicedigital.co</span></div>
+    </div>
+  </div>
+</body>
+</html>

@@ -167,6 +167,27 @@ Generate report in Markdown format optimized for:
 
 Include [Image: description] placeholders for screenshots.
 
+### 5b. Scorecard Mode (the shareable spark)
+
+**Trigger:** user asks for a "scorecard", "shareable card", "the card", a "screenshot version", or the content giveaway ("comment SCORECARD"). Also offer it whenever an audit is run for a prospect — it is the single most shareable, referral-driving artifact Spice produces.
+
+**What it is:** a one-page, Spice-branded report card (`assets/scorecard-template.html`) with one big 0-100 score, a letter grade, a percentile, and the six dimension bars. Built to be screenshotted and forwarded operator-to-operator. The referral hook lives in the footer, so it travels with every screenshot.
+
+**How to generate:**
+1. Run the audit, get the overall score and the six dimension scores.
+2. Copy `assets/scorecard-template.html` and replace every `{{TOKEN}}`:
+   - `{{BRAND}}`, `{{LOCATIONS}}` (e.g. "12 Locations"), `{{PLATFORMS}}`, `{{DATE}}` (e.g. "Jun 2026")
+   - `{{SCORE}}` = overall /100. `{{RING_OFFSET}}` = `527.8 * (1 - SCORE/100)` (score 78 → 116.1).
+   - `{{GRADE}}` from band: 85-100 → A, 70-84 → B, 50-69 → C, <50 → D. Add +/- within band by thirds (78 → B-).
+   - `{{BAND}}` = the band's short phrase ("Good — targeted improvements needed").
+   - `{{PERCENTILE}}` = competitive line, e.g. "Top 22% of multi-unit brands we've graded". **Only use a real benchmark** from graded-brands data; if none exists, replace the chip text with the band phrase instead. Never invent a percentile.
+   - Per dimension (HERO /15, MENUIMG /25, MENUSTRUCT /20, SENTIMENT /15, PROMOS /10, COMPETITIVE /15): set `{{X_SCORE}}` (raw points), `{{X_PCT}}` = `round(score/max*100)`, `{{X_NOTE}}` = one operator-facing sentence.
+   - **Bars are monochrome by brand law** (Monocle, not McKinsey: max 3 colors). Set every `{{X_ALERT}}` to empty EXCEPT the single lowest-scoring dimension by PCT — set that one to `alert` (renders the one red bar + red score). At most one alert. If nothing is clearly weakest/below ~55%, use zero alerts.
+   - `{{VERDICT}}` = one Geist sentence naming the biggest lever and the ceiling.
+3. Save the filled HTML, open in a browser, screenshot the `.card`. That image is the deliverable.
+
+**Brand rules (non-negotiable, per spice-brand.design.md):** off-white/black/tan base + Spice Orange #fa4803 as the ONLY accent, used scarce, never as a background. Bars monochrome with at most one red `alert`. Geist/Inter words, mono numbers. The pepper logo is inlined in the template — never recolor, stretch, or shrink below 32px. Keep dimensions exactly matching the audit rubric (never invent dimensions). The scorecard names the restaurant it grades. The percentile must be real or omitted.
+
 ## References
 
 - Detailed scoring methodology: `references/scoring-rubric.md`
