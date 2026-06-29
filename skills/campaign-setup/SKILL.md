@@ -24,6 +24,8 @@ Create a campaign implementation ticket, log it in the Campaign Registry (Campai
 Planning DB), assign to the right ops analyst, and notify via Slack. Every campaign
 MUST be registered in the Campaign Planning DB for full visibility.
 
+> **Strategy filter — apply the playbooks before registering.** Every campaign passes through the Spice marketplace playbooks at `Cowork/Skills/campaign-plan/references/playbooks/` (`what-works.md` + `marketplace-playbook.md`). Hard gates: (1) **Foundations** — block if rating <4.5, error rate >2%, uptime <95%, or menu conversion <20% at the target locations; route to ops/menu work first. (2) **Segment required** — every campaign sets `Customer Segment` on the DB row (New / Existing / Lapsed / DashPass / All). No blanket promos without explicit "All" justification. (3) **Marketplace only** — UE / DD / GH; Meta is a separate service. (4) **Decay plan** — multi-week campaigns include a refresh + spend-down plan. If a proposal violates a playbook rule with intent, document the "why" in the campaign Notes.
+
 ## Why This Skill Exists
 
 Every campaign Spice runs needs to be briefed, logged, and trackable. The Campaign
