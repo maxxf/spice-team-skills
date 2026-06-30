@@ -121,6 +121,25 @@ Client-facing deliverables are **styled HTML / PDF** built on the Spice Design S
 - **Spreadsheets (`.xlsx` / Google Sheets)** only where a grid is the right tool: optimized menu sheets, trackers, scorecards.
 - **Design work for Dilli** (photos, flyers, hero images, email templates, landing pages) routes through the design-brief flow — a Campaign Planning DB entry + Slack ping to #design-campaigns. Not a Word brief.
 
+## Shared Client Projects (org standard — how everyone works clients)
+
+Every active client has **one shared Cowork project**, shared with the whole team. **All work for a client happens inside its project** — never in a one-off personal thread with data pasted in. This is how the team shares context, stays consistent, and stops burning usage re-explaining the same client every session.
+
+- **Source of truth = the client's Notion Client Wiki.** The project *loads* context from the wiki (creds, tracker URLs, voice, history) — it does **not** duplicate it. One record, no drift (Karpathy's rule: one source of truth). The project is the shared *workspace*; the wiki is the shared *truth*.
+- **One client = one project = one config = one live sheet.** Inside the project, the per-client skills key off the slug: `campaign-plan` / `weekly-reporting` read `clients/<slug>.json` and update that client's live Sheet **in place**.
+
+**Using a client project (everyone, every time):**
+1. Open the client's shared Cowork project — don't start a fresh ad-hoc thread.
+2. It loads the client's Notion Client Wiki for current context.
+3. Drop the week's exports in the client's Drive `Campaign Plan Inputs/<Monday>/`, then run the skill (e.g. "run the campaign-plan refresh for `<client>`").
+
+**Creating a client project (at onboarding — UI/admin step, not a skill):**
+1. New Cowork project named `[Client] — Spice`.
+2. Project instructions: *"Load [Client]'s Notion Client Wiki <link> at the start of any work for current context. Client slug for skills: `<slug>`. Use the Spice skills for all client work."*
+3. Share it with the team. (Creating + sharing projects is a UI/admin action.)
+
+**Don't:** run client work in personal/throwaway threads; paste raw client data into a non-project chat; or keep client context in your head/local notes instead of the Notion wiki.
+
 ## Communication Defaults
 
 ### Client Emails
