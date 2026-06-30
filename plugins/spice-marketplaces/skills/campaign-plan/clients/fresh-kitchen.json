@@ -5,7 +5,7 @@
   "campaigns_json": "fresh-kitchen_campaigns.json",
   "campaign_perf_csv": "campaign_performance.csv",
   "ads_detail_csv": "ads_detail.csv",
-  "output": "/Users/maxx/Downloads/fresh_kitchen_Campaign_Plan.xlsx",
+  "output": "/tmp/campaign-data-fresh-kitchen/fresh_kitchen_Campaign_Plan.xlsx",
   "drive_folder_id": "1eOcJTxayNJ6JMyfJHQG-RGDbQ6efbC_G",
   "slack_channel": "#ext-fresh-kitchen-spice",
   "sheet_id": "1u47uiwz1bvcp0m8EstR7wl5a_l6GovTmdj8NUMWPTgI",

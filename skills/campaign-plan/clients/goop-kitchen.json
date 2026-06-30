@@ -6,7 +6,7 @@
   "campaign_perf_csv": "campaign_performance.csv",
   "ads_detail_csv": "ads_detail.csv",
   "offers_csv": "offers.csv",
-  "output": "/Users/maxx/Downloads/goop_Campaign_Plan.xlsx",
+  "output": "/tmp/campaign-data-goop/goop_Campaign_Plan.xlsx",
   "drive_folder_id": "1UZ2ZX0ntPDGeLai8Dsf7coJFT2i_j0Gs",
   "slack_channel": "#ext-goopkitchen-spice",
   "sheet_id": "1C75jl5NBmGjTHOhUcf9Pky9eLzI3uYh4R6JlTT34kZA",

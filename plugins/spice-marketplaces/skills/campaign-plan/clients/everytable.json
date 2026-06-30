@@ -5,7 +5,7 @@
   "campaigns_json": "everytable_campaigns.json",
   "campaign_perf_csv": "campaign_performance.csv",
   "ads_detail_csv": "ads_detail.csv",
-  "output": "/Users/maxx/Downloads/everytable_Campaign_Plan.xlsx",
+  "output": "/tmp/campaign-data-everytable/everytable_Campaign_Plan.xlsx",
   "drive_folder_id": "1paA7DQ30oRw6EA07lVxNr4ZFZzApmnrU",
   "slack_channel": "#ext-everytable-spice",
   "sheet_id": "1torEs2OkJwcN0anlba0hPOxe8VUEfF3Divt-uVMG0s0",

@@ -277,7 +277,7 @@ The service account already has access via the "1. Active" share. The skill read
 Each client has a config at `clients/<slug>.json` (display name, data dir, input filenames, output path, Drive folder, Slack channel). Once the inputs are in the data dir, the whole update is:
 
 ```bash
-cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
+# run from the campaign-plan skill directory (the folder containing this SKILL.md):
 python3 references/refresh.py --client <slug> [--as-of YYYY-MM-DD]
 ```
 
@@ -510,7 +510,7 @@ First-time setup (once per machine): `python3 -m pip install --user openpyxl goo
 The render takes the Phase 0 tracker CSV and (optionally) the performance CSV:
 
 ```bash
-cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
+# run from the campaign-plan skill directory (the folder containing this SKILL.md):
 python3 references/build_campaign_plan_xlsx.py \
   --client "<display name>" \
   --tracker-csv /tmp/campaign-data-<client>/<client>_tracker.csv \
