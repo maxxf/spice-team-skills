@@ -1,24 +1,24 @@
 ---
 name: goop-campaign-planning-reporting
 description: >
-  goop kitchen Monday refresh end-to-end. Walks Santi (or whoever runs the refresh)
-  through the data inputs needed from Uber Eats, DoorDash, Grubhub, and the
-  Weekly Platform Overview sheet; updates the Campaign Sheet v3 (Active Campaigns,
-  Ads Reporting, Offers Reporting, Dashboard) and moves closed campaigns into the
-  Archive with Learnings; then duplicates the Notion weekly report master template
-  and fills the data placeholders for client review. Trigger on "goop weekly refresh",
-  "goop Monday refresh", "update goop sheet", "build goop weekly report", "run goop
-  weekly reporting", or any request to refresh goop kitchen's reporting stack for a
-  given week. GOOP KITCHEN ONLY. For other clients use the generic weekly-reporting skill.
+  goop kitchen Monday refresh end-to-end. Runs the deterministic campaign-plan
+  refresh (which updates goop's Campaign Tracker Google Sheet IN PLACE — Dashboard,
+  Active Campaigns, Ads/Offers Reporting, History, Archive, Account Learnings, charts,
+  QA), then has the GM curate the planning tabs, then duplicates the Notion weekly
+  report master template and fills the data placeholders for client review. Trigger on
+  "goop weekly refresh", "goop Monday refresh", "update goop sheet", "build goop weekly
+  report", "run goop weekly reporting", or any request to refresh goop kitchen's reporting
+  stack for a given week. GOOP KITCHEN ONLY. For other clients use the generic
+  weekly-reporting / campaign-plan skills.
 team: marketplace
-version: 1.1.0
+version: 2.0.0
 ---
 
 # goop Campaign Planning & Reporting
 
-The Monday refresh. Five phases. Produces two artifacts:
+The Monday refresh. Produces two artifacts:
 
-1. **Updated Campaign Sheet v3** — Active Campaigns, Ads Reporting, Offers Reporting, Dashboard tabs refreshed; closed campaigns moved to Archive with Learnings populated.
+1. **Updated Campaign Tracker** (the Google Sheet) — refreshed **in place** by the deterministic `campaign-plan` refresh. Reporting tabs are written programmatically; the GM curates the planning tabs.
 2. **Updated Notion weekly report** (duplicated from the [master template](https://www.notion.so/373d3ff018e781dabe7fc0a8710af031), data filled, handed to Ro for commentary).
 
 Cadence: Monday. Not Friday. Reasoning is in the memory file and the master template header.
@@ -27,153 +27,92 @@ Owner: Santi.
 
 ---
 
-## ⚠️ The Campaign Sheet v3 is ONE shared Google Sheet — edit it in place
+## ⚠️ How goop's sheet actually works — read this first
 
-**Canonical Campaign Sheet v3 (the only copy):**
-- **Google Sheet:** https://docs.google.com/spreadsheets/d/1HacQMl83W6YIsKwR1X77cL_L9OXpmcyYJ5WXTQ4Vmv4/edit
-- **Sheet ID:** `1HacQMl83W6YIsKwR1X77cL_L9OXpmcyYJ5WXTQ4Vmv4`
-- Lives in goop's Drive folder; shared with the whole team (Santi, Daniel, Ro, Maxx all have edit).
+**The Campaign Tracker is ONE live Google Sheet, updated in place by a script. You never build it by hand and never create a new file.**
 
-**How to edit it:** open this Sheet through the Google Drive connector and update the tabs **in place**. You are editing the one shared file the whole team and (eventually) the client see. The link never changes; history is preserved.
+- **Canonical sheet:** *goop kitchen — Campaign Tracker* → https://docs.google.com/spreadsheets/d/1C75jl5NBmGjTHOhUcf9Pky9eLzI3uYh4R6JlTT34kZA/edit
+  (`sheet_id 1C75jl5NBmGjTHOhUcf9Pky9eLzI3uYh4R6JlTT34kZA`, recorded in `campaign-plan/clients/goop-kitchen.json`.)
+- **How it updates:** the `campaign-plan` skill's `refresh.py` runs in **v2 mode** for goop (`"v2": true` in the config). It writes the reporting tabs **directly into that Sheet via the Sheets API** — Dashboard, Active Campaigns, Ads Reporting, Offers Reporting, History, Archive, Account Learnings, embedded charts — and runs a structural QA pass. It does **not** generate an `.xlsx` and does **not** replace the file, so it never touches the GM-owned planning tabs.
+- **Two tab families in that one sheet:**
+  - *Script-owned (don't hand-edit):* Dashboard, Active Campaigns, Ads Reporting, Offers Reporting, History, Account Learnings (auto-draft), `_Inputs`, `_ChartData`. The refresh overwrites these every run.
+  - *GM-owned (you maintain by hand, in the same sheet):* Q2/Q3/Q4 Plan, Experiments, Conversion Rate, Notes & Definitions, and the **curated** Hypothesis/Outcome/Continue? columns in Archive.
 
 **NEVER do this:**
-- ❌ Do not create a new spreadsheet, "save as," or build a fresh `.xlsx`. A new file = broken link + lost history. This was the old failure mode.
-- ❌ Do not look for a local file on disk (e.g. `~/Documents/.../goop_kitchen_campaign_template_v3.xlsx`). The local xlsx is **retired** — the Drive Sheet above is the single source of truth.
+- ❌ Don't open or "save as" a local `.xlsx` (the old `goop_kitchen_campaign_template_v3.xlsx` is **retired**).
+- ❌ Don't create a new spreadsheet or duplicate the Tracker. A new file = broken link + lost history. This was the old failure mode that produced "a new file every run."
+- ❌ Don't hand-type numbers into the script-owned tabs — they get overwritten. Fix the inputs and re-run instead.
 
-**FAIL LOUD:** if you cannot open the Drive Sheet at the link above (no access, link dead, connector down), **STOP**. Post in `#int-goop-kitchen`: *"Can't open the goop Campaign Sheet v3 — blocked on the refresh, need access checked."* Do **not** work around it by creating a new file. A duplicate is worse than a delayed refresh.
-
----
-
-## Phase 1: Confirm Inputs
-
-Before touching anything, confirm:
-
-- **Week date range** (Mon-Sun). Default: the week that ended yesterday (Sunday).
-- **Campaign Sheet v3 reachable** — open the [Drive Sheet](https://docs.google.com/spreadsheets/d/1HacQMl83W6YIsKwR1X77cL_L9OXpmcyYJ5WXTQ4Vmv4/edit) and confirm you can edit it. If not, fail loud (see above).
-- **A place to drop platform exports** — your Cowork session's working folder / uploads for this run. Files don't need to live on any specific machine; just have them available to this session.
-- **Notion master template page** still locked at `https://www.notion.so/373d3ff018e781dabe7fc0a8710af031` (do not modify the master; only duplicate it).
-
-If any of the above is missing, stop and surface to the user.
+**FAIL LOUD:** if `refresh.py` errors (sheet unreachable, missing service-account key, missing exports), **STOP**. Post in `#int-goop-kitchen` with the error. Do **not** work around it by building a file by hand — a delayed refresh beats a broken duplicate.
 
 ---
 
-## Phase 2: Pull platform data
+## Phase 1: Confirm inputs
 
-This is the data-drop phase. Drop the files into your session's working folder. Use the checklist below — every box is required unless flagged optional. Missing files? Stop and ask.
+- **Week date range** (Mon-Sun). Default: the week that ended yesterday (Sunday). The refresh defaults to last completed week; pass `--as-of YYYY-MM-DD` for a specific week.
+- **`campaign-plan` skill present** and the Sheets service-account key is on this machine (`~/.config/spice/google-sheets-writer.json`). If the key is missing, the refresh fails loud — get the key, don't work around it.
+- **Tracker reachable** — open the [Campaign Tracker](https://docs.google.com/spreadsheets/d/1C75jl5NBmGjTHOhUcf9Pky9eLzI3uYh4R6JlTT34kZA/edit) and confirm you can see it.
+- **Notion master template** still locked at `https://www.notion.so/373d3ff018e781dabe7fc0a8710af031` (only duplicate it, never edit the master).
 
-### Uber Eats (required: 4 files)
-
-- [ ] `ue_transactions_W[XX].csv` — Transaction / Payment export (settlement)
-   - Source: Uber Eats Manager → Reports → Payment Details
-   - Provides per-order revenue + per-order offer attribution. Primary source for UE numbers.
-- [ ] `ue_ads_manager_W[XX].csv` — Campaign Summary by Location export
-   - Source: `advertiser.uber.com/reports/create-v2` → Campaign Summary by Location → date-filtered for the week
-   - Required for ad attribution. **Without it, ad-driven orders get counted as organic.**
-- [ ] `ue_order_accuracy_W[XX].csv` — Order Accuracy export (per-order errors)
-   - Source: UE Manager → Reports → Order Accuracy
-- [ ] `ue_offers_campaigns_W[XX].csv` — Offers / Campaigns export
-   - Source: UE Manager → Marketing → Campaigns → Export
-   - Supplementary detail on offer redemptions.
-
-Optional but recommended:
-- `ue_menu_downtime_W[XX].csv` — Menu downtime
-- `ue_ratings_W[XX].csv` — Customer ratings (if pulling for ratings-flyer cycle)
-
-### DoorDash (required: 5 files)
-
-- [ ] `dd_financial_transactions_W[XX].csv` — Financial Simplified Transactions
-   - Source: DD Merchant Portal → Financials → Transactions → Simplified Transactions export
-- [ ] `dd_error_charges_W[XX].csv` — Error Charges export
-   - Source: DD Merchant Portal → Financials → Error Charges
-- [ ] `dd_sl_marketing_W[XX].csv` — Sponsored Listing Marketing export
-   - Source: DD Merchant Portal → Marketing → Sponsored Listings → Performance Export
-- [ ] `dd_promotions_marketing_W[XX].csv` — Promotions Marketing export
-   - Source: DD Merchant Portal → Marketing → Promotions → Performance Export
-- [ ] `dd_ops_quality_W[XX].csv` — Ops Quality (aggregate + cancellations)
-   - Source: DD Merchant Portal → Operations → Ops Quality → Export
-
-### Grubhub (required: 3 files)
-
-- [ ] `gh_financial_transactions_W[XX].csv`
-- [ ] `gh_financial_summary_W[XX].csv`
-- [ ] `gh_ops_review_W[XX].csv`
-   - Source: GH for Business → Reports
-
-### Reference link (do not modify, just open)
-
-- **Weekly Platform Overview 2.0 sheet:** [`docs.google.com/spreadsheets/d/18we-M-qVdug4LRZiolfScL3emVPE0AuL4Zb9Zqn_A3A`](https://docs.google.com/spreadsheets/d/18we-M-qVdug4LRZiolfScL3emVPE0AuL4Zb9Zqn_A3A/edit)
-   - This is the source of truth for portfolio-level weekly metrics (payout $, spend %, ROAS history). The Notion report's Highlights cross-references this for the 13-week trend numbers. Open it to grab the new week's row once Manish has dropped data into it.
+If anything's missing, stop and surface it.
 
 ---
 
-## Phase 3: Update Campaign Sheet v3
+## Phase 2: Gather platform exports
 
-Open the [Campaign Sheet v3 in Drive](https://docs.google.com/spreadsheets/d/1HacQMl83W6YIsKwR1X77cL_L9OXpmcyYJ5WXTQ4Vmv4/edit) **in place** (see the box at the top — never a new file). Work through the tabs in this order:
+Pull the files below and drop them where the refresh reads inputs — either the goop **Drive** folder `Campaign Plan Inputs/<weekstart>/` (the refresh auto-pulls these) or the local `inputs/` folder under the campaign-plan data dir. The refresh parses them by content, so exact filenames are flexible, but pull everything — missing files mean missing attribution.
 
-### 3a. Active Campaigns tab
+### Uber Eats (required)
+- [ ] Transaction / Payment export (settlement) — UE Manager → Reports → Payment Details. Per-order revenue + offer attribution; primary source for UE numbers.
+- [ ] Campaign Summary by Location (ads) — `advertiser.uber.com/reports/create-v2`, date-filtered. **Without it, ad-driven orders count as organic.**
+- [ ] Order Accuracy — UE Manager → Reports → Order Accuracy.
+- [ ] Offers / Campaigns — UE Manager → Marketing → Campaigns → Export.
+- Optional: Menu downtime; Customer ratings (if pulling for a ratings-flyer cycle).
 
-For every campaign that was live during the reporting week:
+### DoorDash (required)
+- [ ] Financial Simplified Transactions — Financials → Transactions.
+- [ ] Error Charges — Financials → Error Charges.
+- [ ] Sponsored Listing Marketing — Marketing → Sponsored Listings → Performance Export.
+- [ ] Promotions Marketing — Marketing → Promotions → Performance Export.
+- [ ] Ops Quality (aggregate + cancellations) — Operations → Ops Quality → Export.
 
-- Update WTD columns (Spend / Sales / Orders / New Cx / ROAS) with this week's numbers from the platform exports
-- Update Lifetime columns (Spend / Sales / ROAS) — cumulative since campaign start
-- Update Status flag column:
-   - 🟢 Performing — above target ROAS, no concerns
-   - 🟡 Watch — trending down or borderline
-   - 🔴 Below target — below ROAS target 2+ weeks running
-   - 🧪 Test — active experiment with hypothesis + decide-by date
-- For any campaign that ENDED this week: change Status to "Ended" and move to Phase 3d (Archive).
+### Grubhub (required)
+- [ ] Financial transactions, Financial summary, Ops review — GH for Business → Reports.
 
-Then update the By Location section underneath:
-- Recalculate # Active Campaigns per location
-- Update Total Spend WTD / Total Sales WTD / Blended ROAS WTD per location
-- Refresh Top Performer / Underperformer / Notes per location
+### Reference (do not modify, just read)
+- **Weekly Platform Overview 2.0 sheet** — `18we-M-qVdug4LRZiolfScL3emVPE0AuL4Zb9Zqn_A3A`. Source of truth for portfolio payout $, spend %, ROAS history. The refresh cross-pulls this for the marketing-efficiency metrics; the Notion Highlights cite it for the 13-week trend. Make sure Manish has dropped this week's row.
 
-### 3b. Ads Reporting tab
+---
 
-For every Sponsored Listing (UE + DD) that ran this week:
-- Update Spend / Impressions / Clicks / CTR / Orders / Sales / ROAS / CPO
-- Compare to last week's row, populate WoW ROAS column
-- Highlight outliers: top 4 by ROAS, bottom 4 by ROAS
+## Phase 3: Run the refresh (updates the Tracker in place)
 
-Update the Audience Segment Performance table at the bottom (All / New / Existing / Lapsed).
+From the `campaign-plan` skill directory:
 
-### 3c. Offers Reporting tab
+```bash
+python references/refresh.py --client goop-kitchen
+# or for a specific week:
+python references/refresh.py --client goop-kitchen --as-of 2026-06-22
+```
 
-For every promo (DD + UE Offers) that ran this week:
-- Update Spend / Sales / Orders / ROAS / New Cx / % New Cx
-- Mark Status (Live / Ended / Pending)
-- Update Notes column with anything that changed (depth, threshold, audience)
+This pulls inputs (Drive + local), projects the Notion Campaign Planning DB rows, then writes the **script-owned** tabs of `1C75jl5…` in place: Active Campaigns by location, Dashboard (with canonical Mkt Spend % / ROAS / CPO + WoW), Ads Reporting, Offers Reporting, History (this week's snapshot), auto-files ended campaigns to Archive, auto-drafts an Account Learnings signal, embeds charts, and runs a structural QA pass.
 
-Update the New vs Existing Customer Split table at the bottom.
+**Watch the output:**
+- It prints `Live Sheet: https://docs.google.com/spreadsheets/d/1C75jl5…` — confirm that's the canonical Tracker, not a new id.
+- It prints `QA: ✓ structure valid` or lists issues. If issues, fix the inputs and re-run before sharing.
+- If it errors out, **fail loud** (Phase 0 rule) — don't hand-build anything.
 
-### 3d. Archive tab — for any campaigns that closed this week
+> Note: if `campaigns_json` (the Notion DB pull) isn't present yet, run the campaign-plan skill's Notion pull step first (it writes the DB rows the refresh reads). The skill's Phase 0 covers this.
 
-This is Kelly's experiment discipline ask. **Do not let a campaign leave Active without Learnings populated.**
+---
 
-For each closed campaign, add a row to Archive with:
-- Year / Quarter / Week ended / Campaign Name / Type / Platform / Locations / Audience
-- Threshold / Discount or Ad Spend
-- Start Date / End Date / Status (Ended)
-- Total Spend / Total Sales / Total Orders / Avg ROAS / New Cx
-- Test? (Y/N)
-- **Hypothesis** — what we expected to learn
-- **Outcome / Learnings** — what actually happened, in one or two sentences
-- **Decided to Continue?** — Y / N / Modified
+## Phase 3b: GM curation (by hand, in the same sheet)
 
-If the campaign predates Jun 2026 and has no documented hypothesis, populate Outcome with "archived without learnings (predates Jun 2026 discipline)" and move on. Don't fabricate retrospective hypotheses.
+The refresh handles the reporting tabs. You still own, directly in `1C75jl5…`:
 
-### 3e. Dashboard tab
-
-The Dashboard pulls most metrics via formulas from Active Campaigns. After 3a is done, the headline numbers should auto-populate. Manually update:
-- Top 5 / Bottom 5 active campaigns lists
-- This Week's Changes (3-5 bullets, shipped this week)
-- Proposed for Next Week (decisions needed from Lauren)
-- Decline Alerts table — populate any triggered by:
-   - Location WoW < -10%
-   - Campaign ROAS below target 2 consecutive weeks
-   - Active test failing hypothesis
-
-The Drive Sheet saves automatically — there is no "save as" and no export step. Just confirm your edits landed in the live Sheet.
+- **Archive Learnings** — the refresh files ended campaigns with the numbers; **you** fill Hypothesis / Outcome / Decided to Continue? This is Kelly's experiment discipline. Don't let a campaign sit in Archive without a Learning. For pre-Jun-2026 campaigns with no documented hypothesis, write "archived without learnings (predates Jun 2026 discipline)" — don't fabricate.
+- **Experiments tab** — update status / decide-by dates on active tests.
+- **Q2/Q3/Q4 Plan tabs** — reflect anything shipped or newly planned this week.
+- **Dashboard narrative cells** the script leaves for you: This Week's Changes (3-5 bullets), Proposed for Next Week (decisions for Lauren), and any Decline Alerts the data triggers (location WoW < -10%, campaign ROAS below target 2 wks, a test failing its hypothesis).
 
 ---
 
@@ -182,52 +121,35 @@ The Drive Sheet saves automatically — there is no "save as" and no export step
 1. Open the [Notion master template](https://www.notion.so/373d3ff018e781dabe7fc0a8710af031).
 2. **Duplicate** it (don't edit the master) into the goop kitchen Documents Hub.
 3. Title the duplicate exactly: `📊 W[XX] Weekly Update — [Mon date]–[Sun date], 2026 | goop kitchen`
-4. Fill the data placeholders:
+4. Fill the data placeholders (pull from the freshly-refreshed Tracker + the Weekly Platform Overview sheet):
 
 ### Agenda section
-Skip — Maxx writes this Tuesday AM via `client-call-prep` skill.
+Skip — Maxx writes this Tuesday AM via `client-call-prep`.
 
 ### Key Highlights — four locked pillars (fill data, leave commentary blank for Ro)
 
-**💰 Payout growth trend**
-- Portfolio payout this week: [pull from Weekly Platform Overview 2.0 sheet], WoW %, vs March baseline %
-- Lift from: [identify top 3 contributing locations from Sheet v3 Active Campaigns By Location section]
-- Drag this week: [calculate -X pt from Net Payout %, identify UE Other Adjustments + DD Other Adjustments]
-- Next: [leave blank for Ro]
+**💰 Payout growth trend** — portfolio payout this week (from Weekly Platform Overview 2.0), WoW %, vs March baseline %; top 3 contributing locations (Tracker → Active Campaigns by location); drag (-X pt from Net Payout %, UE + DD Other Adjustments); Next: blank for Ro.
 
-**📉 Spend % trend**
-- Marketing/sales [X%] portfolio
-- Discipline: tier breakdown
-- Drag: locations stuck above threshold
-- ROAS direction: marketing ROAS [X] (was [Y], WoW %)
-- Next: [leave blank for Ro]
+**📉 Spend % trend** — marketing/sales % portfolio; tier discipline breakdown; locations stuck above threshold; marketing ROAS direction (X vs Y, WoW %); Next: blank for Ro.
 
-**🔴 Struggling location performance**
-- San Jose + Pasadena sub-section: pull SJ + PA numbers (WoW, $ amounts, conversion, accuracy, organic %, DD vs UE comparison)
-- Ops drag sub-section: list any DD avoidable cancel rate > 0.5%, POS error rate > 1%, UE inaccuracy > 1.5%
-- Leave "Why not" + "Next" lines blank for Ro
+**🔴 Struggling location performance** — San Jose + Pasadena (WoW, $ amounts, conversion, accuracy, organic %, DD vs UE); ops drag (DD avoidable cancel > 0.5%, POS error > 1%, UE inaccuracy > 1.5%); "Why not" + "Next" blank for Ro.
 
-**📊 Campaigns + launches**
-- This week's read: $ spend / $ attributed / blended ROAS / # campaigns live (pull from Sheet v3 Dashboard)
-- Ads vs Offers ROAS comparison
-- The engine: top SLs by ROAS (from Sheet v3 Ads Reporting)
-- Coming next cycle: leave blank for Ro
-- Launches: pull NRO status from Q-plan tabs
+**📊 Campaigns + launches** — this week's read ($ spend / $ attributed / blended ROAS / # live, from Tracker Dashboard); Ads vs Offers ROAS; top SLs by ROAS (Tracker Ads Reporting); NRO/launch status (Q-Plan tabs); Coming next: blank for Ro.
 
 ### Platform Performance tables
-Populate UE, DD, GH tables from the platform exports (already aggregated in your Phase 2 work). Add the under-table commentary block but leave it blank for Ro.
+Populate UE / DD / GH tables from the exports. Leave the under-table commentary block for Ro.
 
 ### Location Performance table
-Pull from Sheet v3 By Location section. Include Tier, Total Sales, WoW, ROAS, Payout %, Mkt Spend %, Notes.
+Pull from the Tracker's by-location view: Tier, Total Sales, WoW, ROAS, Payout %, Mkt Spend %, Notes.
 
 ### Performance Flags
-Leave blank for Ro. She picks the top 5 from what the data surfaces.
+Leave blank for Ro (she picks the top 5).
 
 ### Operations & Quality tables
-Populate DD Ops Quality / UE Cancellations / UE Order Accuracy / GH Ops tables from the platform exports.
+Populate DD Ops Quality / UE Cancellations / UE Order Accuracy / GH Ops from the exports.
 
 ### Validation table
-Fill in the checks (Net Sales formula, Commission % range, Net Payout % range, etc.) so any anomaly is caught before client share.
+Fill the checks (Net Sales formula, Commission % range, Net Payout % range, etc.) so anomalies are caught before client share.
 
 Save the page.
 
@@ -236,46 +158,39 @@ Save the page.
 ## Phase 5: Handoff
 
 1. Post in `#int-goop-kitchen`:
-   > 📊 W[XX] data is loaded. Sheet v3 refreshed + Notion report duplicated and data-filled. Handing to @Ro for commentary by 9 AM PT Tuesday. @Maxx will QA via client-call-prep after that.
+   > 📊 W[XX] data is loaded. Tracker refreshed in place + Notion report duplicated and data-filled. Handing to @Ro for commentary by 9 AM PT Tuesday. @Maxx will QA via client-call-prep after that.
 2. Add the Notion report URL to the message.
-3. Update the `Goop Kitchen | weekly metrics` Google Sheet if Manish hasn't already added this week's row.
+3. Confirm this week's row is in the `Goop Kitchen | weekly metrics` sheet (Manish usually adds it).
 
 ---
 
-## When to Run
+## When to run
+- Every Monday for the prior completed week (Mon-Sun).
+- Mid-week ad-hoc pulse check: run Phase 3 only (skip Notion + handoff) to refresh the Tracker and surface anomalies.
 
-- Every Monday for the prior week (Mon-Sun) ending yesterday
-- Can also be run mid-week for ad-hoc data pulls (decline-alert pulse check) — in that case, skip Phase 4 and Phase 5; just refresh the sheet and surface anomalies in Slack
-
----
-
-## When NOT to Run
-
-- For any client other than goop kitchen. Other clients use the generic `weekly-reporting` skill.
-- Before Sunday midnight — the reporting week isn't closed yet
-- Without the Ads Manager export. UE ad attribution is unreliable without it; rerun once it's available
+## When NOT to run
+- Any client other than goop kitchen (use generic `weekly-reporting` / `campaign-plan`).
+- Before Sunday midnight — the week isn't closed.
+- Without the UE Ads Manager export — ad attribution is unreliable; rerun once it's available.
 
 ---
 
-## Key Rules
+## Key rules
+- **The Tracker (`1C75jl5…`) is updated in place by `refresh.py`. Never hand-build it, never create a new file.** This is the #1 rule.
+- Script-owned tabs are overwritten every run — fix inputs and re-run, don't hand-edit them.
+- Don't modify the Notion master template — only duplicate it.
+- Don't close a campaign without a curated Learning in Archive (Kelly's discipline).
+- Don't fabricate retrospective hypotheses for pre-Jun-2026 campaigns — use the "archived without learnings" tag.
+- The four Highlights pillars + their order are locked: Payout $ / Spend % / Struggling locations / Campaigns + launches.
+- If data is missing from any platform, stop and ask. No partial runs.
+- Data fill is neutral. Interpretive commentary is Ro's job — leave those lines blank.
 
-- **The Campaign Sheet v3 is one shared Drive Sheet. Edit in place, never create a new file.** (See the box at the top.) This is the #1 rule — a duplicate breaks the team's link and loses history.
-- Do NOT modify the Notion master template page. Only duplicate it.
-- Do NOT fabricate retrospective hypotheses for campaigns that predate Jun 2026 discipline. Use the "archived without learnings" tag.
-- Do NOT close a campaign in Active without populating Learnings in Archive. The skill enforces experiment discipline.
-- The four Highlights pillars are non-negotiable: Payout $ trend / Spend % trend / Struggling locations / Campaigns + launches. Section order is locked.
-- If data is missing from any platform, stop and ask. Do not run on partial data.
-- Voice in the data fill is neutral. Commentary (the interpretive lines) is Ro's job — leave those blank.
-
----
-
-## Related Skills
-
-- `client-call-prep` — Maxx triggers Tuesday AM to QA this skill's output + finalize agenda
-- `weekly-reporting` — generic version for non-goop clients
-- `campaign-planner` — quarterly + campaign strategy work (separate from weekly refresh)
-- `hero-image-review` — when running an A/B test on ad creative; logs to Archive
+## Related skills
+- `campaign-plan` — the engine behind Phase 3 (the v2 refresh that writes the Tracker). Also handles quarterly strategy.
+- `client-call-prep` — Maxx triggers Tuesday AM to QA this output + finalize the agenda.
+- `weekly-reporting` — generic version for non-goop clients.
+- `hero-image-review` — when A/B testing ad creative; logs to Archive.
 
 ---
 
-*Updated 2026-06-30. v1.1.0: Campaign Sheet v3 migrated from a Maxx-local xlsx to a shared Google Drive Sheet (`1HacQMl83…`) edited in place — fixes the "new file every run" bug when anyone but Maxx ran the refresh. Source: gk <> Spice 6/2 meeting decisions + memory file [[goop-kitchen-campaign-sheet-v3]].*
+*Updated 2026-06-30. v2.0.0: rewired from hand-editing a Maxx-local xlsx to running the deterministic `campaign-plan` v2 refresh, which updates the canonical Campaign Tracker Sheet (`1C75jl5…`) in place. Fixes the "new file every run" bug — that was the old prose skill having non-Maxx operators hand-build a file that only existed on Maxx's laptop, not a missing key. Source: gk <> Spice 6/2 decisions + memory [[goop-kitchen-campaign-sheet-v3]].*
