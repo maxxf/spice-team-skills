@@ -2,8 +2,8 @@
 name: weekly-reporting
 description: >
   Process weekly delivery marketplace reports from Uber Eats, DoorDash, and Grubhub.
-  Dispatches platform-specific extraction agents, aggregates results, produces paste-ready
-  tracker updates and Notion weekly reports. Triggers on: "weekly report", "weekly reporting",
+  Dispatches platform-specific extraction agents, aggregates results, writes weekly tracker
+  updates in place via the sheets-writer service account (paste-ready fallback) and Notion weekly reports. Triggers on: "weekly report", "weekly reporting",
   "process weekly data", "run reporting", or when multiple platform CSV exports are provided
   with context about weekly performance or client metrics.
 ---
@@ -259,16 +259,20 @@ Omit `--profile-json` if no Notion profile was fetched in Phase 1.
 
 Auto-generate the long-format scorecard rows for the master Sheet. Replaces the manual standalone run reporters used to do separately.
 
-**`SKILL_BASE` resolves to** `/Users/maxx/Desktop/Cowork/Skills/` (the parent of this skill folder, where `weekly-scorecard/` sits as a sibling).
+**`SKILL_BASE` resolves to** the `skills/` directory of the `spice-marketplaces` plugin, where `weekly-scorecard/` sits as a sibling to this skill. The exact path varies by Cowork install location — derive it at runtime rather than hardcoding.
 
 **Soft-dependency check first.** If the scorecard skill isn't installed (rare — should be on every Spice teammate's Cowork), skip Phase 4.6 with a warning and continue to Phase 5:
 
 ```bash
-SKILL_BASE="/Users/maxx/Desktop/Cowork/Skills"
+# Resolve SKILL_BASE portably: parent of this skill's directory.
+# In a Cowork session, cwd is the weekly-reporting skill dir when this runs.
+SKILL_BASE="$(cd .. 2>/dev/null && pwd)"
+SKILL_BASE="${SKILL_BASE:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)}"
+
 BRIDGE_SCRIPT="$SKILL_BASE/weekly-scorecard/scripts/generate_scorecard_rows.py"
 
 if [ ! -f "$BRIDGE_SCRIPT" ]; then
-  echo "⚠️  weekly-scorecard skill not installed at $SKILL_BASE/weekly-scorecard/. Skipping Phase 4.6 — Notion report and tracker paste will still ship. Flag to Santi."
+  echo "weekly-scorecard skill not found at $SKILL_BASE/weekly-scorecard/. Skipping Phase 4.6. Notion report and tracker paste will still ship. Flag to Santi."
   # continue to Phase 5
 else
   # Run the bridge
@@ -370,7 +374,27 @@ The hard formula checks ran in Phase 4.5 (`validate_report.py`). If you're at th
    - **QA Section**: Paste the contents of `OUTPUT/validation_report.md` at the end of the report as a "Validation" section. This is visible proof that the formulas were verified.
    - All other sections remain the same (agenda, action items, key highlights, platform tables, location table, ops, campaigns).
 
-**2. Tracker Paste Columns** — Print paste-ready value blocks directly in chat. One block per sheet section, formatted so the team can copy the values and paste into the week column. Format:
+**2. Tracker update — WRITE IN PLACE (preferred).** Write the week's values directly into the client's **canonical** Campaign Tracker. **Never create a new spreadsheet and never Drive-copy the tracker** — a `_W##` copy fragments the source of truth and strands plan edits (this is the #1 failure mode of this skill). See `references/sheets-writer.md` for the recipe.
+   - Resolve the client's **Campaign Tracker** from the registry / Notion `Data Dashboard` property — goop = `1C75jl5NBmGjTHOhUcf9Pky9eLzI3uYh4R6JlTT34kZA` ("goop kitchen — Campaign Tracker"). Auth with the `spice-sheets-writer` service account (`~/.config/spice/google-sheets-writer.json`, scope `spreadsheets`); the tracker is shared with it as Editor.
+   - Update each tab by its own rule (do NOT treat it like a single paste column):
+     - **History** — *append* this week's campaign × location rows (Weekstart, Campaign, Platform, Location, Spend, Sales, Orders, ROAS). Append-only; never overwrite prior weeks.
+     - **Active Campaigns** — *replace* with this week's live campaigns grouped by location; label the week in the title (e.g. "W25 (Jun 15–21)").
+     - **Ads Reporting / Offers Reporting** — refresh the **This Week** column (shift prior → Last Week). These are platform-reported and intentionally differ from the Dashboard's *settled* figures — do not force them to match.
+     - **Dashboard / _ChartData** — formula/chart tabs that recompute from the above. **Do NOT hand-write them.**
+     - **Q2 / Q3 / Q4 Plan** — the campaign PLAN; reporting must **NOT** touch these.
+     - **Experiments** — the in-flight test register. The weekly run maintains it (this is non-optional — see the accountability gate in `attribution-and-completeness.md`):
+       **Cadence:** experiment readings are stamped on the **Tuesday reporting run** (the weekly-reporting cycle, once DD has settled), keyed to the **just-closed Mon–Sun week** — *not* the Monday planning pass, which is forward-looking and writes no readings. "This week" below = the week just reported.
+       1. **Advance status** — ⚪ Planned→🟡 Running once `Start` week has passed; mark 🔵 **Read due** any row whose `Read / decide` week ≤ the just-closed week and `Status` ≠ Concluded.
+       2. **Log a reading + stamp data freshness** — for every 🟡 Running / 🔵 Read-due row, compute the just-closed week's measurement (the test-vs-control number the row's `Decision rule` calls for, pulled from the data you just refreshed) and **append it to the `Weekly readings` cell** as `W##: <test> vs <control> = <gap/value>`; set `Data thru (wk)` = the just-closed week. This builds the trend so the read at the decision week is backed by every interim week, not one snapshot.
+       3. **Conclude only on the GM's call** — fill `Result` / set 🟢 Concluded when the owner has decided; on conclusion append the durable finding to **Account Learnings**.
+   - **Populate every location × platform.** If a source export is missing, flag it — never leave a tab silently half-populated (the W24 failure: 9 stores' offers + SoMa missing).
+   - **Experiments read-watch + accountability gate:** before finishing, read the **Experiments** tab.
+     - For any row with `Read / decide` week ≤ current week and not Concluded, add a top-of-report callout — `⏰ EXP-##: <test> (owner <name>) — read due <week>. Decision rule: <rule>. Reading: <test-vs-control number>.`
+     - **Accountability check (CRITICAL):** after the Tuesday run, any 🟡 Running / 🔵 Read-due row whose `Data thru (wk)` is **not** the just-closed week means its measurement data wasn't captured — flag it `⚠ EXP-## data not updated — read at risk; owner <name>` and list it with the validation failures. A test you can't read is a failed weekly run, not a silent pass. If the client has no Experiments tab, skip silently.
+   - Idempotent: re-running a week overwrites that week's cells / re-appends cleanly; never duplicate rows or create files.
+   - **If the SA cred is missing or lacks edit access:** do NOT copy the sheet as a workaround — fall back to the paste-ready columns below and flag it in Warnings.
+
+**2-fallback. Tracker Paste Columns** (use ONLY if the in-place write can't run) — Print paste-ready value blocks directly in chat. One block per sheet section, formatted so the team can copy the values and paste into the week column. Format:
 
 ```
 ### UBER EATS — paste into Platform Overview tab, UE section
@@ -406,6 +430,20 @@ If `scorecard_rows.csv` was not generated (Phase 4.6 was skipped or errored), in
 ```
 ⚠️ Scorecard rows not generated — [reason from Phase 4.6 stderr or "skill not installed"]. Run generate_scorecard_rows.py manually or flag to Santi.
 ```
+
+**6. Slack Weekly Briefing — post to the client's internal `#int-[client]` channel.** A short **3–6 bullet** weekly briefing synthesizing this run + the Notion campaign record. **When the run completes, post it to the client's internal `#int-[client]` channel** (e.g. `#int-goop-kitchen`; resolve via `slack_search_channels` by client name) so the GM and pod see it. The GM then shares it — or an adapted version — with the client on their own. ⚠ **Post to `#int-[client]` ONLY. NEVER post to the client-facing `#ext-[client]` channel** — the external share is always the GM's manual action. If the `#int-` channel can't be resolved, print the briefing as a copy-ready block in chat and flag it. Use these bullet roles — include 3–6, drop any that are empty for the week:
+
+- **📊 Headline** — total sales + WoW %, marketing-driven %, blended/marketing ROAS.
+- **🥊 Ads vs Offers** — the channel split: ad ROAS vs offer ROAS and spend on each, which is carrying efficiency, and any WoW shift (e.g. offer ROAS sliding as discount depth rises). From the Dashboard "Ads vs Promos" + the Ads/Offers Reporting tabs.
+- **🏆 Standout campaigns** — name the week's best campaign(s) with their number (top ad + top offer), plus a notable laggard if it's a real drag (e.g. a deep $-off offer killing efficiency). Specific campaigns, not platform-wide vagueness.
+- **🔧 Changes shipped this week** — the campaign moves implemented since last week, pulled from **Notion** (campaign-ops Task Tracker + Campaign Planning entries that went live in the last 7 days). The tactical implementation plan lives in Notion, **not** the sheet — this bullet is its weekly digest (e.g. "Launched Williamsburg 3P; re-segmented 6 stores to New+Lapsed; paused 2 off-plan offers").
+- **⏰ Reads due** — any experiment with a decision owed this/next week (from the Experiments read-watch), named with its rule.
+- **👀 Watch** — the one flag worth surfacing: a metric moving >25% WoW, spend over the client's target %, an offer-ROAS slide, or a completeness-gate flag.
+- **➡️ Next** — the key planned move for next week (from the Q-plan / Notion).
+
+**Close with the sheet link** — end every briefing with `📊 Dashboard: <url>` pointing to the client's **campaign tracker, Dashboard tab** (resolve `sheet_id` from the client config/registry; link the Dashboard gid). One click from the briefing to the live numbers.
+
+Rules: bold lead-ins, real numbers, active verbs, ≤25 words per bullet — strategist voice, not a data dump. Post to `#int-[client]` at end of run, and echo it as a copy-ready block in chat. **Never post to the client `#ext-` channel** — the GM owns the external share.
 
 ---
 
