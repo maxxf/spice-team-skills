@@ -11,14 +11,14 @@ description: >
   weekly reporting", or any request to refresh goop kitchen's reporting stack for a
   given week. GOOP KITCHEN ONLY. For other clients use the generic weekly-reporting skill.
 team: marketplace
-version: 1.0.0
+version: 1.1.0
 ---
 
 # goop Campaign Planning & Reporting
 
 The Monday refresh. Five phases. Produces two artifacts:
 
-1. **Updated Campaign Sheet v3** (`/Users/maxx/Documents/Claude/Projects/goop kitchen/goop_kitchen_campaign_template_v3.xlsx`) — Active Campaigns, Ads Reporting, Offers Reporting, Dashboard tabs refreshed; closed campaigns moved to Archive with Learnings populated.
+1. **Updated Campaign Sheet v3** — Active Campaigns, Ads Reporting, Offers Reporting, Dashboard tabs refreshed; closed campaigns moved to Archive with Learnings populated.
 2. **Updated Notion weekly report** (duplicated from the [master template](https://www.notion.so/373d3ff018e781dabe7fc0a8710af031), data filled, handed to Ro for commentary).
 
 Cadence: Monday. Not Friday. Reasoning is in the memory file and the master template header.
@@ -27,13 +27,30 @@ Owner: Santi.
 
 ---
 
+## ⚠️ The Campaign Sheet v3 is ONE shared Google Sheet — edit it in place
+
+**Canonical Campaign Sheet v3 (the only copy):**
+- **Google Sheet:** https://docs.google.com/spreadsheets/d/1HacQMl83W6YIsKwR1X77cL_L9OXpmcyYJ5WXTQ4Vmv4/edit
+- **Sheet ID:** `1HacQMl83W6YIsKwR1X77cL_L9OXpmcyYJ5WXTQ4Vmv4`
+- Lives in goop's Drive folder; shared with the whole team (Santi, Daniel, Ro, Maxx all have edit).
+
+**How to edit it:** open this Sheet through the Google Drive connector and update the tabs **in place**. You are editing the one shared file the whole team and (eventually) the client see. The link never changes; history is preserved.
+
+**NEVER do this:**
+- ❌ Do not create a new spreadsheet, "save as," or build a fresh `.xlsx`. A new file = broken link + lost history. This was the old failure mode.
+- ❌ Do not look for a local file on disk (e.g. `~/Documents/.../goop_kitchen_campaign_template_v3.xlsx`). The local xlsx is **retired** — the Drive Sheet above is the single source of truth.
+
+**FAIL LOUD:** if you cannot open the Drive Sheet at the link above (no access, link dead, connector down), **STOP**. Post in `#int-goop-kitchen`: *"Can't open the goop Campaign Sheet v3 — blocked on the refresh, need access checked."* Do **not** work around it by creating a new file. A duplicate is worse than a delayed refresh.
+
+---
+
 ## Phase 1: Confirm Inputs
 
 Before touching anything, confirm:
 
 - **Week date range** (Mon-Sun). Default: the week that ended yesterday (Sunday).
-- **Working folder:** `/Users/maxx/Documents/Claude/Projects/goop kitchen/` (Cowork mounted).
-- **Campaign Sheet v3 file present** at `goop_kitchen_campaign_template_v3.xlsx`.
+- **Campaign Sheet v3 reachable** — open the [Drive Sheet](https://docs.google.com/spreadsheets/d/1HacQMl83W6YIsKwR1X77cL_L9OXpmcyYJ5WXTQ4Vmv4/edit) and confirm you can edit it. If not, fail loud (see above).
+- **A place to drop platform exports** — your Cowork session's working folder / uploads for this run. Files don't need to live on any specific machine; just have them available to this session.
 - **Notion master template page** still locked at `https://www.notion.so/373d3ff018e781dabe7fc0a8710af031` (do not modify the master; only duplicate it).
 
 If any of the above is missing, stop and surface to the user.
@@ -42,7 +59,7 @@ If any of the above is missing, stop and surface to the user.
 
 ## Phase 2: Pull platform data
 
-This is the data-drop phase. Drop the files into the working folder. Use the checklist below — every box is required unless flagged optional. Missing files? Stop and ask.
+This is the data-drop phase. Drop the files into your session's working folder. Use the checklist below — every box is required unless flagged optional. Missing files? Stop and ask.
 
 ### Uber Eats (required: 4 files)
 
@@ -91,7 +108,7 @@ Optional but recommended:
 
 ## Phase 3: Update Campaign Sheet v3
 
-Open `goop_kitchen_campaign_template_v3.xlsx`. Work through the tabs in this order:
+Open the [Campaign Sheet v3 in Drive](https://docs.google.com/spreadsheets/d/1HacQMl83W6YIsKwR1X77cL_L9OXpmcyYJ5WXTQ4Vmv4/edit) **in place** (see the box at the top — never a new file). Work through the tabs in this order:
 
 ### 3a. Active Campaigns tab
 
@@ -156,7 +173,7 @@ The Dashboard pulls most metrics via formulas from Active Campaigns. After 3a is
    - Campaign ROAS below target 2 consecutive weeks
    - Active test failing hypothesis
 
-Save the file.
+The Drive Sheet saves automatically — there is no "save as" and no export step. Just confirm your edits landed in the live Sheet.
 
 ---
 
@@ -242,6 +259,7 @@ Save the page.
 
 ## Key Rules
 
+- **The Campaign Sheet v3 is one shared Drive Sheet. Edit in place, never create a new file.** (See the box at the top.) This is the #1 rule — a duplicate breaks the team's link and loses history.
 - Do NOT modify the Notion master template page. Only duplicate it.
 - Do NOT fabricate retrospective hypotheses for campaigns that predate Jun 2026 discipline. Use the "archived without learnings" tag.
 - Do NOT close a campaign in Active without populating Learnings in Archive. The skill enforces experiment discipline.
@@ -260,4 +278,4 @@ Save the page.
 
 ---
 
-*Updated 2026-06-02. Source: gk <> Spice 6/2 meeting decisions + memory file [[goop-kitchen-campaign-sheet-v3]].*
+*Updated 2026-06-30. v1.1.0: Campaign Sheet v3 migrated from a Maxx-local xlsx to a shared Google Drive Sheet (`1HacQMl83…`) edited in place — fixes the "new file every run" bug when anyone but Maxx ran the refresh. Source: gk <> Spice 6/2 meeting decisions + memory file [[goop-kitchen-campaign-sheet-v3]].*
