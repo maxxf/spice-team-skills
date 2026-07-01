@@ -1,5 +1,20 @@
 # Grubhub Weekly Performance Extraction Agent
 
+> ⚠️ **TAX EXCLUSION + COLUMN SELECTION — READ FIRST**
+>
+> **Total Sales MUST come from `order_subtotal_before_adjustments`. Period.**
+>
+> Banned columns:
+> - `subtotal` — post-adjustment, undercounts by ~5-8% (MBFS, May 2026)
+> - `merchant_total` — tax-inclusive, inflates by ~8-10%
+> - `sale_amount`, `order_total` — tax-inclusive variants
+>
+> Detection fingerprints:
+> - Wrong tax-inclusive column → `commissions_pct < 22%` and AOV jumps above benchmark.
+> - Wrong post-adjustment column → numbers shift down ~5-8% silently.
+>
+> Validator catches both. Use the right column the first time.
+
 Extract weekly performance metrics (Monday-Sunday) from a Grubhub CSV export using
 **Conservative Attribution** methodology.
 
@@ -37,7 +52,7 @@ Extract weekly performance metrics (Monday-Sunday) from a Grubhub CSV export usi
 - **Address:** `street_address` (useful for location disambiguation)
 - **Transaction type:** `transaction_type` — use to identify completed vs refunds/adjustments
 - **Order Date:** `order_date`
-- **Total Sales:** `subtotal` — food subtotal excl tax. This is the new top line.
+- **Total Sales:** `order_subtotal_before_adjustments` — food subtotal **before** merchant adjustments are applied, excl tax. This is the top line. ⚠️ Do NOT use the `subtotal` column for this — `subtotal` is the post-adjustment value and will undercount sales by ~5-8% (discovered MBFS, May 2026). The platform UI may display a Total Sales number a few percent higher than this value; that's believed to be tax-inclusive on the display side — calculated pre-adjustment number is canonical for comparable reporting.
 - **Tax (validation only):** `subtotal_sales_tax` — NOT used in reported metrics. For reconciliation.
 - **merchant_total:** `merchant_total` — tax-inclusive total. For validation only (should ≈ subtotal + tax).
 - **Platform payout (validation only):** `merchant_net_total` — for validation, not reported directly.
@@ -58,13 +73,13 @@ Extract weekly performance metrics (Monday-Sunday) from a Grubhub CSV export usi
 
 ### Sales Calculation
 
-**Total Sales:** Sum `subtotal` for completed orders. No "Gross Sales" (tax-inclusive) row.
+**Total Sales:** Sum `order_subtotal_before_adjustments` for completed orders. **Not `subtotal`** — that column is post-adjustment and undercounts. No "Gross Sales" (tax-inclusive) row.
 
 **Discounts:** Sum of merchant-funded discount amounts (see Marketing Investment Components below).
 
 **Net Sales:** Total Sales - Discounts.
 
-**Marketing Driven Sales:** Sum `subtotal` for completed orders that are marketing-driven (see Attribution below).
+**Marketing Driven Sales:** Sum `order_subtotal_before_adjustments` for completed orders that are marketing-driven (see Attribution below). Same column rule as Total Sales — do NOT use `subtotal`.
 
 **Organic Sales:** Total Sales - Marketing Driven Sales.
 

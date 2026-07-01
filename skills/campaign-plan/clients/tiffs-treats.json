@@ -5,7 +5,7 @@
   "campaigns_json": "tiffs-treats_campaigns.json",
   "campaign_perf_csv": "campaign_performance.csv",
   "ads_detail_csv": "ads_detail.csv",
-  "output": "/tmp/campaign-data-tiffs-treats/tiffs_treats_Campaign_Plan.xlsx",
+  "output": "/Users/maxx/Downloads/tiffs_treats_Campaign_Plan.xlsx",
   "drive_folder_id": "1XAzcexkVwm-sCo0VASAqnl0v1wS0JMut",
   "slack_channel": "#int-tiffs-treats",
   "sheet_id": "1Bbcc_tCDg8Im6RKwpLPS1jlU2Zg66-ESazw-li31J6c",

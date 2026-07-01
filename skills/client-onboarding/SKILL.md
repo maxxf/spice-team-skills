@@ -326,8 +326,8 @@ The following linked views in the client page need filters applied:
 
 - Task templates by service: `references/onboarding-tasks.md`
 - Kickoff email templates: `references/kickoff-email-template.md`
-- Storefront audit skill: `/mnt/.skills/skills/storefront-audit/SKILL.md`
-- Optimized menu sheet skill: `/mnt/.skills/skills/optimized-menu-sheet/SKILL.md`
+- Storefront audit skill: `storefront-audit` (in the `spice-marketplaces` plugin)
+- Optimized menu sheet skill: `optimized-menu-sheet` (in the `spice-marketplaces` plugin)
 
 ## Related Skills
 

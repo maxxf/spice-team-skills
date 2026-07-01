@@ -4,6 +4,10 @@ Per-client configuration for weekly reporting. The orchestrator looks up clients
 
 **Tracker URLs are also stored in each client's Notion page under the `Data Dashboard` property.**
 
+**`UE Attribution Tier`** (default **2** if unset) controls UE marketing attribution — see `agents/ue-extraction.md` Step 3b:
+- **2** — client runs UE ads. Ad-attributed orders/sales come from the Ads Manager **performance** export (`placement_v2` / `campaigns_summary_metrics`, date-filtered). As of Uber's 2026 change the settlement CSV no longer carries per-order ad attribution, so this export is mandatory. If ad spend > 0 but no ad orders are attributed, the run is **blocked** (`validate_report.py`).
+- **1** — client does NOT run UE ads; offer-only attribution is correct. (Any UE ad spend > 0 on a Tier-1 client still blocks — it signals misconfig or unattributed ads.)
+
 ---
 
 ## goop Kitchen
@@ -45,6 +49,7 @@ Per-client configuration for weekly reporting. The orchestrator looks up clients
 - **Excluded brands:** None
 - **DD Portal Access:** Yes (invoiced — portal exports required for ad spend + attribution)
 - **UE Ads Manager Access:** Yes
+- **UE Attribution Tier:** 2 (runs UE ads — ad-attributed orders/sales REQUIRED from the Ads Manager performance export; see ue-extraction Step 3b)
 - **Ad platforms:** UE Ads Manager, DD Sponsored Listings
 - **Notion Portal:** https://www.notion.so/2a6d3ff018e780d991eee460d6c021c5
 

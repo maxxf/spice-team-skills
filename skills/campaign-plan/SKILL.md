@@ -12,7 +12,7 @@ description: >
   [client] roadmap", "tier strategy for [client]", "analyze [client] campaigns" —
   see the Mode router. EXECUTION of new campaigns stays with campaign-ops; this
   skill is the planning + performance-tracking + strategy layer.
-version: 0.2.0
+version: 0.2.5
 ---
 
 # Campaign Plan & Performance Tracker
@@ -209,6 +209,10 @@ This Sheet is the **campaign performance** deliverable — what's running, ad/of
 
 This scope split also resolves the DoorDash data-settlement timing problem (below).
 
+## Where the implementation plan lives: Notion, NOT the sheet (clarified 2026-06-23)
+
+The sheet holds **reporting** (Dashboard/Active Campaigns/Ads/Offers/History/Experiments) and the **strategy plan grid** (Q-plan tabs). It does **NOT** hold the tactical *implementation / setup plan* — the per-location × platform execution checklist (set up / adjust / pause, in-platform campaign names, budgets, who-does-what). **That lives in Notion**, authored via the **campaign-ops** skill: the Task Tracker ticket (the brief + checklist, assigned to ops with an approval contact) plus the Campaign Planning registry entries. Do **not** create a "Setup"/"Implementation" tab in the campaign tracker — execution belongs in Notion where it's assignable, status-trackable, and notifiable; the sheet stays a clean reporting + plan artifact. The weekly Slack briefing's "changes shipped" bullet (weekly-reporting skill) is the read-out of those Notion records.
+
 ## The cadence + the DoorDash settlement timing (refined 2026-06-05)
 
 **The DD settlement reality:** DoorDash financials for a Mon–Sun week don't settle until **Tuesday**. So a Monday refresh has *incomplete DD payout data*. **But** the campaign data this Sheet cares about — ad spend, attributed sales, ROAS, orders — comes from the **Ads Manager + Promotions exports, which ARE available Monday.** It's only net-payout/profitability (the *other* sheet's job) that needs to wait for Tuesday settlement. Because this Sheet is campaign-focused, **Monday works for the campaign plan.**
@@ -273,7 +277,7 @@ The service account already has access via the "1. Active" share. The skill read
 Each client has a config at `clients/<slug>.json` (display name, data dir, input filenames, output path, Drive folder, Slack channel). Once the inputs are in the data dir, the whole update is:
 
 ```bash
-# run from the campaign-plan skill directory (the folder containing this SKILL.md):
+cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
 python3 references/refresh.py --client <slug> [--as-of YYYY-MM-DD]
 ```
 
@@ -339,7 +343,7 @@ If Santi wants a section his hand-built version has that the skill doesn't (e.g.
 
 ## Canonical structure: the 9 tabs (target deliverable)
 
-The canonical campaign plan Sheet has **11 tabs** in this order (9 visible + History hidden + Account Learnings). **Reference instance: goop Sheet** (`1YaKsQnbRuKcEGdwfeFRU34HPhLNda8YyQ3HtHdI5yYU`, built by Santi + Ro — this is the spec to match for tabs 1-9).
+The canonical campaign plan Sheet has **12 tabs** in this order (9 visible + History hidden + Account Learnings + Experiments). **Reference instance: goop Sheet** (`1YaKsQnbRuKcEGdwfeFRU34HPhLNda8YyQ3HtHdI5yYU`, built by Santi + Ro — this is the spec to match for tabs 1-9).
 
 | # | Tab | Source | Auto / Human | Refresh |
 |---|---|---|---|---|
@@ -354,6 +358,14 @@ The canonical campaign plan Sheet has **11 tabs** in this order (9 visible + His
 | 9 | **Notes / Triggers / Definitions** | Static (trigger-action automation rules + glossary + status legend + tab index) | One-time template | As needed |
 | 10 | **History** (hidden) | Append-only snapshot per (week × campaign) — Spend/Sales/Orders/ROAS/Status per weekstart | **Auto, append-only** | Every refresh |
 | 11 | **Account Learnings** | Per-client institutional memory — patterns, client preferences, failed tests, strategic decisions | **Human-authored, never touched by skill** | As insights emerge |
+| 12 | **Experiments** | In-flight register of every live test/checkpoint — owner, control, start, **read/decide week**, decision rule, status, **weekly readings**, result | **Phase S registers rows; weekly run logs readings + stamps data freshness + flags reads-due** | Per strategy session + weekly |
+
+### Tab 12 — Experiments (so reads never hide in a week-column, and the data behind them is accountable)
+
+Tests are *designed* in the Q-plan tabs (the `TEST:` / `READ:` cells) but those bury the decision date inside one week's cell — and nothing guarantees the measurement data is captured each week. The **Experiments** tab fixes both: one row per test with `Owner`, `Control`, `Start`, `Read / decide` week, `Decision rule`, `Status` (⚪ Planned · 🟡 Running · 🔵 Read due · 🟢 Concluded), **`Data thru (wk)`**, **`Weekly readings`**, and `Result`. The lifecycle is **Q-plan (designed) → Experiments (in-flight + weekly readings) → Account Learnings (result)**:
+- **Phase S6 write:** every `TEST:`/`READ:` (and every 60-day re-tier `CHECK`) you put in a roadmap also gets a row here — `EXP-##` for spend/offer/creative tests, `CHK-##` for re-tier checkpoints. A stepped-pullback test names its control store. **Assign an owner** — the person accountable for the read (default: analysis/reads → the GM running reporting; ops-execution tests → the ops analyst). Accountability is a name, not a process.
+- **Weekly run (weekly-reporting), Tuesday:** experiment readings are stamped on the **Tuesday reporting cycle** (once DD has settled), keyed to the just-closed week — **Monday is the forward-planning pass and writes no readings.** The Tuesday run advances Planned→Running when Start passes; **for every Running/Read-due row, logs that week's test-vs-control reading into `Weekly readings` and stamps `Data thru (wk)` = the just-closed week**; flags any row whose `Read / decide` week ≤ that week as 🔵 **Read due**; and on a concluded test writes the `Result` + appends the finding to **Account Learnings**. (Cadence is per the client's `reporting_day`; goop = `tuesday_complete`.)
+- **Accountability gate (CRITICAL):** a Running experiment whose `Data thru (wk)` ≠ current week after the run = the read is being built on missing data → flagged against its owner with the validation failures (see `weekly-reporting/references/attribution-and-completeness.md` §6). The read at the decision week is only as good as the interim weekly readings behind it.
 
 ### Tab 10 — History (the source of truth for trend math)
 
@@ -498,7 +510,7 @@ First-time setup (once per machine): `python3 -m pip install --user openpyxl goo
 The render takes the Phase 0 tracker CSV and (optionally) the performance CSV:
 
 ```bash
-# run from the campaign-plan skill directory (the folder containing this SKILL.md):
+cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
 python3 references/build_campaign_plan_xlsx.py \
   --client "<display name>" \
   --tracker-csv /tmp/campaign-data-<client>/<client>_tracker.csv \

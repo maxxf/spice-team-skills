@@ -1,5 +1,15 @@
 # Uber Eats Weekly Performance Extraction Agent
 
+> ⚠️ **TAX EXCLUSION — READ FIRST**
+>
+> **Total Sales MUST come from `Sales (excl. tax)`. Period.**
+>
+> Banned columns: `Sales (incl. tax)`, `merchant_total`, `Order Total`, anything with "Total" or "Gross" in the name. These are tax-inclusive and will inflate sales by ~8-10% (CA sales tax).
+>
+> Detection fingerprint: if Total Sales is mistakenly summed from a tax-inclusive column, you'll see `commissions_pct < 27%` and AOV jump above benchmark with no business cause. The validator catches both — but use the right column the first time.
+>
+> Root cause of the May 2026 goop Kitchen incident (3 weeks of inflated reports): summing the wrong column for Total Sales.
+
 Extract weekly performance metrics (Monday-Sunday) from Uber Eats exports using
 **Conservative Attribution + Net Ads With Credits** methodology.
 
@@ -15,9 +25,11 @@ Extract weekly performance metrics (Monday-Sunday) from Uber Eats exports using
 
 ## Step 0: Load Client Config
 
-**If `OUTPUT/client_profile.json` exists** (written by the orchestrator from the client's Notion Weekly Reporting Profile), read it first. Extract: `ue_ads_access` (determines Tier 1 vs Tier 2), UE-specific data quirks (e.g., $0.99 marketing fee active/inactive), and location map. These override the registry values below.
+**If `OUTPUT/client_profile.json` exists** (written by the orchestrator from the client's Notion Weekly Reporting Profile), read it first. Extract: `ue_attribution_tier` (1 or 2, **default 2** if unset — controls ad attribution, see Step 3b), `ue_ads_access`, UE-specific data quirks (e.g., $0.99 marketing fee active/inactive), and location map. These override the registry values below.
 
-**Otherwise**, check `references/client-registry.md` for `UE Ads Manager Access` and quirks.
+**Otherwise**, check `references/client-registry.md` for `UE Attribution Tier`, `UE Ads Manager Access`, and quirks.
+
+> **Tier is explicit, not inferred.** Default 2. Set Tier 1 ONLY for clients with no UE ad program — never based on whether an export happens to be present this week.
 
 ---
 
@@ -79,13 +91,12 @@ Attribution happens at the **individual order row level** in the transaction CSV
 - **Offer-Driven Sales:** sum `Sales (excl. tax)` for these orders
 - **Offer/Discount Value:** sum of abs values: abs(`Offers on items`) + abs(`Delivery Offers`) where each < 0
 
-### Ad-Driven Orders
-- **Definition:** Any row where `Other payments description` = "Ad Spend" AND `Other payments` < 0 AND the row has order data (non-zero `Sales (excl. tax)` or a non-blank `Order ID`)
-- These are orders where UE attributed ad spend directly to a specific order — the ad cost and the order exist on the same row.
-- **Two patterns exist across clients:**
-  1. **Per-order ad attribution:** Ad Spend appears on a Completed order row WITH sales, Order ID, etc. That order is ad-driven. (Common for most active-ads clients)
-  2. **Standalone spend rows:** Ad Spend appears on rows with blank Order Status, $0 sales, no Order ID. These are daily aggregate ad charges per store — NOT tied to specific orders. (Seen when campaigns are paused or UE isn't attributing per-order)
-- **How to handle:** Check ALL rows with "Ad Spend" description. If the row has net_sales > 0 or a non-blank Order ID, it's an ad-attributed order. If it has $0 sales and no Order ID, it's a standalone spend charge (still count toward ad spend, but can't attribute orders without Ads Manager cross-reference).
+### Ad-Driven Orders — ⚠️ 2026 CHANGE, READ CAREFULLY
+**You cannot identify ad-driven ORDERS from the transaction CSV.** As of Uber's 2026 update (the "W26" change), the per-order `Marketing Adjustment` column is empty and "Ad Spend" appears ONLY on standalone aggregate rows (blank `Order Status`, $0 `Sales`, no `Order ID`) — these are daily ad CHARGES, not order flags. (Verified Jun 2026: `Marketing Adjustment` nonzero on **0 of 300,700** goop orders in 2026, vs 1,313–30,054 in 2025; export headers otherwise identical.)
+
+- The transaction CSV yields **ad SPEND only** (Step 4 netting) — never ad orders.
+- Ad-driven **orders and sales come exclusively from the Ads Manager performance export** (Tier 2 — Step 3b).
+- Do **not** mark any transaction row as ad-driven and do **not** infer ad orders from "Ad Spend" rows. Offer attribution (above) is unaffected and remains per-order.
 
 ### Combined Marketing Attribution
 - **Marketing-Driven Orders:** Orders that are offer-driven OR ad-driven (count once if both — no double-counting)
@@ -104,28 +115,19 @@ UE charges some clients a **$0.99 marketing fee per offer redemption**. Check fo
 
 ## Step 3b: Marketing Attribution Summary (Tier Selection)
 
-**Check the client registry for `UE Ads Manager Access`.**
+**Use the explicit `UE Attribution Tier` from Step 0 (default 2). Do NOT infer tier from whether an export happens to be present.**
 
-### Tier 1: Transaction CSV Only (default)
+### Tier 2 — client runs UE ads (default)
 
-If `UE Ads Manager Access = No` or `TBD`, or if no Ads Manager export was provided:
+Ad-driven orders/sales **must** come from the **UE Ads Manager performance export**, date-filtered to the reporting week (Mon–Sun):
+- Source: `placement_v2_<dates>.csv` (per campaign/placement; cols `Date`, `Orders`, `Sales`, `Ad spend`) or `campaigns_summary_metrics_<dates>.csv` (`Orders`, `Sales`, `Ad spend (USD)`, `Locations`, `Audience targeted`).
+- ⚠️ **NOT** `ads-campaigns-list*.csv` — that is all-time campaign config/totals and is useless for weekly attribution.
+- Per store: `ads_attributed_orders` = Σ `Orders`, `ads_attributed_sales` = Σ `Sales` across that store's campaigns for the week (distribute multi-store campaigns proportionally — see below).
+- Also use it for campaign-level detail (spend, ROAS, impressions, clicks) and segment breakdowns (new vs returning, audience types).
 
-- **Marketing-Driven Orders** = offer-driven orders from Step 3 (offer OR per-order ad-attributed)
-- **Marketing-Driven Sales** = net sales of those orders
-- **Ad Spend** = from transaction CSV netting (Step 4) — counted in Total Marketing Investment
-- **No ad-attributed orders/sales added** beyond what's already in the transaction CSV
-- Add validation flag: `"UE attribution: Tier 1 (offer-only). Ad spend included in marketing investment but ad-driven orders not attributed. ROAS is conservative."`
-- Do NOT warn or block. This is the standard path for most clients.
+**If the performance export is missing — or it yields 0 ad orders while ad spend > 0 — STOP. Do NOT publish offer-only numbers.** Set `ad_attributed_orders = 0` and emit a flag; `validate_report.py` will FAIL the run (BLOCKING). Offer-only output here understates ROAS and overstates CPO, because the 2026 settlement CSV no longer carries ad orders (Step 3). Pull the performance export and re-run.
 
-### Tier 2: Transaction CSV + Ads Manager Export (enhanced)
-
-If `UE Ads Manager Access = Yes` AND an Ads Manager **performance export** is provided (date-filtered, with actual spend/sales/orders data):
-
-- Use it for **campaign-level detail** in the campaigns output (spend, ROAS, impressions, clicks per store)
-- Use it for **segment breakdowns** (new vs returning customers, audience types)
-- Use Ads Manager attributed orders/sales for the enhanced marketing split (see below)
-
-#### Ads Manager Attribution Logic
+#### Ads Manager Attribution Logic (Tier 2)
 
 Uber's Ads Manager uses view-through attribution — any customer who *saw* a sponsored listing gets counted, even if they later converted via an offer. This means heavy overlap between offer orders and Ads Manager attributed orders.
 
@@ -136,6 +138,7 @@ Uber's Ads Manager uses view-through attribution — any customer who *saw* a sp
 4. **Unique ad orders = max(0, ads_attributed_orders - overlap)**
 5. **Combined marketing orders = offer_orders + unique_ad_orders**
 6. **Combined marketing sales** = (offer_driven_sales) + (unique_ad_orders × store AOV)
+7. **Record `ad_attributed_orders` = Σ unique_ad_orders and `ad_attributed_sales` = Σ (unique_ad_orders × store AOV)** in the output (overview + per location). These are exactly what `validate_report.py`'s ad-attribution gate checks — if ad spend > 0 they must be > 0.
 
 This means: ad orders only add to marketing when Ads Manager claims MORE orders than the offers already captured. If a store has 500 offer orders and 400 Ads Manager orders, unique ad orders = 0 (all ad-attributed orders are already counted via offers).
 
@@ -151,41 +154,31 @@ When the Ads Manager `Locations` field shows a count (e.g., "4") instead of a st
 
 **NOTE:** The Ads Manager **campaign list export** (shows campaign configs, statuses, all-time metrics) is NOT useful for weekly attribution. You need the **performance report filtered to the week's date range.**
 
+### Tier 1 — client does NOT run UE ads (set explicitly)
+
+- Offer-only attribution. `ad_attributed_orders = 0`, `ad_attributed_sales = 0`.
+- If an Ads Manager export is present, use it for campaign detail only.
+- **Sanity flag:** if `ad_spend > 0` for a Tier-1 client, emit a flag — config says no ads but spend exists (misconfigured tier, or ads running unattributed). `validate_report.py` treats UE `ad_spend > 0` with 0 ad-attributed orders as BLOCKING regardless of tier, so either correct the tier or supply the performance export.
+
 ---
 
-## Step 4: Ads + Credits Netting (from Transaction CSV) — REQUIRED, DO NOT SKIP
+## Step 4: Ads + Credits Netting (from Transaction CSV)
 
-**This step is the #1 source of missed data in past runs (May 2026 incident: Dulari missed UE ad spend by skipping this step on a client where ad spend rows had blank Order Status). Do not skip. Do not assume the order-level rows already captured ad spend — they don't.**
+Ad/credit data lives in `Other payments description` (label) and `Other payments` (amount). These rows typically have **blank Order Status**.
 
-Ad/credit data lives in `Other payments description` (label) and `Other payments` (amount). These rows typically have **blank Order Status** and are NOT order rows.
+**Ad-Related Row Definition:** treat a row as ad-related if:
+- `Other payments description` contains "Ad" (case-insensitive), OR
+- `Other payments description` equals "Customer contribution"
 
-**Required process — execute literally:**
-
-1. Filter the transaction CSV to ALL rows where `Other payments description` is non-empty. Include rows with blank Order Status. Include rows with $0 in `Sales (excl. tax)`. Include rows with no Order ID.
-2. From that filtered set, identify ad-related rows:
-   - `Other payments description` contains "Ad" (case-insensitive), OR
-   - `Other payments description` equals "Customer contribution"
-3. Compute the metrics below from those ad-related rows.
-
-**EXCLUDE from ad spend:** $0.99 marketing fees (see Step 3 above — those are offer costs).
+**EXCLUDE from ad spend:** $0.99 marketing fees (see Step 3 above).
 
 **Ad Metrics (ALWAYS from transaction CSV, never from Ads Manager):**
-- **Gross Ad Spend:** sum abs(`Other payments`) where description == `"Ad Spend"` (case-insensitive match)
+- **Gross Ad Spend:** sum abs(`Other payments`) where description == `"Ad Spend"`
 - **Ad Credits / Offsets:** sum of positive `Other payments` among ad-related rows where description != `"Ad Spend"`
 - **Net Ad Spend Impact (Payout Impact):** sum of signed `Other payments` among ad-related rows (typically negative)
 - **Net Ad Spend (Cost):** abs(Net Ad Spend Impact)
 
 **IMPORTANT:** Ad Spend for the tracker/overview MUST come from transaction CSV netting, NOT from Ads Manager totals. Ads Manager reports spend using different attribution windows and may include spend from outside the Mon-Sun reporting period. The transaction CSV reflects actual charges to the merchant's account for the week.
-
-**MANDATORY output for this step (include in your final JSON's `validation.flags` array):**
-
-After computing Ad Spend, emit a flag confirming what you found:
-
-```
-"step_4_ad_spend_audit: scanned <N> rows with 'Other payments description' non-empty, found <M> 'Ad Spend' rows summing to $<total>, found <K> other ad-related rows summing to $<total>"
-```
-
-If `M == 0` AND `discounts > 0` AND `Ads Manager Access = Yes` for this client (per profile), STOP and ask the user: "Found zero 'Ad Spend' rows in the transaction CSV but client is supposed to be running ads. Did the CSV export include all relevant rows? Check the export filter or re-pull from the platform."
 
 ---
 
@@ -259,7 +252,8 @@ Before outputting results, confirm:
 - Marketing Driven Sales + Organic Sales = Total Sales (Net) within $1
 - Orders from Marketing + Organic Orders = Total Orders exactly
 - Net Payout % is reasonable (typically 50-90% range; flag if outside)
-- Note attribution tier used: Tier 1 (offer-only) or Tier 2 (offer + Ads Manager)
+- Note attribution tier used: Tier 1 (offer-only, non-ads client) or Tier 2 (offer + Ads Manager)
+- **Ad-attribution gate (BLOCKING):** if UE `ad_spend > 0` and `ad_attributed_orders = 0`, the report is INVALID — do NOT publish. Supply the Ads Manager performance export and re-run. `validate_report.py` enforces this.
 - Report attribution breakdown: X offer orders, Y ad orders (if Tier 2), Z overlap (if Tier 2)
 - Flag $0.99 marketing fee status (active/inactive for this client)
 - Flag any anomalies: unusually large credits/offsets, net ad spend flipping positive, etc.
@@ -289,6 +283,9 @@ Write standardized JSON to `OUTPUT/ue_results.json`:
     "organic_sales": 0.00,
     "total_orders": 0,
     "orders_from_marketing": 0,
+    "ad_attributed_orders": 0,
+    "ad_attributed_sales": 0.00,
+    "ue_attribution_tier": 2,
     "organic_orders": 0,
     "aov": 0.00,
     "total_marketing_investment": 0.00,

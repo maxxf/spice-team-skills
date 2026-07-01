@@ -45,6 +45,18 @@ PCT_TOLERANCE = 0.5          # ±0.5 percentage points
 PAYOUT_RECONCILE_PCT = 2.0   # Flag if calc vs column differs > 2%
 PAYOUT_PCT_RANGE = (50, 85)  # Soft flag outside this range
 
+# ── Tax-inclusion guardrail (added May 2026 after goop Kitchen incident) ──
+# If Total Sales accidentally includes tax, two fingerprints emerge:
+#   1. commissions_pct drops below the platform's true rate (denominator inflated)
+#   2. AOV jumps above benchmark with no business cause
+# Below: minimum commissions_pct expected per platform. Flag if observed is lower.
+COMMISSION_PCT_MIN = {
+    "uber_eats": 27.0,  # UE typical commission rate ~30%
+    "doordash": 25.0,   # DD typical ~28%
+    "grubhub": 22.0,    # GH typical ~25%
+}
+AOV_BENCHMARK_MAX = 60.0  # AOV above this is suspicious for our clients ($20-50 typical)
+
 
 def load_platform_jsons(output_dir):
     """Load all *_results.json files from the output directory."""
@@ -194,27 +206,6 @@ def validate_metrics(metrics, label_prefix):
                     f"(threshold: {PAYOUT_RECONCILE_PCT}%)"
                 )
 
-    # Suspicious ad_spend = 0 detection (May 2026 incident: UE ad spend missed because
-    # the extraction agent skipped Step 4's standalone Ad Spend rows).
-    # If marketing-driven sales/orders are non-zero but ad_spend is 0, that suggests
-    # offers are tracked but ad spend isn't — flag for human review.
-    if ad == 0 and mds > 0 and "uber" in label_prefix.lower():
-        warnings.append(
-            f"{label_prefix} ad_spend = $0 but marketing_driven_sales = ${mds:,.0f}. "
-            f"For UE, this can happen with offer-only attribution (Tier 1) — but it can also indicate "
-            f"missed standalone Ad Spend rows in the transaction CSV (rows with blank Order Status, "
-            f"Other payments description = 'Ad Spend'). Verify the extraction agent processed Step 4 correctly."
-        )
-
-    # Same check for DD/GH (less common pattern but possible)
-    if ad == 0 and mds > 0 and ("doordash" in label_prefix.lower() or "dd" in label_prefix.lower()):
-        warnings.append(
-            f"{label_prefix} ad_spend = $0 but marketing_driven_sales = ${mds:,.0f}. "
-            f"For DoorDash, this is expected ONLY for enterprise clients with invoiced ad spend "
-            f"(not in settlement CSV). Confirm this client is on invoiced billing — if not, "
-            f"the Sponsored Listing CSV may not have been processed."
-        )
-
     return critical, warnings
 
 
@@ -337,6 +328,80 @@ def check_kpi_targets(platforms, profile):
     return warnings
 
 
+def check_tax_inclusion(platform_name, platform_data, label):
+    """Detect the tax-inclusion class of bug (added May 2026 after goop Kitchen incident).
+
+    If Total Sales is accidentally summed from a tax-inclusive column, two
+    fingerprints emerge that this function checks:
+      1. commissions_pct falls below the platform's typical commission rate
+         (the denominator is inflated by ~8-10% of tax, so the ratio drops)
+      2. AOV jumps above the benchmark $60 with no business explanation
+
+    Returns warnings (soft — not blocking, but visible in the QA section).
+    """
+    warnings = []
+    overview = platform_data.get("overview", {})
+
+    # Check 1: commissions_pct below platform minimum
+    expected_min = COMMISSION_PCT_MIN.get(platform_name)
+    actual_pct = safe_get(overview, "commissions_pct")
+    total_sales = safe_get(overview, "total_sales")
+    if expected_min is not None and actual_pct > 0 and total_sales > 0:
+        if actual_pct < expected_min:
+            warnings.append(
+                f"{label} commissions_pct = {actual_pct:.1f}% — below platform minimum "
+                f"({expected_min:.1f}%). FINGERPRINT: Total Sales may include tax. Verify "
+                f"the extraction agent used the pre-tax column (see methodology §2a)."
+            )
+
+    # Check 2: AOV above benchmark
+    aov = safe_get(overview, "aov")
+    if aov > AOV_BENCHMARK_MAX:
+        warnings.append(
+            f"{label} AOV = ${aov:.2f} — above benchmark ${AOV_BENCHMARK_MAX:.0f}. "
+            f"Verify Total Sales is pre-tax and Total Orders count is correct."
+        )
+
+    return warnings
+
+
+def check_ad_attribution_gate(platform_name, platform_data, label):
+    """UE 2026 ad-attribution gate (added Jun 2026 — goop ROAS incident).
+
+    Uber's 2026 settlement/transaction export no longer carries per-order ad
+    attribution: the `Marketing Adjustment` column was emptied and "Ad Spend"
+    rows are aggregate daily charges only. So ad-driven ORDERS can only come from
+    the Ads Manager performance export (Tier 2). If a UE report shows ad SPEND > 0
+    but ZERO ad-attributed orders, ROAS is understated and CPO overstated — the
+    exact silent failure that shipped wrong client numbers for 3 weeks. BLOCK it.
+
+    Only applies to uber_eats. No ad spend -> offer-only is correct, no gate.
+    """
+    critical = []
+    if platform_name != "uber_eats":
+        return critical
+    overview = platform_data.get("overview", {})
+    ad_spend = safe_get(overview, "ad_spend")
+    if ad_spend <= 0:
+        return critical  # client isn't running UE ads this week — offer-only is correct
+    ad_orders = overview.get("ad_attributed_orders")
+    if ad_orders is None:
+        critical.append(
+            f"{label} ad_spend=${ad_spend:,.0f} but output has no `ad_attributed_orders` field -- "
+            f"cannot confirm ad orders were attributed. UE 2026 settlement exports carry no per-order "
+            f"ad attribution; supply the Ads Manager PERFORMANCE export (placement_v2 / Campaign Summary "
+            f"by Location, date-filtered) and re-run. Refusing to publish potentially deflated ROAS."
+        )
+    elif ad_orders == 0:
+        critical.append(
+            f"{label} ad_spend=${ad_spend:,.0f} but 0 ad-attributed orders -> ROAS understated / CPO overstated. "
+            f"UE 2026 settlement exports no longer tag ad orders. Supply the Ads Manager PERFORMANCE export "
+            f"(placement_v2 / campaigns_summary_metrics, date-filtered -- NOT ads-campaigns-list) and re-run. "
+            f"If this client genuinely runs no UE ads, ad_spend should be 0 (check the Step 4 netting)."
+        )
+    return critical
+
+
 def generate_report_md(all_critical, all_warnings, platforms_checked):
     """Generate human-readable validation report."""
     lines = []
@@ -417,7 +482,15 @@ def main():
         warn = validate_extraction_flags(data, f"[{label}]")
         all_warnings.extend(warn)
 
-    # 6. KPI target checks (soft)
+        # 6. Tax-inclusion fingerprint (commissions_pct + AOV)
+        warn = check_tax_inclusion(platform_name, data, f"[{label}]")
+        all_warnings.extend(warn)
+
+        # 6b. UE 2026 ad-attribution gate (BLOCKING): ad spend with no attributed ad orders
+        crit = check_ad_attribution_gate(platform_name, data, f"[{label}]")
+        all_critical.extend(crit)
+
+    # 7. KPI target checks (soft)
     if profile:
         kpi_warn = check_kpi_targets(platforms, profile)
         all_warnings.extend(kpi_warn)
@@ -438,6 +511,8 @@ def main():
             "location_sums": True,
             "metric_completeness": True,
             "extraction_flags": True,
+            "tax_inclusion_fingerprint": True,
+            "ad_attribution_gate": True,
             "kpi_targets": profile is not None
         }
     }

@@ -1,0 +1,138 @@
+{
+  "client": "Fresh Kitchen",
+  "_meta": {
+    "platforms": ["uber_eats", "doordash"],
+    "no_grubhub": true,
+    "location_count_total": 15,
+    "location_count_active": 14,
+    "pilot_locations_count": 10,
+    "source": "Notion client page (10-location pilot) + Fresh-Kitchen-Locations-for-Grubhub.xlsx (full 15-location address list)",
+    "platform_strings_verified": false,
+    "verification_owner": "Manish",
+    "verification_notes": "Best-guess UE/DD strings based on goop kitchen pattern (lowercase brand + parenthesized location). Reporter to verify on first run and correct any mismatches. Fresh Kitchen has NO Grubhub presence — confirmed in Notion client page."
+  },
+  "locations": {
+    "Tampa Westshore": {
+      "address": "4616 W Kennedy Blvd, Tampa, FL 33609",
+      "market": "Tampa Bay",
+      "pilot": false,
+      "uber_eats": ["fresh kitchen (Tampa Westshore)", "fresh kitchen (Westshore)"],
+      "doordash": ["Fresh Kitchen (Westshore)", "Fresh Kitchen (Tampa - Westshore)"]
+    },
+    "Tampa USF": {
+      "address": "11802 Bruce B Downs Blvd, Tampa, FL 33612",
+      "market": "Tampa Bay",
+      "pilot": false,
+      "uber_eats": ["fresh kitchen (USF)", "fresh kitchen (Tampa USF)"],
+      "doordash": ["Fresh Kitchen (USF)", "Fresh Kitchen (Tampa - USF)"]
+    },
+    "New Tampa": {
+      "address": "8648 Hunters Village Rd, Tampa, FL 33647",
+      "market": "Tampa Bay",
+      "pilot": false,
+      "uber_eats": ["fresh kitchen (New Tampa)"],
+      "doordash": ["Fresh Kitchen (New Tampa)"]
+    },
+    "St. Petersburg": {
+      "address": "4447 4th St N, Ste 2, St. Petersburg, FL 33703",
+      "market": "Tampa Bay",
+      "pilot": false,
+      "uber_eats": ["fresh kitchen (St Petersburg)", "fresh kitchen (St. Petersburg)"],
+      "doordash": ["Fresh Kitchen (St Petersburg)"]
+    },
+    "Sarasota": {
+      "address": "8491 Cooper Creek Blvd, Sarasota, FL 34201",
+      "market": "Sarasota",
+      "pilot": false,
+      "uber_eats": ["fresh kitchen (Sarasota)"],
+      "doordash": ["Fresh Kitchen (Sarasota)"]
+    },
+    "SoDo": {
+      "address": "2855 S Orange Ave, Orlando, FL 32806",
+      "market": "Central Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (SODO)", "fresh kitchen (SoDo)"],
+      "doordash": ["Fresh Kitchen (SODO)", "Fresh Kitchen (SoDo)"]
+    },
+    "Waterford": {
+      "address": "851 N Alafaya Trail, Orlando, FL 32828",
+      "market": "Central Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Waterford Lakes)", "fresh kitchen (Waterford)"],
+      "doordash": ["Fresh Kitchen (Waterford Lakes)", "Fresh Kitchen (Waterford)"]
+    },
+    "Winter Garden": {
+      "address": "3337 Daniels Rd, Ste 120, Winter Garden, FL 34787",
+      "market": "Central Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Winter Garden)"],
+      "doordash": ["Fresh Kitchen (Winter Garden)"]
+    },
+    "Lakeland": {
+      "address": "4520 Florida Ave S, Lakeland, FL 33813",
+      "market": "Central Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Lakeland)"],
+      "doordash": ["Fresh Kitchen (Lakeland)"]
+    },
+    "Gainesville": {
+      "address": "700 NW 62nd St, Gainesville, FL 32605",
+      "market": "North Central Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Gainesville)"],
+      "doordash": ["Fresh Kitchen (Gainesville)"]
+    },
+    "Davie": {
+      "address": "2853 S University Dr, Davie, FL 33328",
+      "market": "South Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Davie)"],
+      "doordash": ["Fresh Kitchen (Davie)"]
+    },
+    "Weston": {
+      "address": "1382 Weston Rd, Weston, FL 33326",
+      "market": "South Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Weston)"],
+      "doordash": ["Fresh Kitchen (Weston)"]
+    },
+    "Boca Raton": {
+      "address": "5550 N Military Trail, Bay 214, Boca Raton, FL 33496",
+      "market": "South Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Boca Raton)", "fresh kitchen (Boca)"],
+      "doordash": ["Fresh Kitchen (Boca Raton)", "Fresh Kitchen (Boca)"]
+    },
+    "Miami Wynwood": {
+      "address": "3201 N Miami Ave, Ste 103, Miami, FL 33127",
+      "market": "South Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Wynwood)", "fresh kitchen (Miami Wynwood)", "fresh kitchen (Miami)"],
+      "doordash": ["Fresh Kitchen (Wynwood)", "Fresh Kitchen (Miami)"]
+    },
+    "Lutz": {
+      "address": "17629 Harpers Run Rd, Lutz, FL 33558",
+      "market": "Tampa Bay",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Lutz)"],
+      "doordash": ["Fresh Kitchen (Lutz)"]
+    },
+    "Lake Mary": {
+      "address": "3793 Lake Emma Rd, Lake Mary, FL 32746",
+      "market": "Central Florida",
+      "pilot": true,
+      "uber_eats": ["fresh kitchen (Lake Mary)"],
+      "doordash": ["Fresh Kitchen (Lake Mary)"]
+    },
+    "South Tampa": {
+      "address": "1719 W Kennedy Blvd, Tampa, FL 33606",
+      "market": "Tampa Bay",
+      "pilot": false,
+      "opening": "Summer 2026",
+      "uber_eats": [],
+      "doordash": []
+    }
+  },
+  "merge_rules": {},
+  "notes": "Pilot = 10 priority locations confirmed by Hannah McDonnell on Mar 9. (Note: Hannah's list said 'Weston/Miami/Davie/Boca/Lake Mary/Waterford/Winter Garden/Gainesville/Lakeland/Lutz/SoDo' = 11 stores; flagged as 10 in Notion property — treat all 11 as pilot.) South Tampa opens Summer 2026 — leave out of weekly runs until live."
+}

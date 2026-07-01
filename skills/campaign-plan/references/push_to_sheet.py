@@ -29,27 +29,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 
 
-def _robot_email() -> str:
-    try:
-        with open(KEY_PATH) as f:
-            return json.load(f).get("client_email", "the service account")
-    except Exception:
-        return "the service account"
-
-
 def _drive():
     from google.oauth2 import service_account
     from googleapiclient.discovery import build
     if not os.path.exists(KEY_PATH):
-        sys.exit(
-            f"STOP: no service-account key at {KEY_PATH}. The campaign plan can't be published "
-            f"to Drive without it, and I will NOT fall back to leaving a local .xlsx lying around. "
-            f"Get the key onto this machine (see references/google-service-account-setup.md), then re-run.")
+        sys.exit(f"no service-account key at {KEY_PATH}. See references/google-service-account-setup.md.")
     creds = service_account.Credentials.from_service_account_file(KEY_PATH, scopes=SCOPES)
     return build("drive", "v3", credentials=creds, cache_discovery=False)
 
 
-def push(client_slug: str, xlsx_path: str, recreate: bool = False) -> str:
+def push(client_slug: str, xlsx_path: str) -> str:
     from googleapiclient.http import MediaFileUpload
     cfg_path = os.path.join(SKILL, "clients", f"{client_slug}.json")
     with open(cfg_path) as f:
@@ -61,22 +50,11 @@ def push(client_slug: str, xlsx_path: str, recreate: bool = False) -> str:
     media = MediaFileUpload(xlsx_path, mimetype=XLSX_MIME, resumable=True)
 
     # Update-in-place if we already have a valid Sheet; else create one in the client folder.
-    # FAIL LOUD: a recorded sheet_id that the robot can't open almost always means a sharing
-    # problem, NOT a deleted sheet. Silently recreating it spawns a duplicate every run and
-    # breaks the link the team/client already have. Stop and make the human fix sharing,
-    # unless they explicitly pass --recreate to mint a fresh Sheet on purpose.
-    if sheet_id and not recreate:
+    if sheet_id:
         try:
             drive.files().get(fileId=sheet_id, fields="id", supportsAllDrives=True).execute()
-        except Exception as e:
-            sys.exit(
-                f"STOP: clients/{client_slug}.json records sheet_id={sheet_id} but the robot "
-                f"({_robot_email()}) can't open it ({type(e).__name__}). This is almost always a "
-                f"sharing issue — share that Sheet with the robot as Editor (do NOT delete the "
-                f"recorded id). If you truly want a brand-new Sheet, re-run with --recreate. "
-                f"Refusing to silently create a duplicate.")
-    elif recreate:
-        sheet_id = None  # explicit opt-in to mint a fresh Sheet
+        except Exception:
+            sheet_id = None  # recorded id is gone/inaccessible — recreate
 
     if sheet_id:
         f = drive.files().update(fileId=sheet_id, media_body=media,
@@ -103,10 +81,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--client", required=True, help="client slug -> clients/<slug>.json")
     ap.add_argument("--xlsx", required=True, help="generated workbook to push")
-    ap.add_argument("--recreate", action="store_true",
-                    help="mint a brand-new Sheet even if one is recorded (use only when the old one is truly gone)")
     args = ap.parse_args()
-    push(args.client, args.xlsx, recreate=args.recreate)
+    push(args.client, args.xlsx)
 
 
 if __name__ == "__main__":

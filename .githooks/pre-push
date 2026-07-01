@@ -1,0 +1,20 @@
+#!/bin/sh
+# Pre-push guardrail — block any push that would ship skill divergence.
+# Single source of truth: every skill must resolve to ONE content hash across
+# the monolith and (on Maxx's machine) the Cowork authoring source. This is the
+# enforcement that prevents the weekly-reporting / campaign-plan drift from
+# happening again. Emergency override: git push --no-verify
+REPO="$(git rev-parse --show-toplevel)"
+EXTRA=""
+if [ -d "$HOME/Desktop/Cowork/Skills" ]; then
+  EXTRA="--extra cowork=$HOME/Desktop/Cowork/Skills"
+fi
+echo "[pre-push] checking skill consistency..."
+if ! python3 "$REPO/check-consistency.py" $EXTRA; then
+  echo "" >&2
+  echo "PUSH BLOCKED: skill divergence detected (see above)." >&2
+  echo "Reconcile every divergent skill to one source before pushing." >&2
+  echo "(emergency override: git push --no-verify)" >&2
+  exit 1
+fi
+echo "[pre-push] skills consistent — proceeding."

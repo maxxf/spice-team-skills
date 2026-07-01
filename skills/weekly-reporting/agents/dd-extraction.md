@@ -1,5 +1,15 @@
 # DoorDash Weekly Performance Extraction Agent
 
+> ⚠️ **TAX EXCLUSION — READ FIRST**
+>
+> **Total Sales MUST come from `Subtotal` (food total excl tax). Period.**
+>
+> Banned columns: `Sales (incl. tax)`, `Order Total`, `Net total`, any "Total" column containing tax. These will inflate sales by ~8-10% (CA sales tax).
+>
+> Detection fingerprint: if Total Sales is summed from a tax-inclusive column, `commissions_pct < 25%` and AOV jumps above benchmark with no business cause. Validator catches both.
+>
+> Root cause of the May 2026 goop Kitchen incident (3 weeks of inflated reports): summing the wrong column for Total Sales.
+
 Extract weekly performance metrics (Monday-Sunday) from DoorDash exports using
 **Conservative Attribution** methodology with Marketplace-only filtering.
 

@@ -25,9 +25,38 @@ def test_compute_emits_payload_with_required_shape():
     assert payload["sub_skill"] == "diagnostic-topline"
     assert payload["client"] == "goop-kitchen"
     assert "AOV" in payload["computed"]["radar_contributions"]
-    assert "Re-order Rate" in payload["computed"]["radar_contributions"]
+    # Re-order Rate only present when repeat-customer data supplied (no fake 6.0)
+    assert "Re-order Rate" not in payload["computed"]["radar_contributions"]
     assert payload["computed"]["metrics"]["gross_sales"] > 0
     assert isinstance(payload["computed"]["findings"], list)
+
+
+def test_emits_weekly_trend_for_overlay_chart():
+    payload = compute.run(client="x", window_start="2026-02-08",
+                          window_end="2026-05-08", df=_normal_df())
+    tw = payload["computed"]["metrics"]["trend_weekly"]
+    assert tw["weeks"] == [f"W{w:02d}" for w in range(1, 11)]
+    assert len(tw["gmv"]) == len(tw["net_payout"]) == len(tw["roas"]) == 10
+    # Weekly GMV reconciles to the portfolio total (no fabrication)
+    assert round(sum(tw["gmv"]), 2) == round(payload["computed"]["metrics"]["gross_sales"], 2)
+    assert all(r == 0.0 for r in tw["roas"])  # no spend column → roas 0
+
+
+def test_reorder_scored_from_real_input_when_present():
+    df = _normal_df().assign(reorder_rate_pct=47.0)  # 45–55 band → 9.0
+    payload = compute.run(client="x", window_start="2026-01-01",
+                          window_end="2026-04-01", df=df)
+    rc = payload["computed"]["radar_contributions"]
+    assert rc["Re-order Rate"] == 9.0
+    assert payload["data_quality"]["gaps"] == []
+
+
+def test_reorder_suppressed_with_gap_when_no_data():
+    payload = compute.run(client="x", window_start="2026-01-01",
+                          window_end="2026-04-01", df=_normal_df())
+    rc = payload["computed"]["radar_contributions"]
+    assert "Re-order Rate" not in rc  # no fabricated 6.0
+    assert any("Re-order Rate" in g for g in payload["data_quality"]["gaps"])
 
 
 def test_compute_payload_passes_contract_validator():

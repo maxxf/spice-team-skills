@@ -353,7 +353,6 @@ The hard formula checks ran in Phase 4.5 (`validate_report.py`). If you're at th
 
 ### Presentation Checks
 - [ ] **No "Gross Sales" row** in any table. Tax-inclusive numbers removed.
-- [ ] **Tax-exclusion sanity** — verify AOV is in the typical $20-$50 range for the client. If AOV jumped 7-10% with no menu change OR `commissions_pct` is below the platform floor (UE <27%, DD <25%, GH <22%), Total Sales likely includes tax. Re-extract using the pre-tax column (see methodology §2a). Validator should have flagged this in the QA section — if it didn't, that's a bug to fix.
 - [ ] Ops quality data matches source files (if provided)
 - [ ] Key Highlights have been rewritten (no `KEY_HIGHLIGHTS_DATA` comment remaining)
 - [ ] **Every platform table has 20 rows** (7 financial waterfall + 13 marketing attribution) — no rows omitted

@@ -112,6 +112,35 @@ def test_metrics_block_includes_foundation_gate_inputs():
     assert "uptime_pct" in metrics
 
 
+def test_customer_sentiment_star_derived_when_no_explicit_column():
+    """No customer_sentiment_pct column → derive from normalized star rating."""
+    payload = compute.run(
+        client="x", window_start="2026-01-01", window_end="2026-04-01",
+        df=_normal_df(),  # rating mean = 4.6 → (4.6-1)/4 = 90.0%
+    )
+    m = payload["computed"]["metrics"]
+    assert m["rating_basis"] == "star-derived"
+    assert m["customer_sentiment_pct"] == 90.0
+
+
+def test_customer_sentiment_uses_explicit_volume_weighted_column():
+    """customer_sentiment_pct + rating_count present → volume-weighted blend."""
+    df = pd.DataFrame({
+        "store": ["A", "B"] * 2,
+        "rating": [4.6, 4.6] * 2,
+        "error_rate_pct": [1.0, 1.0] * 2,
+        "cancellation_pct": [1.0, 1.0] * 2,
+        "uptime_pct": [98.0, 98.0] * 2,
+        "hours_accurate": [True, True] * 2,
+        "customer_sentiment_pct": [60.0, 90.0] * 2,
+        "rating_count": [100, 300] * 2,  # weighted → (60*100+90*300)/400 = 82.5
+    })
+    payload = compute.run(client="x", window_start="2026-01-01", window_end="2026-04-01", df=df)
+    m = payload["computed"]["metrics"]
+    assert m["rating_basis"] == "unified-positive-rate"
+    assert m["customer_sentiment_pct"] == 82.5
+
+
 def test_cancellation_surge_emits_high_finding():
     df = pd.DataFrame({
         "store": ["A"] * 4,

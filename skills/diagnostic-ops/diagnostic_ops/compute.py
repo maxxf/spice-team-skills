@@ -102,6 +102,26 @@ def _classify_store_tier(row) -> tuple[str, float, list[str]]:
     return flag, score, reasons
 
 
+def _customer_sentiment(df: pd.DataFrame, rating_mean: float) -> tuple[float, str]:
+    """Unified cross-platform Positive Rating Rate (framework: Customer Sentiment).
+
+    If the input carries a pre-blended `customer_sentiment_pct` (built at input
+    prep from DD loved/disliked + UE/GH 4–5★, volume-weighted), use it —
+    weighted by `rating_count` when present. Otherwise derive it from the
+    normalized star-equivalent rating: positive_rate = (rating − 1) / 4.
+    """
+    if "customer_sentiment_pct" in df.columns:
+        s = pd.to_numeric(df["customer_sentiment_pct"], errors="coerce")
+        if "rating_count" in df.columns:
+            w = pd.to_numeric(df["rating_count"], errors="coerce").fillna(0.0)
+            if w.sum() > 0:
+                return round(float((s.fillna(0.0) * w).sum() / w.sum()), 1), "unified-positive-rate"
+        if s.notna().any():
+            return round(float(s.mean()), 1), "unified-positive-rate"
+    pct = max(0.0, min(100.0, (rating_mean - 1.0) / 4.0 * 100.0))
+    return round(pct, 1), "star-derived"
+
+
 def run(*, client: str, window_start: str, window_end: str, df: pd.DataFrame) -> dict:
     by_store = _aggregate_by_store(df)
 
@@ -195,12 +215,15 @@ def run(*, client: str, window_start: str, window_end: str, df: pd.DataFrame) ->
             "deliverable_trigger": {"skill": "", "params": {}},
         })
 
+    sentiment_pct, rating_basis = _customer_sentiment(df, portfolio_rating_mean)
+
     # Drafted layer
     n_red = sum(1 for v in tier_contributions.values() if v["flag"] == "red")
     toggle_prose = (
         f"Average rating {portfolio_rating_mean:.2f} (min {portfolio_rating_min:.2f}); "
         f"avg error rate {portfolio_error_mean:.1f}% (max {portfolio_error_max:.1f}%); "
         f"avg uptime {portfolio_uptime_mean:.1f}% (min {portfolio_uptime_min:.1f}%). "
+        f"Customer sentiment {sentiment_pct:.0f}% positive ({rating_basis}). "
         f"{n_red} store(s) flagged red on the ops sub-bucket."
     )
 
@@ -256,6 +279,9 @@ def run(*, client: str, window_start: str, window_end: str, df: pd.DataFrame) ->
                 "all_hours_accurate": all_hours_accurate,
                 "store_count": int(len(by_store)),
                 "red_ops_store_count": n_red,
+                # Unified cross-platform Customer Sentiment (framework spec)
+                "customer_sentiment_pct": sentiment_pct,
+                "rating_basis": rating_basis,
             },
             # Operations radar dim is a composite computed by orchestrator from tier_contributions
             "radar_contributions": {},
