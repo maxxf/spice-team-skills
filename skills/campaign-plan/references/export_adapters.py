@@ -145,20 +145,25 @@ def dd_promotions(rows: list) -> list:
 
 
 def load_campaign_exports(inputs_dir: str):
-    """Scan an inputs dir for known platform exports → (ads_rows, offers_rows). Skips daily UE
-    granular + the *_Store self-serve variants (redundant with the summary/MARKETING files)."""
+    """Recognize each export by its COLUMN SIGNATURE (export_router) and route it to its adapter —
+    filename-agnostic. Wrong-type / unrecognized files are surfaced, never silently dropped, so a
+    mis-uploaded export becomes a visible message instead of an empty Sheet. Returns
+    (ads_rows, offers_rows, used_filenames)."""
+    import export_router as er
+    ADAPT = {"ue_sl": ue_sponsored_listings, "dd_sl": dd_sponsored_listings,
+             "ue_offers": ue_offers, "dd_promo": dd_promotions}
+    OFFER_KEYS = {"ue_offers", "dd_promo"}
+    matched, problems = er.route(inputs_dir)
     ads, offers, used = [], [], []
-    for p in sorted(glob.glob(os.path.join(inputs_dir, "*.csv"))):
-        n = os.path.basename(p).lower()
-        try:
-            if "campaigns_summary_metrics" in n:
-                ads += ue_sponsored_listings(_read(p)); used.append(n)
-            elif "marketing_sponsored_listing" in n:
-                ads += dd_sponsored_listings(_read(p)); used.append(n)
-            elif n.startswith("offers-campaigns"):
-                offers += ue_offers(_read(p)); used.append(n)
-            elif "marketing_promotion" in n:
-                offers += dd_promotions(_read(p)); used.append(n)
-        except Exception as e:
-            print(f"   (adapter skipped {n}: {str(e)[:70]})")
+    for key, paths in matched.items():
+        for p in paths:
+            n = os.path.basename(p)
+            try:
+                rows = ADAPT[key](_read(p))
+                (offers if key in OFFER_KEYS else ads).extend(rows)
+                used.append(n)
+            except Exception as e:
+                print(f"   (adapter skipped {n}: {str(e)[:70]})")
+    for pr in problems:
+        print(f"   ⚠️  {pr}")
     return ads, offers, used

@@ -128,6 +128,7 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     import sheets_writer as sw
     import v2_aggregate as agg
     import slack_draft as sd
+    import key_takeaways as kt
 
     sheet_id = cfg["sheet_id"]
     # Friendly week label for the Dashboard title: "W22 (May 25–May 31)" derived from the
@@ -433,6 +434,15 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     with open(draft_path, "w") as f:
         f.write(draft)
 
+    # Internal "key takeaways" digest → the team handoff channel (internal_channel, falling back
+    # to slack_channel). Client-agnostic, derived from the dashboard data. GM posts — no auto-send.
+    int_channel = cfg.get("internal_channel") or cfg.get("slack_channel")
+    kt_draft = kt.build(dash, display, week_label, ads_rows=ads_rows, offers_rows=offers_rows,
+                        tier_strategy=cfg.get("tier_strategy"))
+    kt_path = os.path.join(data_dir, f"key_takeaways_{weekstart}.txt")
+    with open(kt_path, "w") as f:
+        f.write(kt_draft)
+
     # Final gate: structural QA. Surfaces off-by-one / drift before the GM ships it.
     v = sw.validate_sheet(sheet_id)
     if v["ok"]:
@@ -445,9 +455,12 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
     print(f"\n✅ {display} v2 campaign plan refreshed")
     print(f"   Live Sheet: {url}")
-    print(f"   Slack draft: {draft_path}")
+    print(f"   Slack draft (client note): {draft_path}")
     if cfg.get("slack_channel"):
         print(f"   GM reviews the draft + sends to {cfg['slack_channel']} Monday.")
+    print(f"   Key takeaways (internal handoff): {kt_path}")
+    if int_channel:
+        print(f"   GM posts the takeaways to {int_channel}.")
 
 
 def main():
@@ -457,6 +470,7 @@ def main():
     ap.add_argument("--overwrite-perf", action="store_true")
     ap.add_argument("--no-push", action="store_true", help="Skip publishing to the live Google Sheet (file only).")
     ap.add_argument("--no-drive-pull", action="store_true", help="Skip pulling inputs from Drive folder (uses local data_dir only).")
+    ap.add_argument("--force-inputs", action="store_true", help="Bypass the input-validation gate (publish even if exports look wrong/missing).")
     args = ap.parse_args()
 
     cfg_path = os.path.join(SKILL, "clients", f"{args.client}.json")
@@ -483,6 +497,22 @@ def main():
     # into <data_dir>/inputs/. Falls back gracefully if folder doesn't exist.
     if not args.no_drive_pull:
         _maybe_pull_from_drive(cfg, weekstart)
+
+    # Step 0.5 — INPUT GATE: validate the dropped platform exports BEFORE anything is written.
+    # Refuses to publish on a missing/wrong/truncated export (the enforcement point — a bad file
+    # can't silently corrupt the client Sheet). `required_exports` in the client config sets which
+    # exports are mandatory; --force-inputs bypasses for genuine edge cases.
+    if cfg.get("v2") and cfg.get("sheet_id"):
+        import validate_inputs as vi
+        # Enforcement is OPT-IN: only hard-block when the client config explicitly lists
+        # required_exports. Absent → advisory (validate what's present, warn on gaps) so clients
+        # running fewer platforms (or not yet onboarded to the gate) aren't wrongly blocked.
+        _req = cfg.get("required_exports")
+        res = vi.validate(os.path.join(data_dir, "inputs"), _req if _req is not None else [])
+        print(res["report"])
+        if _req and not res["ok"] and not args.force_inputs:
+            sys.exit("\n⛔ Refresh aborted — inputs failed validation (above). "
+                     "Fix the export(s) and re-run, or pass --force-inputs to override.")
 
     # Step 1 — PLANNING: DB rows -> tracker CSV (if the Notion pull was written)
     campaigns_json = _resolve(data_dir, cfg.get("campaigns_json"))

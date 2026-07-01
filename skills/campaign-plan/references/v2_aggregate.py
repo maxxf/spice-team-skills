@@ -490,10 +490,16 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
         by_location = sorted([_cb("location", k, v) for k, v in lm.items()
                               if (_cnum(v.get("mktg_investment")) or 0) > 0], key=lambda r: -r["spend"])
         by_tier = []
-        if tier_map:
+        # Prefer the client's strategy tiers (Top/Mid/Low/New/Red — what the team actually planned
+        # around, from clients/<slug>.json tier_strategy) so the By-Tier rollup matches the
+        # By-Location tier column. Fall back to the sales-sheet color map only when no config tiers.
+        _T_EMOJI = {"Top": "🟢 Top", "Mid": "🔵 Mid", "Low": "🟠 Low", "New": "🟣 New", "Red": "🔴 Red"}
+        _use_assign = bool(tier_assignments)
+        _tsrc = tier_assignments if _use_assign else tier_map
+        if _tsrc:
             tg = {}
             for k, v in lm.items():
-                t = tier_map.get(k)
+                t = _tsrc.get(k)
                 if not t:
                     continue
                 d = tg.setdefault(t, {"ts": 0, "inv": 0, "mds": 0, "mo": 0})
@@ -501,10 +507,11 @@ def dashboard_from_data(tracker_rows: list[dict], ads_rows: list[dict],
                 d["inv"] += _cnum(v.get("mktg_investment")) or 0
                 d["mds"] += _cnum(v.get("mktg_driven_sales")) or 0
                 d["mo"] += _cnum(v.get("mktg_orders")) or 0
-            for t in ("Red", "Yellow", "Green"):
+            _order = ("Top", "Mid", "Low", "New", "Red") if _use_assign else ("Red", "Yellow", "Green")
+            for t in _order:
                 if t in tg:
                     d = tg[t]
-                    by_tier.append({"tier": t, "spend": d["inv"], "sales": d["mds"],
+                    by_tier.append({"tier": _T_EMOJI.get(t, t), "spend": d["inv"], "sales": d["mds"],
                                     "roas": round(d["mds"] / d["inv"], 1) if d["inv"] else 0,
                                     "orders": int(d["mo"]),
                                     "mkt_spend_pct": _pct(d["inv"], d["ts"]),
