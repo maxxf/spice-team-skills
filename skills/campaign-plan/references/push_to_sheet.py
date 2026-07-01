@@ -77,12 +77,42 @@ def push(client_slug: str, xlsx_path: str) -> str:
     return url
 
 
+def _is_network_error(exc) -> bool:
+    """True when the failure is 'can't reach Google' (the Cowork sandbox wall) rather than a
+    real auth/sharing/data error. Cowork's cloud sandbox blocks outbound to Google's token
+    endpoint, so the same push that works on any Mac fails there with a transport/DNS/token error."""
+    blob = f"{type(exc).__name__} {exc}".lower()
+    return any(s in blob for s in (
+        "transport", "getaddrinfo", "name resolution", "connection", "timed out", "timeout",
+        "network is unreachable", "unreachable", "ssl", "socket", "failed to establish",
+        "max retries", "newconnectionerror", "refresherror", "oauth", "token"))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--client", required=True, help="client slug -> clients/<slug>.json")
     ap.add_argument("--xlsx", required=True, help="generated workbook to push")
     args = ap.parse_args()
-    push(args.client, args.xlsx)
+    try:
+        push(args.client, args.xlsx)
+    except SystemExit:
+        raise  # our own explicit exits (missing key, no drive_folder_id) already read clearly
+    except Exception as exc:
+        if _is_network_error(exc):
+            sys.stderr.write(
+                "\n" + "-" * 66 + "\n"
+                "CAN'T REACH GOOGLE — the workbook was NOT published.\n"
+                "You're almost certainly running in Cowork, whose sandbox blocks outbound\n"
+                "network to Google. Your credentials and the Sheet are fine — this is only\n"
+                "the Cowork network wall, not a setup problem.\n\n"
+                f"Your finished workbook is ready here:\n  {args.xlsx}\n\n"
+                "Publish it one of two ways:\n"
+                f"  1) From your own Mac:  bash run_local.sh {args.client}   (see RUN-LOCALLY.md)\n"
+                "  2) Manual: open the client's Sheet -> File -> Import -> Upload that .xlsx\n"
+                "     -> \"Replace current sheet\" (about 2 minutes).\n"
+                + "-" * 66 + "\n")
+            sys.exit(3)
+        raise  # a genuine, unexpected error — surface the full traceback
 
 
 if __name__ == "__main__":
