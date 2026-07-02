@@ -164,13 +164,17 @@ The settlement CSV underattributes because it only flags orders where a fee/disc
 6. **Portal marketing orders (deduped)** = min(Portal combined, Total Completed Orders) — HARD CAP at total orders
 7. **Marketing orders (final)** = max(Settlement marketing orders, Portal marketing orders deduped) — use whichever is higher, but never exceed total
 
-**For sales:**
-- **Portal Ad Sales** = sum `Sales` from Sponsored Listings export
-- **Portal Promo Sales** = sum `Sales` from Promotions export
-- **Marketing Driven Sales** = min(Portal Ad Sales + Portal Promo Sales, Total Net Sales) — cap at total net sales
-- If Marketing Driven Sales > Total Net Sales, set to Total Net Sales and flag: "Portal over-attribution at [store]: Ad+Promo sales exceed total. Capped."
+**For sales — derive from the DEDUPED order count; do NOT sum Ad + Promo sales (mirrors the UE Tier-2 discipline):**
+- **Store AOV** = Total Net Sales (settlement) ÷ Total Completed Orders, per store.
+- **Marketing Driven Sales** = **Marketing orders (final, deduped — step 7) × Store AOV.** Because the order count is already overlap-deduped and hard-capped at total orders (steps 5–7), this can never exceed total net sales and never double-counts an order that appears in BOTH the Ad and Promo exports.
+- **Do NOT compute `Portal Ad Sales + Portal Promo Sales` as Marketing Driven Sales.** Summing them double-counts every order that's in both exports — that is exactly what produced stores reporting >100% of their sales as marketing-driven (goop W26: 5 stores). Portal Ad Sales / Promo Sales are still reported per-campaign in the Ads/Offers tabs for campaign detail; they are NOT summed into the store's Marketing Driven Sales.
+- If Marketing orders (final) = Total Completed Orders, the store is fully marketing-driven (MDS = Total Net Sales) — flag for review.
 
 **Organic Sales** = Total Net Sales (settlement) - Marketing Driven Sales
+
+**Discount-Driven Sales (supplementary — the conservative, client-facing cut):**
+- **Discount-Driven Sales** = Sum `Subtotal` for completed-like Marketplace orders where `Customer discounts` < 0 (a customer discount was actually given). This EXCLUDES ad-only attribution (orders a Sponsored Listing merely touched). Report it ALONGSIDE Marketing Driven Sales (never replacing it) as `discount_driven_sales` / `discount_driven_pct`.
+- This is the honest answer to "what share was *truly promo-driven*" — it runs well below the platform-attributed MDS (goop W26: ~42% vs ~66%), and it's the number to show a client who (rightly) questions why "marketing-driven" looks so high. Platform-attributed MDS = ads + offers the platform credits; discount-driven = orders that actually received a discount. Neither is *incrementality* — that needs a pullback test.
 
 > **Flag when overlap > 20% of portal combined:** "Portal Ad + Promo overlap at [store]: [X] orders overlap out of [Y] combined. Using deduped figure of [Z]."
 
