@@ -203,6 +203,47 @@ def fro_block(fj: dict) -> str:
     return "".join(out)
 
 
+def levers_block(fj: dict) -> str:
+    """The Levers — the client-facing distillation of the opportunity.
+
+    Optional block (rendered only when ``findings.levers.items`` is present).
+    Names the top 2–4 levers that move the number, each as
+    current → target · mechanism · expected impact. This is the actionable
+    counterpart to the Foothold/Risk/Opportunity cards and maps onto the
+    weakest actionable radar axes (Traffic/CTR, AOV, Marketing Efficiency).
+
+    Item shape: ``{n?, name, current?, target?, unit?, mechanism?, impact?}``.
+    Prose fields are HTML the builder emits verbatim (contract convention);
+    the numeric badge and section title are escaped.
+    """
+    lv = fj.get("levers") or {}
+    items = lv.get("items", [])
+    if not items:
+        return ""
+    title = lv.get("title", "The Levers — where the number moves")
+    intro = f'<div class="cap">{lv["intro"]}</div>' if lv.get("intro") else ""
+    cards = []
+    for i, it in enumerate(items):
+        n = it.get("n", i + 1)
+        cur, tgt = it.get("current"), it.get("target")
+        mv = ""
+        if cur is not None or tgt is not None:
+            cur_h = f'<span class="cur">{cur}</span>' if cur is not None else ""
+            arw_h = ('<span class="arw">→</span>'
+                     if (cur is not None and tgt is not None) else "")
+            tgt_h = f'<span class="tgt">{tgt}</span>' if tgt is not None else ""
+            mv = f'<div class="mv">{cur_h}{arw_h}{tgt_h}</div>'
+        unit = f'<div class="lever-unit">{it["unit"]}</div>' if it.get("unit") else ""
+        mech = f'<div class="mech">{it["mechanism"]}</div>' if it.get("mechanism") else ""
+        imp = f'<span class="imp">{it["impact"]}</span>' if it.get("impact") else ""
+        cards.append(
+            f'<div class="lever"><div class="n">{_esc(str(n))}</div>'
+            f'<h4>{it.get("name", "")}</h4>{mv}{unit}{mech}{imp}</div>'
+        )
+    return (f'<h2>{_esc(title)}</h2>{intro}'
+            f'<div class="levers">{"".join(cards)}</div>')
+
+
 def timeline_block(fj: dict) -> str:
     tl = fj.get("timeline", [])
     if not tl:
@@ -571,6 +612,8 @@ def build(run_dir: pathlib.Path) -> str:
 {radar_block(run_dir, fj, mj)}
 
 {fro_block(fj)}
+
+{levers_block(fj)}
 
 <h2>Action Plan</h2>
 {timeline_block(fj)}

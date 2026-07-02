@@ -10,7 +10,7 @@ description: >
   checklist, creates the Drive folder for them to drop files into, waits for
   confirmation, runs the multi-skill orchestrator, uploads charts, creates
   the Notion page, returns one URL.
-version: 1.3.0
+version: 1.4.0
 ---
 
 # Client Diagnostics
@@ -22,6 +22,8 @@ When invoked, run this entire flow yourself. Do not make the user write code, ed
 > **The deliverable is the HTML report — always produce it.** The client-facing artifact is `report.html`: a styled, self-contained report built by `references/build_report.py` using the Spice Design System stylesheet (`references/report_style.css` — Geist, spice `#fa4803`, design tokens). It has real visual hierarchy: 6-slot hero band, /10 radar, color-blocked cards, inline charts. **Always run the diagnostic with `--pdf`** (which implies `--html` and renders `report.pdf` via headless Chrome). A Notion-page-only run is half the deliverable — the runner itself warns `XX Visual deliverable -> text-only` when you skip it. Never hand a client the Notion page as the primary artifact; the Notion page is the internal, searchable data home that *links to* the HTML/PDF.
 
 > **Strategy filter — route the action plan through the playbooks.** When generating recommendations, consult `Cowork/Skills/campaign-plan/references/playbooks/what-works.md` + `marketplace-playbook.md`. Apply these specifically: (1) **Foundations gate first** — if rating <4.5, error >2%, uptime <95%, or menu conversion <20%, the action plan leads with foundations work, NOT ad spend. (2) **Cite proven precedent** — when proposing a tactic, name the playbook play it applies (e.g., "Sunnyvale flyer at low-ratings location", "Spend X Save Y aggressive at sub-20% conversion", "Friday-depth tweak at high-weekend-competition location"). (3) **DoorDash priority** for new clients (89% payout vs 78% UE). (4) **Location-based, not keyword** for any paid recommendation. (5) **Segment offers** by New/Existing/Lapsed/All; never recommend a blanket promo for established locations. The diagnostic's job isn't to invent strategy each time — it's to apply the proven playbook to this client's specific shape.
+
+> **Scoring + levers — the two things that most often go wrong (read `references/diagnostic-framework.md`).** (1) **Score Conversion on menu→order CVR, never the end-to-end funnel.** ~20% UE menu CVR = 7 ("good, not great"), not 3. The storefront→menu CTR leak is the **Traffic** axis, and the per-store menu CVR must be stated as an explicit number. (2) **Distill the opportunity into 2–4 levers** (`current → target · mechanism · impact`) via findings.json `levers` — recurring ones are storefront CTR, AOV (below $30), and net payout / marketing efficiency. (3) **Ops surfaces to Half 1** when any store is Broken — it can't score high while stores are breached. (4) **Never show a derived number that contradicts the hero strip** (e.g. a bowl "AOV" above blended AOV).
 
 **Output shape — two artifacts from one orchestrator pass:**
 

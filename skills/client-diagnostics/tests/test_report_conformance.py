@@ -165,6 +165,46 @@ def test_menu_storefront_renders_when_field_absent():
     assert "data-pending" in doc.lower() or "data pending" in doc.lower()
 
 
+def test_levers_absent_skips_block():
+    """The Levers block is optional — absent findings.levers ⇒ no block,
+    so existing clients that don't supply it are unaffected."""
+    with tempfile.TemporaryDirectory() as t:
+        doc = build_report.build(_fixture(Path(t)))
+    assert 'class="levers"' not in doc
+    assert 'class="lever"' not in doc
+
+
+def test_levers_render_when_present():
+    """findings.levers.items ⇒ a titled block of lever cards with
+    current→target, mechanism and impact emitted verbatim; cards that omit
+    optional fields still render (graceful degradation)."""
+    with tempfile.TemporaryDirectory() as t:
+        tmp = _fixture(Path(t))
+        fj = json.loads((tmp / "findings.json").read_text())
+        fj["levers"] = {
+            "title": "The Three Levers — where the number moves",
+            "intro": "<b>Act on these three.</b>",
+            "items": [
+                {"n": 1, "name": "Storefront click-through",
+                 "current": "9–10%", "target": "12–18%",
+                 "unit": "storefront → menu CTR",
+                 "mechanism": "New hero + <b>higher ratings</b>.",
+                 "impact": "+30% revenue, zero new spend."},
+                {"name": "AOV", "current": "$27.62", "target": "$30+"},
+            ],
+        }
+        (tmp / "findings.json").write_text(json.dumps(fj))
+        doc = build_report.build(tmp)
+    assert 'class="levers"' in doc
+    assert doc.count('class="lever"') == 2          # two cards, not the container
+    assert "The Three Levers — where the number moves" in doc
+    assert "Storefront click-through" in doc
+    assert "9–10%" in doc and "12–18%" in doc
+    assert "higher ratings" in doc                  # HTML emitted verbatim
+    assert "+30% revenue, zero new spend." in doc
+    assert "$27.62" in doc and "$30+" in doc          # 2nd card, no mechanism/impact
+
+
 # Per-client tokens that must never appear in EITHER generalized source —
 # includes the funnel/storefront values proven on the live Virgil's run, so
 # the new code paths can't smuggle literals back in.

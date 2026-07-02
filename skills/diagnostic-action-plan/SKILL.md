@@ -8,7 +8,7 @@ description: >
   target store's tier group. Foundation gate downgrades scaling actions to HOLD.
   Backward-compat: if called without tier_rollup, falls back to v0.1 severity
   kanban (P1/P2/P3).
-version: 0.2.0
+version: 0.2.1
 ---
 
 # Diagnostic — Action Plan
@@ -65,6 +65,31 @@ When `foundation_triggered=True`:
 - Green's "+20% budget" auto-action is replaced with "HOLD all scaling — foundation gate active".
 - Yellow / Red / New auto-actions are unchanged (already conservative).
 - Non-foundation findings in green/yellow/new are tagged `deferred_until_foundation_clear: true` (still visible to GM).
+
+## Portfolio-consolidation + presentation rules (canonical)
+
+The raw sub-skill findings over-fragment. Before emitting, consolidate:
+
+- **One review effort, not two.** Merge any "rating push" and "review-velocity
+  push" into a **single** program. Pick the locations that matter (rating-gated
+  stores + low-review-volume stores) and run one flyer/$5-credit push across
+  them. Never ship two overlapping review actions. Flyer mechanics: **we design
+  → client prints & bags them → we automate the Uber Eats replies; DoorDash
+  replies are manual on the client.**
+- **Hero image is portfolio-wide by default.** A storefront-CTR fix is a
+  hero/photo problem across *all* locations, not one store. Emit a single
+  "hero refresh — all locations" action (routed to Dilli via design brief),
+  unless there's a specific reason to isolate one store.
+- **Separate "what we need from the client" from "what Spice does."** Stage the
+  client-asks explicitly (approve menu restructure, upload/portal access, print
+  flyers) — these gate time-to-value. Surface them as their own block.
+- **Sequence menu + ops before aggressive campaign scaling.** Campaigns convert
+  better after menu/ops fixes. But **carve out quick wins** — obvious spend
+  trims, a hero swap, a higher-threshold AOV campaign — and ship them
+  immediately. Time-to-value is the invisible metric every client is watching:
+  how fast do they get something usable or a result.
+- **Cadence.** Present in **week 2**, start implementing by **week 3**. Every
+  deliverable must have a clear "what it is + when we share it."
 
 ## v0.1 fall-back
 

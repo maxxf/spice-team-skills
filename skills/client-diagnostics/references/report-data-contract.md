@@ -156,6 +156,33 @@ slot.
 `{foothold:{body,fig,action}, risk:{…}, opportunity:{…}}` — HTML strings,
 omitted card skipped.
 
+### levers (The Levers — actionable distillation of the opportunity)
+Optional. Names the **top 2–4 levers that move the number**, each as
+`current → target · mechanism · expected impact`. Rendered as its own block
+(cards) right after Foothold/Risk/Opportunity. **Absent ⇒ block skipped**
+(backward compatible). The recurring delivery levers are storefront CTR
+(Traffic axis), AOV (below $30), and net payout / marketing efficiency — see
+`diagnostic-framework.md` §"The Levers".
+
+```jsonc
+"levers": {
+  "title": "The Three Levers — where the number moves",   // optional
+  "intro": "…HTML lead-in…",                              // optional
+  "items": [
+    {"n": 1, "name": "Storefront click-through",
+     "current": "9–10%", "target": "12–18%",              // both optional
+     "unit": "storefront → menu CTR vs. benchmark",       // optional sub-label
+     "mechanism": "New hero image + higher ratings. <b>Not a menu problem.</b>",
+     "impact": "Closing half the gap ≈ +30% revenue, zero new ad spend."}
+  ]
+}
+```
+`name`/`unit`/`mechanism`/`impact`/`intro`/`current`/`target` are HTML the
+builder emits verbatim; `n` and `title` are escaped. Any field may be omitted
+(the card degrades gracefully). Keep levers consistent with the hero strip and
+radar — **never state a lever value that contradicts a hero number** (internal-
+consistency rule, see framework §"The Levers").
+
 ### Action plan
 `timeline:[{when,what,sub,now?}]`,
 `action_plan:{this_week_lane, this_week:[{title,meta}], review_lane:{lane,body}}`.

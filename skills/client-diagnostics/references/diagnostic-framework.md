@@ -32,6 +32,33 @@ The radar in Half 1 of the Notion output uses these 7 axes. Each scored 1–10. 
 | 6 | **Traffic** | UE storefront → menu CTR (impression-to-store-view as fallback) | <5%=3 · 5–7%=4 · 7–9%=6 · 9–12%=7.5 · >12%=9 |
 | 7 | **Campaigns / ROAS** | Blended ROAS across UE Ads + DD SL + GH Sponsored | <2x=3 · 2–3x=5 · 3–4x=6.5 · 4–5x=8 · >5x=9–10 |
 
+> **⚠ Conversion vs. Traffic — never conflate (canonical, enforced by review).**
+> The **Conversion** axis scores the **menu→order CVR only** — the *bottom* of the
+> funnel (someone opened the menu; did they order?). Score it against the bands
+> above / the cuisine table below. **A ~20% menu CVR is a 7 ("good, not great"),
+> not a 3.** The **storefront→menu CTR** — the *top* of the funnel (someone saw the
+> storefront; did they open the menu?) — is the **Traffic** axis, scored separately.
+> **Never** score Conversion using the end-to-end storefront→order rate (~1–3%):
+> that double-counts the traffic leak, buries a healthy menu, and ships a wrong
+> "conversion is broken" headline. Benchmark on **Uber Eats** (our canonical
+> benchmarking platform) and **state the per-store menu CVR explicitly** in the
+> funnel section — it is a required number, not an implied one.
+>
+> **Keep the funnel steps on separate axes — never a combined "Menu & Storefront."**
+> **Traffic** owns storefront→menu CTR (does the listing earn the click — hero
+> image + ratings + thumbnails; impressions→views visibility is the fallback and
+> a radar_notes caveat). **Conversion** owns menu→order (menu photos, structure,
+> price). A combined axis hides which step is actually broken: when the menu
+> converts fine (~20%) but the store underperforms, the weak axis is **Traffic /
+> storefront CTR**, not Conversion.
+
+> **⚠ Operations scores the breaches, and surfaces to Half 1.** Operations = `%
+> of stores flagged`. If any store's ops sub-bucket is **Broken** (error/cancel
+> >5%, rating <4.2, uptime <90%) OR ≥2 stores are **Watch**, Operations **cannot
+> score above ~6**, and ops **must** appear as a headline risk in the Executive
+> Summary / Foothold-Risk-Opportunity — not only inside the Ops toggle. A high
+> Operations score sitting next to broken stores is a conformance smell.
+
 **Re-order Rate definition (detail):**
 - UE: % of orders in the period from customers with ≥2 orders in trailing 90 days. Source: UE Manager → Customers tab → Repeat Customer Rate.
 - DD: % share of orders from customers DD classifies as "frequent" (≥4 orders in 90 days). Source: DD Merchant Portal → Customer Insights.
@@ -45,6 +72,47 @@ The radar in Half 1 of the Notion output uses these 7 axes. Each scored 1–10. 
 - **Re-order Rate is a first-class axis.** But if the repeat/frequent-customer data is not machine-readable this cycle, it is **DATA-PENDING**: rendered at 0 with a `(pending)` tick label and **excluded from the overall mean**. It is never guessed and never silently carried forward from a prior cycle. Re-order Rate being unscored is a **data-pull failure, not an analysis choice** — flag it loudly in the data-quality footer and the Menu & Storefront toggle.
 - **Proxy-derived axes must be labeled.** When Conversion or Traffic are derived from ad-click data because a true storefront/menu funnel was not exported, the axis label carries an explicit `(ad proxy)` suffix (e.g. `Conversion (ad proxy)`). Never present a proxy as a true funnel measurement.
 - **Overall = mean of measured axes only.** Pending/null axes are excluded from the denominator. State the count of measured axes in the radar caption notes (e.g. "Overall = mean of the 6 measured axes").
+
+## The Levers — the client-facing distillation
+
+Every diagnostic must name the **top 2–4 levers that move the number**, each as
+`current → target · mechanism · expected impact`. This is what the client acts
+on, and it maps directly onto the weakest **actionable** radar axes. Render it
+via findings.json `levers` (see `report-data-contract.md`) so it gets its own
+block right after Foothold/Risk/Opportunity. For delivery marketplaces the
+recurring three levers are:
+
+1. **Storefront click-through (Traffic axis).** storefront→menu CTR below the
+   12–18% benchmark. → new hero image (test something different) + higher
+   ratings / review volume. Impact: closing half the gap ≈ +25–35% revenue with
+   **zero new ad spend**.
+2. **AOV.** Blended AOV below **$30**. → higher-threshold "spend $X, save $Y"
+   campaigns aimed at **existing/loyal** customers + modifier upsells on top
+   SKUs — **never a blanket discount on established stores** (see the ads-
+   segmentation practice). Impact: each +$1 AOV ≈ +(orders/mo) GMV.
+3. **Net payout / Marketing Efficiency.** Payout low because marketing
+   investment runs >20% of gross and inefficient. → reallocate to what's
+   working, cut margin-bleed promos. Impact: +N pts payout retained/mo.
+
+Foundation gates (ops, ratings, menu) still sequence **first** in the action
+plan — but the levers are the scoreboard the client watches. Surface AOV, net
+payout, and customer sentiment in the hero strip (they are canonical hero slots),
+and surface marketing-investment % (the payout lever) explicitly — do not drop it.
+
+**Internal-consistency rule (canonical).** Every derived or competitive figure
+must reconcile with the portfolio metrics before it ships. If a per-item or
+competitor "AOV" exceeds the blended AOV, or a tier sum doesn't reconcile to the
+headline, it is **wrong** — fix or drop it, never show a number that contradicts
+the hero strip. (A "$38 bowl AOV" against a $27.62 blended AOV is the canonical
+red flag: bowls can't average more than the whole order.)
+
+**Customer sentiment is a section, not just a hero number.** Beyond the hero
+slot, produce a short sentiment read in analyst depth from platform satisfaction
+signals — star-rating spread, DoorDash "Loved" rate, negative-flag rate — to
+locate *which* store has an experience problem vs. a visibility problem. When
+verbatim UE/DD review text is available, mine it for theme-level sentiment
+(packaging, portion, wait time, missing items); when it isn't, label the read a
+proxy and flag verbatim mining as the next step. Never fabricate review quotes.
 
 ## Foundation Health Gate
 
