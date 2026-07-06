@@ -88,8 +88,11 @@ def check_close(actual, expected, tolerance, label):
     return False, f"{label}: expected {expected:.2f}, got {actual:.2f} (diff: {diff:.2f}, tolerance: ±{tolerance})"
 
 
-def validate_metrics(metrics, label_prefix):
+def validate_metrics(metrics, label_prefix, platform=None):
     """Validate formula integrity for a single metrics block (overview or location).
+
+    `platform` (e.g. "doordash") selects the correct reconciliation base for the
+    marketing/organic split — see check 2.
 
     Returns (critical_failures, soft_warnings).
     """
@@ -122,10 +125,16 @@ def validate_metrics(metrics, label_prefix):
     if not ok:
         critical.append(msg)
 
-    # 2. Marketing Driven Sales + Organic Sales = Total Sales
-    expected_ts = mds + os_
-    ok, msg = check_close(ts, expected_ts, CURRENCY_TOLERANCE,
-                          f"{label_prefix} Marketing + Organic = Total Sales")
+    # 2. Marketing Driven Sales + Organic Sales reconcile to Total Sales (UE/GH) or
+    #    Net Sales (DoorDash). DoorDash attributes its marketing/organic split NET of the
+    #    promo discount, so the two sum to Net Sales, not gross Total Sales. Checking DD
+    #    against Total Sales produced ~18 false criticals per run (fixed Jul 2026).
+    if platform == "doordash":
+        mkt_base, base_label = ns, "Net Sales"
+    else:
+        mkt_base, base_label = ts, "Total Sales"
+    ok, msg = check_close(mkt_base, mds + os_, CURRENCY_TOLERANCE,
+                          f"{label_prefix} Marketing + Organic = {base_label}")
     if not ok:
         critical.append(msg)
 
@@ -459,14 +468,14 @@ def main():
 
         # 1. Validate overview formula integrity
         overview = data.get("overview", {})
-        crit, warn = validate_metrics(overview, f"[{label}]")
+        crit, warn = validate_metrics(overview, f"[{label}]", platform_name)
         all_critical.extend(crit)
         all_warnings.extend(warn)
 
         # 2. Validate each location's formula integrity
         for loc_data in data.get("by_location", []):
             loc_name = loc_data.get("location", "UNKNOWN")
-            crit, warn = validate_metrics(loc_data, f"[{label} / {loc_name}]")
+            crit, warn = validate_metrics(loc_data, f"[{label} / {loc_name}]", platform_name)
             all_critical.extend(crit)
             all_warnings.extend(warn)
 

@@ -75,10 +75,25 @@
       "uber_eats": [],
       "doordash": ["goop kitchen (North Hollywood, CA)"],
       "grubhub": ["goop Kitchen|Los Angeles|5643 Lankershim Blvd"]
+    },
+    "Berkeley": {
+      "uber_eats": ["goop kitchen (Berkeley)"],
+      "doordash": ["goop kitchen (Berkeley)"],
+      "grubhub": []
+    },
+    "East Williamsburg": {
+      "uber_eats": ["goop kitchen (East Williamsburg)"],
+      "doordash": ["goop kitchen (East Williamsburg)"],
+      "grubhub": []
+    },
+    "Midtown West": {
+      "uber_eats": ["goop kitchen (Midtown West)"],
+      "doordash": ["goop kitchen (Midtown West)"],
+      "grubhub": []
     }
   },
   "merge_rules": {
     "North Hollywood": "Studio City"
   },
-  "notes": "Robertson on DD = Pico-Robertson. North Hollywood on DD + GH = Studio City in tracker. Venice has no GH presence."
+  "notes": "Robertson on DD = Pico-Robertson. North Hollywood on DD + GH = Studio City in tracker. Venice has no GH presence. Berkeley + East Williamsburg + Midtown West added Jul 2026 (goop Bay Area/NYC expansion) with goop's standard UE/DD naming 'goop kitchen (X)'. CONFIRM against the first weekly export that includes them: exact UE/DD strings (DD sometimes carries an '@ Suffix'), and whether each is on Grubhub — if so add grubhub as 'Goop Kitchen|City|Address'."
 }
