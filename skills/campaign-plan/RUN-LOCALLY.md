@@ -18,7 +18,11 @@ pret, tiffs-treats, westville today) plus any client you add below. Nothing here
 2. **Google service-account key** — get it from Maxx **securely** (password manager / secure
    transfer — never Slack, email, or commit). Save to `~/.config/spice/google-sheets-writer.json`
    and `chmod 600` it. Same robot for every client: `spice-sheets-writer@…`.
-3. **Python deps** (once):
+3. **Notion token** — also from Maxx, securely → `~/.config/spice/notion-token`. Powers the
+   campaign pull (`notion_campaigns_read.py`, raw REST). Without it the refresh can't pull
+   planned campaigns headlessly (the MCP query needs a Notion Business plan). *Want to skip the
+   whole key dance? Use the Mini path below — no local secrets.*
+4. **Python deps** (once):
    `python3 -m pip install --user google-api-python-client google-auth openpyxl`
    (or use a venv and set `SPICE_PY=/path/to/venv/bin/python`).
 
