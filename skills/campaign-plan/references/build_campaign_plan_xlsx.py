@@ -7,8 +7,7 @@ Dashboard (rollups overall / by platform / ads vs offers + chart) + Campaign Tra
 (conditional-formatted status) + Legend.
 
 Usage:
-  python build_campaign_plan_xlsx.py --client "goop Kitchen" --tracker-csv rows.csv --output out.xlsx
-  python build_campaign_plan_xlsx.py --client "goop Kitchen" --output out.xlsx   # uses embedded goop sample
+  python build_campaign_plan_xlsx.py --client "<Client Name>" --tracker-csv rows.csv --output out.xlsx
 
 Tracker CSV columns (header row, in this order):
   Campaign, Platform, Type, Offer/Ad Detail, Locations, Status, Days in Queue,
@@ -64,24 +63,6 @@ ADS_COLS = ["Campaign", "Platform", "Locations", "Status", "Impressions", "Click
 # Input CSV the team/feed provides (computed columns are derived, not supplied):
 ADS_INPUT_COLS = ["Campaign", "Platform", "Locations", "Status",
                   "Impressions", "Clicks", "Spend", "Orders", "Attributed Sales"]
-
-# Embedded goop sample (used when no --tracker-csv given). Mirrors the audit data.
-# Column order: Campaign, Platform, Type, Offer/Ad Detail, Locations, Segment, Status,
-# Days in Queue, Flight Start, Flight End, Target ROAS, Actual ROAS, Spend, Sales, Orders,
-# In-Platform Campaign Name, Notes.
-GOOP_SAMPLE = [
-    ["Spend X Save Y (aggressive)", "Uber Eats", "Offer", "Tiered spend/save, lowered thresholds", "San Jose / Pasadena", "All", "Live", "", "2026-05-15", "ongoing", 3.5, "", "", "", "", "San Jose | Spend X Save Y | All", "Drove San Jose conversion 25%->33%"],
-    ["Spend X Save Y (aggressive)", "DoorDash", "Offer", "Tiered spend/save, lowered thresholds", "San Jose / Pasadena", "All", "Live", "", "2026-05-15", "ongoing", 3.5, "", "", "", "", "San Jose | Spend X Save Y | All", "Second-best sales week of year ($50K SJ)"],
-    ["Friday aggression tweak", "Uber Eats", "Offer", "Higher Friday promo depth", "San Jose / Pasadena", "All", "Live", "", "2026-05-16", "ongoing", "", "", "", "", "", "Pasadena | Friday Depth | All", "Pasadena best delivery week of year"],
-    ["Friday aggression tweak", "DoorDash", "Offer", "Higher Friday promo depth", "San Jose / Pasadena", "All", "Live", "", "2026-05-16", "ongoing", "", "", "", "", "", "Pasadena | Friday Depth | All", "Ratings velocity 38 (from 20-22 baseline)"],
-    ["SJ + Pasadena BOGA", "Uber Eats", "Offer", "Buy one get one add-on", "San Jose / Pasadena", "All", "Blocked-on-client", 11, "TBD", "", 3.0, "", "", "", "", "San Jose | BOGA | All", "Awaiting goop sign-off, 11 days in queue"],
-    ["SJ + Pasadena BOGA", "DoorDash", "Offer", "Buy one get one add-on", "San Jose / Pasadena", "All", "Blocked-on-client", 11, "TBD", "", 3.0, "", "", "", "", "San Jose | BOGA | All", "Awaiting goop sign-off, 11 days in queue"],
-    ["Berkeley launch", "Uber Eats", "Offer", "New-market intro offer", "Berkeley", "New", "Proposed", "", "2026-06-08", "", "", "", "", "", "", "Berkeley | Intro Offer | New", "New market launch, spec ready"],
-    ["Berkeley launch", "DoorDash", "Offer", "New-market intro offer", "Berkeley", "New", "Proposed", "", "2026-06-08", "", "", "", "", "", "", "Berkeley | Intro Offer | New", "New market launch, spec ready"],
-    ["Berkeley launch", "Grubhub", "Offer", "New-market intro offer", "Berkeley", "New", "Proposed", "", "2026-06-08", "", "", "", "", "", "", "Berkeley | Intro Offer | New", "New market launch, spec ready"],
-    ["Studio softness test", "Uber Eats", "Offer", "Spend $15 get $5 off, win-back", "Studio City", "Lapsed", "Proposed", "", "TBD", "", 3.0, "", "", "", "", "Studio City | Spend 15 Save 5 | Lapsed", "Requested by Lauren 5/21"],
-]
-
 
 def _perf_num(s):
     """Parse a weekly-reporting formatted value ('$1,234', '6.2', '--', '--*') to float or None."""
@@ -453,7 +434,7 @@ def build(client: str, tracker_rows: list[list], highlights: list[str], out: str
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--client", required=True)
-    ap.add_argument("--tracker-csv", default=None, help="CSV of campaign rows (see header spec). Omit to use embedded goop sample.")
+    ap.add_argument("--tracker-csv", required=True, help="CSV of campaign rows (see header spec), produced by refresh.py / db_to_tracker.py. Client-agnostic: no client data is embedded.")
     ap.add_argument("--campaign-perf-csv", default=None, help="weekly-reporting OUTPUT/campaign_performance.csv. Folds Spend/Sales/ROAS/Orders into matching tracker rows (no double-pull).")
     ap.add_argument("--overwrite-perf", action="store_true", help="Overwrite existing performance cells. Default fills only empty cells.")
     ap.add_argument("--ads-detail-csv", default=None, help="Ads funnel CSV (ADS_INPUT_COLS: Campaign,Platform,Locations,Status,Impressions,Clicks,Spend,Orders,Attributed Sales). Builds the Ad Performance tab + dashboard funnel.")
@@ -461,16 +442,8 @@ def main():
     ap.add_argument("--output", required=True)
     args = ap.parse_args()
 
-    if args.tracker_csv:
-        rows = read_tracker_csv(args.tracker_csv)
-        highlights = ["Performance highlights populated from this cycle's results."]
-    else:
-        rows = GOOP_SAMPLE
-        highlights = [
-            "San Jose: $50K, second-best sales week of the year. Conversion 25% to 33%.",
-            "Pasadena: best delivery sales week of the year. Conversion 34%. Ratings velocity 38 (from 20-22).",
-            "Meta ads killed 5/13: freed $1,150/wk with no measurable demand loss, reallocated to promos.",
-        ]
+    rows = read_tracker_csv(args.tracker_csv)
+    highlights = ["Performance highlights populated from this cycle's results."]
 
     ads_rows = read_ads_csv(args.ads_detail_csv) if args.ads_detail_csv else []
     if ads_rows:

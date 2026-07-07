@@ -505,7 +505,7 @@ If only platform exports without the wizard's structure are available, the skill
 
 ## Phase 2: Run the update
 
-First-time setup (once per machine): `python3 -m pip install --user openpyxl google-auth google-api-python-client` (matches `SETUP-per-GM.md`; run commands with plain `python3`). (The two google packages are only needed for the live-Sheet publish step; openpyxl alone suffices for file-only output.)
+First-time setup (once per machine): `python3 -m pip install --user openpyxl google-auth google-api-python-client` (see `RUN-LOCALLY.md`; run commands with plain `python3`). (The two google packages are only needed for the live-Sheet publish step; openpyxl alone suffices for file-only output.)
 
 The render takes the Phase 0 tracker CSV and (optionally) the performance CSV:
 
