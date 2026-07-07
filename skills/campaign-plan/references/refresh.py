@@ -35,6 +35,26 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
 sys.path.insert(0, HERE)  # allow importing sibling reference modules
 
+SHEETS_KEY_PATH = os.path.expanduser("~/.config/spice/google-sheets-writer.json")
+
+
+def _sheets_write_blocked_msg(client, reason):
+    """Actionable message when the live-Sheet write can't happen — missing key OR the Cowork
+    sandbox can't reach Google. This is the #1 campaign-plan gotcha; it used to fail SILENTLY
+    mid-run (Santi, goop W27). Fail loud with the fix instead."""
+    bar = "-" * 68
+    return (
+        f"\n{bar}\n"
+        f"CAN'T WRITE THE LIVE SHEET — {reason}.\n"
+        f"  Service-account key expected at: {SHEETS_KEY_PATH}\n\n"
+        "You're almost certainly running inside Cowork, whose sandbox can't reach your Mac's\n"
+        "home directory or Google's network. This is expected — not a skill bug.\n\n"
+        "Fix — run where the key + open network live:\n"
+        f"  1) Your own Mac:  ./run_local.sh {client}          (see RUN-LOCALLY.md)\n"
+        f"  2) The Mac Mini:  Slack \"@Spicy publish the {client} campaign sheet\"\n"
+        f"{bar}"
+    )
+
 
 def _resolve(data_dir: str, name: str | None) -> str | None:
     """Find the file by name. Checks (in order): absolute path; data_dir/inputs/; data_dir/.
@@ -479,6 +499,13 @@ def main():
     with open(cfg_path) as f:
         cfg = json.load(f)
 
+    # Preflight (fail FAST, before the slow Drive pull + data build): the v2 path writes the
+    # live Google Sheet directly and has no local-file fallback. If the service-account key
+    # isn't on this machine (e.g. Cowork's sandbox), the write can't happen — say so now with
+    # the fix, instead of erroring silently after a long run (Santi, goop W27).
+    if cfg.get("v2") and cfg.get("sheet_id") and not args.no_push and not os.path.exists(SHEETS_KEY_PATH):
+        sys.exit(_sheets_write_blocked_msg(args.client, "the Google service-account key is not on this machine"))
+
     data_dir = cfg["data_dir"]
     display = cfg["client_display_name"]
     py = sys.executable
@@ -533,7 +560,18 @@ def main():
     # Reporting / Offers Reporting / History) + Slack draft. Skips the xlsx build + push,
     # which would clobber the v2 tabs. Gated on cfg["v2"] == true AND a sheet_id present.
     if cfg.get("v2") and cfg.get("sheet_id"):
-        _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display)
+        try:
+            _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display)
+        except SystemExit:
+            raise
+        except Exception as exc:
+            blob = f"{type(exc).__name__} {exc}".lower()
+            net = ("transport", "getaddrinfo", "name resolution", "connection", "timed out",
+                   "timeout", "unreachable", "ssl", "socket", "failed to establish",
+                   "max retries", "refresherror", "oauth", "token", "credentials")
+            if any(s in blob for s in net):
+                sys.exit(_sheets_write_blocked_msg(args.client, "Google's API is unreachable from here"))
+            raise
         return
 
     # Step 2 — REPORTING (v0.1): render workbook + fold in performance + ads funnel

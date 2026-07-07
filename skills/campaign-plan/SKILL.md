@@ -234,7 +234,7 @@ The sheet holds **reporting** (Dashboard/Active Campaigns/Ads/Offers/History/Exp
 
 1. **PLAN (GM, ongoing)** — Notion DB is the source of truth. Every campaign logged with current Status, Segment, Locations, Start/End Date, ROAS Target. Set **Client Review Since** when items enter client review. If it's not in the DB, it's not in the plan.
 2. **PULL (Ops, when fresh data is available)** — drop platform exports into the client's **`Campaign Plan Inputs / <weekstart>/`** Drive folder. Typically Sun night or Mon AM after weekly-reporting runs.
-3. **RUN (GM, when warranted)** — trigger the refresh in Cowork. Skill pulls from the Drive folder + queries Notion DB, regenerates the live Sheet in place, and **produces a Slack draft** in Ro's format.
+3. **RUN (GM, when warranted)** — regenerate the live Sheet in place + **produce a Slack draft** in Ro's format. **⚠ Writing the live Sheet needs the Google service-account key at `~/.config/spice/google-sheets-writer.json`, which the Cowork sandbox does NOT have** — a Cowork run now fails fast with instructions instead of erroring silently. Run where the key + open network live: **`./run_local.sh <client>`** on your own Mac (one-time setup in RUN-LOCALLY.md), or Slack **`@Spicy publish the <client> campaign sheet`** to run it on the always-on Mac Mini. Either way the skill pulls the Drive folder + Notion DB, then writes the Sheet.
 4. **COMMUNICATE (GM, Monday)** — review the Slack draft, edit, send to `#ext-[client]-spice`. The Sheet link is stable; the note explains what moved.
 
 ### The Monday Slack note (GM-authored from a draft the skill provides)
