@@ -491,6 +491,7 @@ def main():
     ap.add_argument("--no-push", action="store_true", help="Skip publishing to the live Google Sheet (file only).")
     ap.add_argument("--no-drive-pull", action="store_true", help="Skip pulling inputs from Drive folder (uses local data_dir only).")
     ap.add_argument("--force-inputs", action="store_true", help="Bypass the input-validation gate (publish even if exports look wrong/missing).")
+    ap.add_argument("--no-notion-pull", action="store_true", help="Skip the REST Notion pull; use the existing campaigns_json (e.g. an MCP pull written in Cowork).")
     args = ap.parse_args()
 
     cfg_path = os.path.join(SKILL, "clients", f"{args.client}.json")
@@ -540,6 +541,25 @@ def main():
         if _req and not res["ok"] and not args.force_inputs:
             sys.exit("\n⛔ Refresh aborted — inputs failed validation (above). "
                      "Fix the export(s) and re-run, or pass --force-inputs to override.")
+
+    # Step 0.7 — NOTION PULL (de-gated): pull the client's Campaign Planning rows via the RAW
+    # REST reader (NOT the plan-gated MCP query) when a Notion token is present, writing the
+    # campaigns_json that db_to_tracker reads. This lets the whole refresh run headless on any
+    # machine with the token (your Mac / the Mini) with no Notion Business plan. No token → keep
+    # whatever campaigns_json already exists (e.g. an MCP pull the skill wrote in Cowork).
+    if not args.no_notion_pull:
+        cj_rel = cfg.get("campaigns_json", f"{args.client}_campaigns.json")
+        cj_abs = cj_rel if os.path.isabs(cj_rel) else os.path.join(data_dir, cj_rel)
+        try:
+            import notion_campaigns_read as ncr
+            tok = ncr._load_token()
+            if tok:
+                n = ncr.pull(args.client, cj_abs, tok)
+                print(f"→ notion: pulled {n} Campaign Planning rows via REST reader (no plan gate)")
+            else:
+                print("   (no Notion token — using existing campaigns_json; MCP pull is the Cowork fallback)")
+        except Exception as e:
+            print(f"   (Notion REST pull skipped: {str(e)[:110]} — using existing campaigns_json if present)")
 
     # Step 1 — PLANNING: DB rows -> tracker CSV (if the Notion pull was written)
     campaigns_json = _resolve(data_dir, cfg.get("campaigns_json"))

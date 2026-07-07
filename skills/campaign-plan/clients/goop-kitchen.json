@@ -1,6 +1,7 @@
 {
   "client_slug": "goop-kitchen",
   "client_display_name": "goop Kitchen",
+  "notion_client_page_id": "2a6d3ff0-18e7-80d9-91ee-e460d6c021c5",
   "data_dir": "/tmp/campaign-data-goop",
   "campaigns_json": "goop_campaigns.json",
   "campaign_perf_csv": "campaign_performance.csv",

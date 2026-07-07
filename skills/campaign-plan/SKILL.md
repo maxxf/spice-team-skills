@@ -281,7 +281,7 @@ cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
 python3 references/refresh.py --client <slug> [--as-of YYYY-MM-DD]
 ```
 
-`refresh.py` runs three steps: `db_to_tracker.py` (planning) → `build_campaign_plan_xlsx.py` (reporting) → `push_to_sheet.py` (publish). It skips any optional input (perf, ads) that isn't present. The only thing it can't do itself is the Notion pull — the skill writes the DB rows to `<data_dir>/<campaigns_json>` first (Phase 0 Step A), because querying Notion needs the MCP. After that, one command, every time.
+`refresh.py` runs three steps: `db_to_tracker.py` (planning) → `build_campaign_plan_xlsx.py` (reporting) → `push_to_sheet.py` (publish). It skips any optional input (perf, ads) that isn't present. The Notion pull is now done by `notion_campaigns_read.py` (raw Notion REST — **not** the plan-gated MCP query) whenever a Notion token is present, so `refresh.py` runs fully headless with no Business plan. Without a token it falls back to whatever `<data_dir>/<campaigns_json>` already exists (the model can write that via the MCP — Phase 0 Step A). After that, one command, every time.
 
 **Publish to a live Google Sheet (in place).** When the service-account key is present at `~/.config/spice/google-sheets-writer.json`, `refresh.py` auto-pushes the workbook into the client's Drive folder as a **native Google Sheet** and records its `sheet_id` in `clients/<slug>.json`. The first run creates the Sheet; every later run updates that same file — stable link, same sharing, no manual drag. Pass `--no-push` to skip (produces the .xlsx only). Service-account setup is a one-time admin task: see `references/google-service-account-setup.md`. The robot (`spice-sheets-writer@…`) needs Editor on the client's Drive folder (sharing the parent "1. Active" folder once covers every client).
 
@@ -302,7 +302,9 @@ After this runs, the client has a live Sheet in their Drive folder and shows up 
 
 The **Notion Campaign Planning DB** (`collection://1c8d3ff0-18e7-8067-abff-000b54568283`) is the single source of truth for what's running, proposed, and blocked. Every delivery campaign should be a row there (`Entry Type = Campaign`), created via `campaign-ops`. The skill reads that DB and projects it into the tracker.
 
-**Step A — query the DB for this client.** Use `notion-search` / `notion-fetch` scoped to the data source, filtered to the client (the `Client` relation) and `Entry Type = Campaign`. Normalize each page into a JSON array of objects keyed by DB property name (`Campaign name`, `Channels`, `Campaign Type`, `Offer Details`, `Locations`, `Customer Segment`, `Status`, `Start Date`, `End Date`, `ROAS Target`, `Actual ROAS`, `Performance Notes`, `Client Review Since`). Save to `/tmp/campaign-data-<client>/<client>_campaigns.json`.
+**Step A — pull the client's campaigns.** `refresh.py` does this automatically via **`references/notion_campaigns_read.py`** — the raw Notion REST API (**not** the plan-gated MCP `query_data_sources`), filtered by the client's `Client` relation (`notion_client_page_id` in `clients/<slug>.json`; falls back to the strategy block's `notion_parent_page_id`). It writes the `campaigns_json` array `db_to_tracker` reads. **Needs a Notion token** (`NOTION_TOKEN` or `~/.config/spice/notion-token`) — present on your Mac / the Mini, absent in Cowork.
+
+*Fallback only when there's no token (e.g. a Cowork run):* have the model query via `notion-search`/`notion-fetch` scoped to the data source, filtered to the client (`Client` relation) + `Entry Type = Campaign`, and write the same JSON — objects keyed by DB property name (`Campaign name`, `Channels`, `Campaign Type`, `Offer Details`, `Locations`, `Customer Segment`, `Status`, `Start Date`, `End Date`, `ROAS Target`, `Actual ROAS`, `Performance Notes`, `Client Review Since`) — to `/tmp/campaign-data-<client>/<client>_campaigns.json`.
 
 **Step B — run the bridge** to produce the tracker CSV:
 
