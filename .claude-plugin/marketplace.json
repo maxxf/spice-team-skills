@@ -9,7 +9,7 @@
     {
       "name": "spice-team-skills",
       "description": "Shared Spice org context + utility skills. Keep installed by every teammate. (The per-function plugins below are siblings, not replacements yet \u2014 soft migration.)",
-      "version": "1.22.7",
+      "version": "1.22.8",
       "source": "./",
       "author": {
         "name": "Maxx Freedman",

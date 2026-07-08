@@ -1,6 +1,7 @@
 {
   "client_slug": "westville",
   "client_display_name": "Westville",
+  "notion_client_page_id": "326d3ff0-18e7-8040-be5a-ef6c701c497a",
   "data_dir": "/tmp/campaign-data-westville",
   "campaigns_json": "westville_campaigns.json",
   "campaign_perf_csv": "campaign_performance.csv",

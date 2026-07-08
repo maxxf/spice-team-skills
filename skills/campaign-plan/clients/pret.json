@@ -1,6 +1,7 @@
 {
   "client_slug": "pret",
   "client_display_name": "PRET A Manger",
+  "notion_client_page_id": "30cd3ff0-18e7-80b8-995c-fc66b87a5297",
   "data_dir": "/tmp/campaign-data-pret",
   "campaigns_json": "pret_campaigns.json",
   "campaign_perf_csv": "campaign_performance.csv",

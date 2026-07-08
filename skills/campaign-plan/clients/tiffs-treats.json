@@ -1,6 +1,7 @@
 {
   "client_slug": "tiffs-treats",
   "client_display_name": "Tiff's Treats",
+  "notion_client_page_id": "343d3ff0-18e7-81a1-874f-f2d6883c6493",
   "data_dir": "/tmp/campaign-data-tiffs-treats",
   "campaigns_json": "tiffs-treats_campaigns.json",
   "campaign_perf_csv": "campaign_performance.csv",
