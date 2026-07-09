@@ -9,8 +9,8 @@ description: End-to-end new client onboarding for Spice. Handles post-signature 
 
 End-to-end post-signature onboarding automation. Takes a new client from Closed Won to fully set up in Notion with tasks, email drafted, and manual steps checklist.
 
-**Primary user:** Client Services Lead
-**Handoff point:** Maxx closes deal, sends kickoff email with the Client Services Lead CC'd. From that point, the Client Services Lead owns everything except the kickoff call (where Maxx makes the formal introduction).
+**Primary user / Client Services Lead:** **Diline G** — diline@spicedigital.co, Notion `36ed872b-594c-8110-ad57-0002a3e614db`. Diline is the **default Client Services Lead**; every "Client Services Lead" reference below resolves to Diline unless Maxx names someone else at runtime. (Cesar held this role through early 2026 and has since departed — never route onboarding to him.)
+**Handoff point:** Maxx closes deal, sends kickoff email with Diline CC'd. From that point Diline owns everything except the kickoff call (where Maxx makes the formal introduction).
 
 ## Trigger Phrases
 
@@ -188,9 +188,9 @@ Create tasks in the Client Onboarding database using `notion-create-pages`.
 
 | Task | Phase | Days | Owner ID |
 |------|-------|------|----------|
-| Create internal Slack channel (#int-[client]) | Kickoff | 0 | Client Services Lead (assign at runtime) |
-| Create external Slack channel (#ext-[client]-spice) or WhatsApp group | Kickoff | 0 | Client Services Lead (assign at runtime) |
-| Confirm Payment On File in Stripe | Kickoff | 1 | Client Services Lead (assign at runtime) |
+| Create internal Slack channel (#int-[client]) | Kickoff | 0 | Client Services Lead — Diline (`36ed872b-594c-8110-ad57-0002a3e614db`) by default |
+| Create external Slack channel (#ext-[client]-spice) or WhatsApp group | Kickoff | 0 | Client Services Lead — Diline (`36ed872b-594c-8110-ad57-0002a3e614db`) by default |
+| Confirm Payment On File in Stripe | Kickoff | 1 | Client Services Lead — Diline (`36ed872b-594c-8110-ad57-0002a3e614db`) by default |
 
 **Step 5b: Create service-specific tasks**
 
@@ -198,7 +198,7 @@ See `references/onboarding-tasks.md` for the full task list per service.
 
 **Owner logic:**
 - Advisory tasks → Maxx (`c249c8bc-e33f-4b35-b4f8-c9b22117cccc`)
-- All other tasks → Client Services Lead (assign at runtime). Lead reassigns to team members.
+- All other tasks → Client Services Lead — Diline (`36ed872b-594c-8110-ad57-0002a3e614db`) by default. Lead reassigns to team members.
 
 **Task creation format:**
 ```json
@@ -294,14 +294,18 @@ The following linked views in the client page need filters applied:
 | Name | Role | Email | Notion ID |
 |------|------|-------|-----------|
 | Maxx Freedman | CEO / Sales | maxx@spicedigital.co | c249c8bc-e33f-4b35-b4f8-c9b22117cccc |
-| Rodrigo Gutierrez | Growth & Marketplace Ops | rodrigo@spicedigital.co | babf0663-1fa3-49dd-8605-5b777bab2c13 |
-| David Pliego | Operations / Systems | david@spicedigital.co | 1c0d872b-594c-8190-90bc-00025e02e3b6 |
-| Rui Moreira | Marketplace Operations | rui@spicedigital.co | 1b7d872b-594c-813a-9ec9-00026a26bf6a |
-| Manish Kumar | Data / Analytics | manish@spicedigital.co | 2afd872b-594c-8133-b913-00024826113c |
-| Tomas Wayne | Operations (transitioning) | tomas@spicedigital.co | 2bad872b-594c-81ce-9d48-00022fecb006 |
-| Ana | Growth Manager (starting Mar 18, 2026) | — | — |
-| Dulari Fernando | — | dulari@spicedigital.co | 1cad872b-594c-81a0-a0db-000282941e87 |
-| Diri Thadhani | — | diri@spicedigital.co | 270d872b-594c-81f7-b95e-0002309a801d |
+| **Diline G** | **Client Services Lead (owns onboarding)** | diline@spicedigital.co | 36ed872b-594c-8110-ad57-0002a3e614db |
+| Rodrigo Gutierrez | GM, Marketplace | rodrigo@spicedigital.co | babf0663-1fa3-49dd-8605-5b777bab2c13 |
+| Santiago López | Ops / Enterprise GM | santiago@spicedigital.co | 336d872b-594c-81f7-887a-0002fa54184e |
+| Daniel Ramirez | GM | daniel@spicedigital.co | 359d872b-594c-814a-9897-0002e0ca699a |
+| Ana Pernett | GM | ana@spicedigital.co | 325d872b-594c-8153-8d55-0002c2874d99 |
+| Manish Kumar | Ops Analyst | manish@spicedigital.co | 2afd872b-594c-8133-b913-00024826113c |
+| Dulari Fernando | Ops Analyst (PT) | dulari@spicedigital.co | 1cad872b-594c-81a0-a0db-000282941e87 |
+| Harol | Retention | harol@spicedigital.co | 36dd872b-594c-8169-a744-00021994d6d4 |
+| Dilli Dias | Design | dilli@spicedigital.co | 33bd872b-594c-81e0-937a-0002fe81f779 |
+| David Pliego | Paid Media | david@spicedigital.co | 1c0d872b-594c-8190-90bc-00025e02e3b6 |
+
+_Departed — never assign: Cesar (Head of Client Services through early 2026), Rui, Tomas, Diri._
 
 ## Notion Database References
 
