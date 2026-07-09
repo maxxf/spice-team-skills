@@ -9,7 +9,7 @@ description: End-to-end new client onboarding for Spice. Handles post-signature 
 
 End-to-end post-signature onboarding automation. Takes a new client from Closed Won to fully set up in Notion with tasks, email drafted, and manual steps checklist.
 
-**Primary user / Client Services Lead:** **Diline G** — diline@spicedigital.co, Notion `36ed872b-594c-8110-ad57-0002a3e614db`. Diline is the **default Client Services Lead**; every "Client Services Lead" reference below resolves to Diline unless Maxx names someone else at runtime. (Cesar held this role through early 2026 and has since departed — never route onboarding to him.)
+**Primary user — Onboarding Coordinator:** **Diline G** (Spice EA + onboarding coordinator) — diline@spicedigital.co, Notion `36ed872b-594c-8110-ad57-0002a3e614db`. Diline **owns onboarding**; every "Client Services Lead" reference below (the functional role in this skill) resolves to Diline unless Maxx names someone else at runtime. (Cesar held this role through early 2026 and has since departed — never route onboarding to him.)
 **Handoff point:** Maxx closes deal, sends kickoff email with Diline CC'd. From that point Diline owns everything except the kickoff call (where Maxx makes the formal introduction).
 
 ## Trigger Phrases
@@ -294,7 +294,7 @@ The following linked views in the client page need filters applied:
 | Name | Role | Email | Notion ID |
 |------|------|-------|-----------|
 | Maxx Freedman | CEO / Sales | maxx@spicedigital.co | c249c8bc-e33f-4b35-b4f8-c9b22117cccc |
-| **Diline G** | **Client Services Lead (owns onboarding)** | diline@spicedigital.co | 36ed872b-594c-8110-ad57-0002a3e614db |
+| **Diline G** | **EA / Onboarding Coordinator (owns onboarding)** | diline@spicedigital.co | 36ed872b-594c-8110-ad57-0002a3e614db |
 | Rodrigo Gutierrez | GM, Marketplace | rodrigo@spicedigital.co | babf0663-1fa3-49dd-8605-5b777bab2c13 |
 | Santiago López | Ops / Enterprise GM | santiago@spicedigital.co | 336d872b-594c-81f7-887a-0002fa54184e |
 | Daniel Ramirez | GM | daniel@spicedigital.co | 359d872b-594c-814a-9897-0002e0ca699a |
