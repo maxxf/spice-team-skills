@@ -27,7 +27,7 @@ A brief that *looks* complete but runs on stale data is worse than a short hones
 
 Vault (for Maxx's current priorities, feeds §1 triage only):
 - Path (resolve under whichever user runs it): `$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/Obsidian Vault/` → read `00-home/hot.md` + `00-home/top-of-mind.md`. On the Mac Mini (user `spicy`) this iCloud vault is usually ABSENT — that's expected, not an error.
-- If that path isn't mounted (headless Mac Mini iCloud often isn't), try the `obsidian-vault` MCP. If neither works, **proceed without it and note "vault context unavailable"** — do not block, do not invent. **Never source metrics from the vault** (MRR etc. come from Stripe).
+- If that path isn't mounted (headless Mac Mini iCloud often isn't), try the `obsidian-vault` MCP. If neither works, **proceed without it and note "vault context unavailable"** — do not block, do not invent. **Never source metrics from the vault** (realized MRR/AR come from Stripe; the revenue forecast comes from the P&L — see §6).
 
 Roster (source of truth — verify, don't hardcode from memory):
 - Confirm the active roster against Notion + `CLAUDE.md` before crediting anyone.
@@ -92,11 +92,21 @@ Email is more recent than meeting notes — where they conflict, email wins for 
 - Flag any client about to be scrutinized on spend who also owes — they pay first.
 - **NEVER call `stripe_api_execute` (it does not exist)** — that exact bug made past briefs falsely report "Stripe not connected." If `GetInvoices` ever errors, rediscover via `stripe_api_search "list invoices"` then `stripe_api_read`. If Stripe is genuinely unreachable, emit **`AR UNAVAILABLE — verify Stripe MCP on the Mac Mini`**, never "AR clean."
 
-**MRR (compute from Stripe — do NOT use the vault/P&L estimate; it runs ~$10K high and stale):**
-- Discover the subscriptions op via `stripe_api_search "list subscriptions"` → `stripe_api_read`. Sum active/trialing subs, annual ÷ 12.
-- **Also count recurring `send_invoice` subscriptions** that sit in `past_due`/non-active (goop, Capriotti's, etc. bill net-30 — a naive `status=active` query MISSES ~$15K). Include clearly-recurring service fees even when delinquent; note the delinquent portion.
+**Two revenue numbers — track both, they are NOT the same and neither is "wrong":**
+- **Stripe = REALIZED recurring** — what actually billed. The source of truth for MRR against the $100K goal.
+- **P&L = FORECASTED total revenue** — what's *planned*, forward-looking, and now **includes non-MRR revenue** (one-time launch/setup fees, project work, performance payouts, ezCater/catering, retention, paid-media add-ons). So the P&L forecast will run **above** Stripe MRR by design — that gap is the non-recurring layer + not-yet-realized ramp, not an error. Do not "correct" the P&L to Stripe or vice-versa.
+
+**Realized MRR (compute from Stripe):**
+- Discover the subscriptions op via `stripe_api_search "list subscriptions"` → `stripe_api_read` (`{"status":"all","limit":100}`; paginate on `has_more`). Sum **active + trialing + past_due** subs, normalizing to monthly (annual ÷ 12, weekly × 52/12). Exclude `canceled` / `incomplete_expired`.
+- **Count recurring `send_invoice` subs even when `past_due`/non-active** (goop, Capriotti's, etc. bill net-30 — a naive `status=active` query MISSES ~$15K). Include clearly-recurring service fees even when delinquent; note the delinquent portion.
 - Note CAD subs (BKDS group) — state whether counted nominally or converted.
-- Report **Total MRR + gap to $100K**, with the subscription / recurring-invoice split and past-due amount. (Reference only, Jun 2026: ~$64K subs + ~$15.5K recurring = ~$79.5K, ~$20.5K to goal — verify, don't reprint.)
+- Report **Realized MRR + gap to $100K**, with the active-sub / delinquent-recurring split and past-due amount. (Reference only, Jul 2026: ~$81.3K realized MRR = ~$79.7K active + ~$1.65K past_due, ~$18.7K to goal — verify, don't reprint.)
+
+**Forecasted revenue (read from the P&L):**
+- Source = **SPICE P&L** Google Sheet `1WkDkIdGRlj655-rx3BnCTquneh4UytacanfgMEZrO78` (tab gid `104487856`). Read it with the Google Drive MCP `read_file_content` (`fileId` = that sheet id) — returns the sheet as a markdown table.
+- The top **`Revenue`** row is **total revenue by month** and already **includes non-MRR** (the sub-rows below it — Digital Storefront, Reputation Management, Email Marketing, plus one-time/project/performance/catering booked into the total). The month columns run left→right (`Mar-2023 … Dec-2026`). Take the cell under the **current month** (the month containing the prep's Monday; e.g. week of Jul 13 2026 → `Jul-2026`).
+- If the sheet can't be read, emit **`FORECAST UNAVAILABLE — P&L not read this run`** and report Stripe realized only — never invent a forecast or fall back to a vault estimate.
+- Report **P&L forecast total + the realized-vs-forecast variance** (Stripe realized ÷ P&L forecast). This variance is the real signal: how much of the planned book has actually landed in Stripe. The gap = the non-MRR layer (one-time/project/performance/catering) + not-yet-realized ramp — name the biggest driver if one stands out. (Reference only, Jul 2026: P&L forecast `$100,352` total revenue vs ~$81.3K Stripe realized MRR ≈ 81% realized — verify against the live sheet, don't reprint.)
 
 ### 7. Churn scoring
 Score every active client 0/1/2 on five dimensions — **Pay** (late/disputed billing), **Eng** (responsiveness, attendance, POC churn), **Perf** (sales/conversion/rating trend), **Ops** (platform/menu/campaign blockers), **Rel** (lead changes, tension). Total /10 → 🔴 High (6+), 🟡 Monitor (3–5), Healthy (0–2). Compare to last week's prep (fetch the prior archive page) and note score changes + why. Surface only clients scoring 3+.
@@ -155,7 +165,7 @@ New-client onboarding only, **sourced from §3 (the onboarding DB read), not mee
 
 ### Standup Summary — copy/paste (formatted, NOT code blocks)
 The one intentional consolidation (its job is to be pasted into the standup doc). Render as **real formatted content** — proper sub-headings + bullet/numbered lists — NOT inside code fences. Use the standup's exact section names as `###` sub-headings, in order:
-- **MRR / Goal** → one bold line: the **Stripe-computed** MRR (§6) + RAG dot + gap to $100K. Never the vault estimate.
+- **MRR / Goal** → one bold line: **Stripe realized MRR** (§6) + RAG dot + gap to $100K, then the **P&L forecast** + realized-vs-forecast variance in parentheses (e.g. `~$81.3K realized 🟡 — $18.7K to goal (P&L forecast $100.4K total rev; 81% realized)`). Realized (Stripe) is the goal number; forecast (P&L) is context. Never a vault estimate.
 - **`### Pipeline Updates`** → bullets: **Recently Won** / **Proposal Shared** / **Meeting Booked** / **Pitched** / **Chase**.
 - **`### 🏆 Big Wins This Week (All)`** → numbered list, top 5, `win — owner`.
 - **`### Onboarding Updates`** → counts + the one client needing attention.
@@ -191,7 +201,7 @@ The standup doc "🌶️ Spice | Weekly Standup" is a row in **DB: Team Meetings
    - `## Pipeline Updates` ← prep §2 (stages + chase). Omit the internal CRM-cleanup note.
    - `## 🏆 Big Wins This Week (All)` ← prep §4, numbered with attribution.
    - `## Onboarding Updates` (+ `Churn Risk` sub-bullets) ← prep §5 + §6 Red/Yellow one-liners.
-   - Exec Summary toggle → **2026 Company Goals** table → `MRR to 100k` row → **Status cell** = the Stripe-computed MRR + RAG dot (e.g. `~$79.5K — $20.5K to goal 🟡`).
+   - Exec Summary toggle → **2026 Company Goals** table → `MRR to 100k` row → **Status cell** = the **Stripe realized** MRR + RAG dot + gap to goal (e.g. `~$81.3K — $18.7K to goal 🟡`). The `MRR to 100k` cell tracks REALIZED (Stripe), not the P&L forecast — the goal is realized recurring. Keep the P&L forecast/variance in the prep's MRR line, not this cell.
 4. **NEVER touch:** the inline linked DB view in Exec Summary; any per-person toggle (Accomplishments / Top Priorities / Something Fun); the Announcements callout.
 5. **Report** which sections were filled, which were skipped, and the standup page link.
 
@@ -206,11 +216,13 @@ The standup doc "🌶️ Spice | Weekly Standup" is a row in **DB: Team Meetings
 - **Onboarding hand-derived from meetings** → soft, wrong counts. Pull §5 from the onboarding DB.
 - **Sourcing from the standup** → circular. Client meetings, sales calls, 1:1s, biweeklies, Notion, Gmail, Stripe only.
 - **Crediting departed teammates** → exclude them.
+- **Conflating realized and forecast** → Stripe MRR (realized) and the P&L (forecast, incl. non-MRR) measure different things. Report both + the variance; the `MRR to 100k` goal cell tracks realized only. Never "reconcile" one to the other or call the gap an error.
 
 ## Self-check before finishing
 - Every section labeled live / fallback / unavailable — and zero banned hedge phrases?
 - Any stale or baseline number presented as current? (must be no)
 - AR: a real Stripe read, or an explicit `AR UNAVAILABLE`? Never a false "clean"?
+- MRR line: **realized** (Stripe) AND **forecast** (P&L, incl. non-MRR) both shown, with the variance — and the goal cell = realized only?
 - Pipeline stages from the reader/CRM, not inferred from calls?
 - §1 anchored to Maxx-only leverage (≥1 offense, ≥1 build), with reassignments called out?
 - Anyone departed credited? (must be no)
