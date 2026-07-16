@@ -1,0 +1,78 @@
+{
+  "client_slug": "REPLACE_WITH_SLUG",
+  "client_display_name": "REPLACE_WITH_DISPLAY_NAME",
+  "notion": {
+    "parent_page_id": null,
+    "comment": "If populated, render_deliverable can publish a Notion mirror of the PDF"
+  },
+  "platforms_in_scope": ["ue", "dd", "gh"],
+  "marketing_pct_benchmark": 0.03,
+  "new_customer_spend_share": null,
+  "data_quirks": {
+    "ue_ads_access": true,
+    "dd_ad_spend_invoiced_separately": false,
+    "ad_spend_is_net_of_credits": true,
+    "notes": "ad_spend_is_net_of_credits MUST be true before sharing — map spend to the NET ad column, never gross. Platforms credit back a large share of ad spend; a gross figure doubles spend and halves ROAS. The engine flags any location >60% marketing as a likely un-netted-gross error."
+  },
+  "locations": [
+    {
+      "location_id": "example-soma",
+      "location_name": "SoMa",
+      "comp_set": "sf-bay-area",
+      "market": "San Francisco",
+      "open_date": "2025-12-17",
+      "structural_events": []
+    }
+  ],
+  "column_mappings": {
+    "ue": {
+      "sales_by_store": {
+        "file_hint": ["sales-by-store", "sales_by_store"],
+        "skiprows": 1,
+        "columns": {
+          "location_name": "Store Name",
+          "week_starting": "Week",
+          "gross_sales": "Gross Sales",
+          "net_payout": "Net Payout",
+          "orders": "Orders"
+        }
+      },
+      "ads": {
+        "file_hint": ["ads", "campaign"],
+        "columns": {
+          "location_name": "Store",
+          "week_starting": "Week",
+          "spend": "Net Ad Spend",
+          "attributed_sales": "Attributed Sales"
+        },
+        "_comment": "Map spend to the NET-of-credits column (e.g. 'Net Ad Spend'), NEVER a gross 'Total Ad Spend'. If only a gross column exists, net the Ad Credits column yourself before building."
+      }
+    },
+    "dd": {
+      "financials": {
+        "file_hint": ["financial", "statement"],
+        "columns": {
+          "location_name": "Store",
+          "week_starting": "Week Starting",
+          "gross_sales": "Gross Sales",
+          "net_payout": "Net Payout",
+          "orders": "Orders"
+        }
+      },
+      "sponsored": {
+        "file_hint": ["sponsored"],
+        "columns": {
+          "location_name": "Store",
+          "week_starting": "Week",
+          "spend": "Spend",
+          "attributed_sales": "Sales"
+        }
+      }
+    }
+  },
+  "_notes": [
+    "column_mappings is the column rename map for each platform's source CSV.",
+    "Fill in once per client, then reuse across audit cycles.",
+    "If a column is missing in the source CSV, omit it from the mapping — the script tolerates absence."
+  ]
+}
