@@ -71,7 +71,7 @@
       "Midtown West": {
         "tier": "Top",
         "goal": "payout",
-        "overrides": "NYC organic engine \u2014 keep spend ~0, protect",
+        "overrides": "SUMMER-ONLY window 2026-07-14 to 2026-09-07 (Maxx, Labor Day per roadmap.window_end) \u2014 raise to 3-4% spend, then REVERT to 'keep spend ~0, protect'. Biggest single location by total sales (~$164K/wk) with effectively $0 UE Ads presence (W28: only 2 DD offer campaigns, $940 spend, ~2% spend%) \u2014 needs a new UE Ads campaign stood up to reach 3-4%, doesn't exist yet. Do not treat as a permanent tier change.",
         "reorder_rate": null,
         "reorder_captured": "2026-05-08",
         "reorder_note": "31.9% as 'NYC' \u2014 live Apr 18, not comparable; revisit 60-90d"
@@ -131,7 +131,7 @@
       "San Jose": {
         "tier": "Low",
         "goal": "growth",
-        "overrides": "GM override of diagnostic Red \u2014 deliberate growth program (May 16 tweak), walk 21%\u219215%",
+        "overrides": "GM override of diagnostic Red \u2014 deliberate growth program (May 16 tweak); no hard tier ceiling as of 2026-07-14 (Maxx), gated by 10% portfolio guardrail instead \u2014 see tiers.Low.notes, fund acquisition here first (organic headroom)",
         "reorder_rate": 0.606,
         "reorder_captured": "2026-05-08",
         "reorder_note": "May 8 analysis (Feb-May window, volume-weighted UE+DD+GH)"
@@ -139,7 +139,7 @@
       "Pasadena": {
         "tier": "Low",
         "goal": "growth",
-        "overrides": "GM override of diagnostic Red \u2014 paired with San Jose program, walk 19%\u219215%",
+        "overrides": "GM override of diagnostic Red \u2014 paired with San Jose program; no hard tier ceiling as of 2026-07-14 (Maxx), gated by 10% portfolio guardrail instead \u2014 see tiers.Low.notes, fix efficiency (retire legacy campaigns) before adding spend, don't just trim",
         "reorder_rate": 0.717,
         "reorder_captured": "2026-05-08",
         "reorder_note": "May 8 analysis (Feb-May window, volume-weighted UE+DD+GH)"
@@ -192,7 +192,7 @@
         ],
         "goal": "growth",
         "acq_retention": "55/45",
-        "notes": "SJ/Pas aggressive-depth program, walking 19-21% down to 10-12% by P3"
+        "notes": "SJ/Pas: Maxx 2026-07-14 (re: Kelly Burke top-line-growth ask) — NO hard ceiling on Low tier itself; band can flex above 15% if needed and efficient (ROAS holding), gated by the PORTFOLIO blended guardrail (now 10%, see portfolio_guardrail below), not a tier-level cap or a date-based taper. Still an active acquisition + repeat/retention program, NOT hold. W28 actual: 10.6% blended for the group. San Jose (8% spend, 42% mkt-driven-sales vs 54.6% tier avg) has real organic headroom — fund acquisition there first. Pasadena (12% spend, ROAS -17.6% L4W, W28 dashboard flags ⚠ Pull back) — retire/rebuild inefficient legacy campaigns (e.g. Pasadena SL 2.5x) before adding spend; efficiency gate applies per-store even though the tier band itself isn't capped. GAP: neither store has a dedicated repeat/retention (Lapsed win-back or loyalty) campaign — both entries are acquisition-only; needed to actually 'drive repeat behavior' per Maxx's ask. New spend must be New/Lapsed-segmented, not All-customer (see cannibalization note below)."
       },
       "New": {
         "spend_pct": [
@@ -213,8 +213,17 @@
       }
     },
     "portfolio_guardrail": {
-      "blended_mkt_spend_pct_max": 6,
-      "note": "tiers are %-based; portfolio must stay balanced at <=6% blended"
+      "blended_mkt_spend_pct_max": 10,
+      "note": "raised 6%→10% 2026-07-14 (Maxx). Portfolio-wide ceiling, not per-tier: individual tiers (incl. Low/SJ+Pas) can run above their own band if needed and efficient, as long as the whole-portfolio blend stays <=10%."
+    },
+    "growth_targets": {
+      "set": "2026-07-14 (Maxx)",
+      "portfolio_weekly_sales_target": 1500000,
+      "note": "W28 actual $1.41M. Ramp to $1.5M/wk, spend held to <=10% blended and efficient (see portfolio_guardrail) — growth from efficiency gains + reallocation, not just more budget.",
+      "location_priority": [
+        {"rank": 1, "locations": ["Studio City", "Beverly Hills"], "target": "$100K/wk each, comp-based (Pico-Robertson $81K, Silver Lake $80K, South Bay $79K already near/above that on Mid-tier budgets)", "w28_actual": {"Studio City": "~$85K/wk", "Beverly Hills": "~$68K/wk"}, "gap": {"Studio City": "~$15K/wk", "Beverly Hills": "~$32K/wk"}},
+        {"rank": 2, "locations": ["San Jose", "Pasadena"], "target": "see tiers.Low — efficiency-gated, San Jose funded first (organic headroom), Pasadena fixed first (retire legacy campaigns)"}
+      ]
     },
     "reorder_rates": "CANONICAL = May 8 2026 analysis (Notion 35ad3ff0\u2026): portfolio 74.5% blended, retention-rich. Jun 12 capture INVALIDATED (truncated exports, n=1-63, contradicted by May 8 full pulls). Quarterly re-confirm; next at Aug re-tier incl. BH 30d-post-reopen + NYC 60-90d reads",
     "roadmap": {
