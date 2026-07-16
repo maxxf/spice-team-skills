@@ -42,10 +42,10 @@ Ask user to confirm which services this client is onboarding for:
 
 | Service | Code | Task Count (incl. shared) |
 |---------|------|---------------------------|
-| Delivery Marketplaces | `DM` | 14 tasks |
-| Retention (Email/SMS/Loyalty) | `RET` | 12 tasks |
-| Paid Acquisition (Meta/Google/TikTok) | `PAID` | 11 tasks |
-| Advisory | `ADV` | 7 tasks |
+| Delivery Marketplaces | `DM` | 15 tasks |
+| Retention (Email/SMS/Loyalty) | `RET` | 13 tasks |
+| Paid Acquisition (Meta/Google/TikTok) | `PAID` | 12 tasks |
+| Advisory | `ADV` | 8 tasks |
 
 Only generate tasks for selected services. See `references/onboarding-tasks.md` for full task details.
 
@@ -75,7 +75,6 @@ data_source_url: collection://1c8d3ff0-18e7-80e9-8381-000b4448cb87
 | DM Base Fee | Per-client product | Created per client | $1,000/mo |
 | DM First 5 Locations | DM First 5 Locations | `price_1Sn0k7FSznekd2wYk5POzUaX` | $350/loc/mo |
 | DM Locations 6+ | DM Locations 6+ | `price_1Sn0kgFSznekd2wYjOTMUtih` | $175/loc/mo |
-| Loop Analytics (DM included) | *Manual line item* | — | $60/loc/mo |
 | Retention | Retention Lite | `price_1SfDC3FSznekd2wY5FY2QUUf` | $1,400/mo |
 | Advisory | Fractional Head of Growth | `price_1SpYumFSznekd2wYC6stONcN` | $4,000/mo |
 | Advisory Lite | Advisory Lite | `price_1TCCHbFSznekd2wY1mrKsAmC` | $2,500/mo |
@@ -86,8 +85,10 @@ data_source_url: collection://1c8d3ff0-18e7-80e9-8381-000b4448cb87
 DM Monthly = $1,000 base
            + ($350 x first 5 locations)
            + ($175 x locations 6+)
-           + ($60 x all locations)  <- Loop Analytics
 ```
+
+Analytics (Spicy) is included in the DM engagement — no separate per-location line item
+(the former $60/loc Loop Analytics charge was removed when Loop was deprecated).
 
 **CONFIRM pricing with user before proceeding.** Clients may have negotiated custom pricing.
 
@@ -189,8 +190,9 @@ Create tasks in the Client Onboarding database using `notion-create-pages`.
 | Task | Phase | Days | Owner ID |
 |------|-------|------|----------|
 | Create internal Slack channel (#int-[client]) | Kickoff | 0 | Client Services Lead — Diline (`36ed872b-594c-8110-ad57-0002a3e614db`) by default |
-| Create external Slack channel (#ext-[client]-spice) or WhatsApp group | Kickoff | 0 | Client Services Lead — Diline (`36ed872b-594c-8110-ad57-0002a3e614db`) by default |
+| Set up client comms channel: Slack Connect or WhatsApp (bridge via 2Chat) | Kickoff | 0 | Client Services Lead — Diline (`36ed872b-594c-8110-ad57-0002a3e614db`) by default |
 | Confirm Payment On File in Stripe | Kickoff | 1 | Client Services Lead — Diline (`36ed872b-594c-8110-ad57-0002a3e614db`) by default |
+| Update Figma kickoff deck (present on kickoff call) | Kickoff | 0 | Dilli Dias (`33bd872b-594c-81e0-937a-0002fe81f779`) — updates post-Closed Won |
 
 **Step 5b: Create service-specific tasks**
 
