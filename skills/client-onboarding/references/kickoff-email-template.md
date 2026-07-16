@@ -2,7 +2,7 @@
 
 ## Delivery Marketplaces / Multi-Service Email
 
-This email is sent by Maxx (or the salesperson) immediately after SOW signature. It introduces the Client Services Lead and hands off the relationship for onboarding.
+This email is sent by Maxx or Diline immediately after SOW signature. It introduces the onboarding lead (Diline) and hands off the relationship for onboarding. Real-world subject line pattern: "Onboarding: {restaurant_name} <> Spice".
 
 ### Variables
 
@@ -20,13 +20,13 @@ This email is sent by Maxx (or the salesperson) immediately after SOW signature.
 ### Template
 
 ```
-Subject: Welcome to Spice! - {restaurant_name} Onboarding
+Subject: Onboarding: {restaurant_name} <> Spice
 
-{first_name} — allow me to formally welcome you to Spice. We are excited to be partnering with you and {restaurant_name}!
+{first_name} — allow me to formally welcome you to Spice 🌶. We are excited to be partnering with you and {restaurant_name}!
 
 Over the next week, we will be organizing internally by assigning more Spice members to your team, gathering assets from you, and taking time to understand your business in a more comprehensive way, building on our initial calls together.
 
-In order to streamline this process, I'd like to introduce you to {cs_lead_name} (copied), who will coordinate your onboarding, to handle the following:
+In order to streamline this process, I'd like to introduce you to {cs_lead_name} (copied), Spice's onboarding lead, to coordinate the following:
 
 - Scheduling Kick-off call: {kickoff_date}
 - Setting up shared Slack / WhatsApp for communications
@@ -37,6 +37,8 @@ In order to streamline this process, I'd like to introduce you to {cs_lead_name}
 Please be sure to set some time aside to prep this info for us.
 
 Thank you!
+
+// maxx freedman | managing partner | Spice
 ```
 
 ### Notes
@@ -52,9 +54,9 @@ Thank you!
 For clients purchasing only Advisory services, Maxx remains the primary contact. No Client Services handoff.
 
 ```
-Subject: Welcome to Spice! - {restaurant_name}
+Subject: Onboarding: {restaurant_name} <> Spice
 
-{first_name} — welcome to Spice. Excited to get started with {restaurant_name}.
+{first_name} — allow me to formally welcome you to Spice 🌶. We're excited to get started with {restaurant_name}.
 
 I'll be your direct point of contact for our advisory engagement. Here's what's next:
 
@@ -63,4 +65,6 @@ I'll be your direct point of contact for our advisory engagement. Here's what's 
 - I'll be reaching out separately to gather docs and context for our first working session.
 
 Looking forward to it.
+
+// maxx freedman | managing partner | Spice
 ```

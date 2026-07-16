@@ -66,7 +66,7 @@ data_source_url: collection://1c8d3ff0-18e7-80e9-8381-000b4448cb87
 
 ### Step 2: Pricing Calculation & Stripe Handoff
 
-**Who runs Stripe:** Only Maxx has Stripe access. This step calculates pricing and outputs a Stripe action checklist for Maxx. If Maxx is running the skill, Stripe tools are used directly. If the Client Services Lead is running it, Stripe steps are output as manual tasks for Maxx.
+**Who runs Stripe:** Maxx or the billing EA/ops (Stripe **Support Specialist** role — can create/manage customers, prices, subscriptions, and payment links; blocked from API keys, payouts, and bank settings). This step calculates pricing and either creates the Stripe objects directly (if run by someone with a Stripe seat) or outputs a Stripe action checklist for whoever holds billing. Only pricing confirmation and the link send are gated to a human; customer + price + link creation can be delegated to the EA/ops seat.
 
 **Step 2a: Calculate pricing**
 
@@ -92,12 +92,12 @@ Analytics (Spicy) is included in the DM engagement — no separate per-location 
 
 **CONFIRM pricing with user before proceeding.** Clients may have negotiated custom pricing.
 
-**Step 2b: Stripe action checklist (for Maxx)**
+**Step 2b: Stripe action checklist (for Maxx or billing EA/ops)**
 
 Always output this in the summary, regardless of who runs the skill:
 
 ```
-STRIPE SETUP (Maxx only):
+STRIPE SETUP (Maxx or billing EA/ops — Support Specialist seat):
 1. Create Stripe customer: [Client Name], [Client Email]
 2. Create payment link for [first service] at $[amount]/mo (recurring)
 3. Configure payment link to collect: name, email, phone, business name + address, billing contact
@@ -254,7 +254,7 @@ After all automation completes, output:
 **CC:** [client services lead email]
 **Subject:** Welcome to Spice! - [restaurant name] Onboarding
 
-## Stripe Setup (Maxx Action Required)
+## Stripe Setup (Maxx or billing EA/ops)
 
 Pricing: [breakdown with per-service totals]
 Terms: [upfront / net-15]
