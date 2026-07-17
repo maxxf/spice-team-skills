@@ -14,6 +14,15 @@ SLACK_WEBHOOK="${SKILL_VERSIONS_WEBHOOK:-}"   # set SKILL_VERSIONS_WEBHOOK via m
 have=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['version'])" "$PJ" 2>/dev/null) || have=""
 latest=$(curl -s --max-time 4 "$RAW" | python3 -c "import json,sys;print(json.load(sys.stdin)['version'])" 2>/dev/null) || latest=""
 
+# Race guard: this hook fires before Claude Code's marketplace autoUpdate
+# finishes its pull, so a just-shipped release reads as "stale" even though
+# the update lands seconds later. On mismatch, try the pull ourselves and
+# re-read — only warn if the machine is STILL behind (i.e. the pull failed).
+if [ -n "$have" ] && [ -n "$latest" ] && [ "$have" != "$latest" ]; then
+  git -C "$HOME/.claude/plugins/marketplaces/spice-team-skills" pull --ff-only --quiet >/dev/null 2>&1 || true
+  have=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['version'])" "$PJ" 2>/dev/null) || have=""
+fi
+
 if [ -n "$have" ] && [ -n "$latest" ] && [ "$have" != "$latest" ]; then
   echo "WARN: Spice team skills are OUT OF DATE on this machine — installed v$have, latest v$latest."
   echo "Fix: restart Claude Code (autoUpdate pulls it) or run  /plugin marketplace update spice-team-skills"
