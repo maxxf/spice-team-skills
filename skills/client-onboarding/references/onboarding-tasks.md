@@ -13,6 +13,10 @@ These tasks are common across all services. Create only ONE instance per client,
 
 Tag shared tasks with the **first** selected service.
 
+**Combined clients:** if the client already has an active Spice engagement (e.g. DM) and is
+adding another service like Catering, do NOT recreate the shared tasks — reuse their existing
+Slack channels and kickoff deck. Only generate the new service's service-specific tasks.
+
 ## Delivery Marketplaces
 
 | Task | Phase | Days | Default Owner | Notes |
@@ -73,6 +77,31 @@ Tag shared tasks with the **first** selected service.
 
 **Total: 4 unique + 4 shared = 8 tasks**
 
+## Catering Marketplaces (ezCater)
+
+Standalone service (not a DM add-on). Monthly cadence, so a lighter pack than DM. v1 is the
+visibility / marketing layer only (no corporate-account sales). **Managing ezCater needs
+logins to BOTH surfaces:** the Partner Portal (`partnerportal.ezcater.com` — ops, badge,
+sales, menus, financials) and ezManage (`catering.ezcater.io` — the paid levers: Preferred
+Partner Placement, ezRewards, Promotions).
+
+| Task | Phase | Days | Default Owner | Notes |
+|------|-------|------|---------------|-------|
+| Client completes onboarding form w/ ezCater logins | Access & Setup | 5 | Client Services Lead | Collect BOTH ezCater Partner Portal AND ezManage logins. The Partner Portal login alone does not grant the paid levers. |
+| Confirm Access to ezCater Partner Portal + ezManage | Access & Setup | 7 | Assigned by Client Services Lead | Verify login access to both surfaces. Individual seats under the `ops@spicedigital.co` alias with 2FA; success+[client]@spicedigital.co pattern for portal accounts. |
+| Remediate paused / at-risk stores | Access & Setup | 7 | Assigned by Client Services Lead | **P0 — a paused store earns $0.** Breaching accountability standards (rejected ≤5%, canceled ≤3%, on-time ≥95%, ready-for-dispatch ≥95%) pauses a store. Unpause requires completing ezCater's remediation course (e.g. Cancellations course). Surface from the diagnostic and fix first. |
+| Run ezCater Diagnostic (Ops · Visibility · Packaging) | Audit | 7 | Assigned by Client Services Lead | Kick off as soon as access is confirmed. Use the ezcater-diagnostic skill. Flags paused/at-risk stores, badge gaps, menu/packaging, and visibility-lever opportunities. Output to client Document Hub. |
+| Connect ezCater data to Spicy / establish export SOP | Access & Setup | 10 | Assigned by Client Services Lead | Wire Partner Portal exports into the Spicy data layer per the ezCater export SOP. Powers monthly reporting. |
+| Menu + Packaging Optimization | Build & Launch | 14 | Assigned by Client Services Lead | Per-store menu editing on the Partner Portal — items, photos, packaging specs, pricing. Packaging is a catering-specific lever (group sizes, presentation). |
+| Set up Visibility Levers on ezManage | Build & Launch | 14 | Assigned by Client Services Lead | The paid growth levers live on ezManage, not the Partner Portal: Preferred Partner Placement (PPP) bids, ezRewards, and Promotions. Configure per client budget/strategy. |
+| Badge Plan (Reliability Rockstar) | Build & Launch | 17 | Assigned by Client Services Lead | Badge gate is **delivery tracking ≥75%** (plus order volume ≥6, rejected ≤0.5%, canceled 0%, accuracy ≥99%, on-time ≥98.5%). Self-delivery clients show 0% tracking and fail the badge even with perfect ops — fix operationally via ezDispatch / driver-app status updates. |
+| Set up Monthly Catering Reporting | Build & Launch | 21 | Assigned by Client Services Lead | Monthly reporting cadence (catering is monthly, not weekly). Spicy dashboard is the primary source of truth; manual sheet is the client-facing / backup view. |
+
+**Total: 9 unique + 4 shared = 13 tasks**
+
+Note: reviews on ezCater are **monitor-only** (no reply control, unlike DoorDash/Uber Eats),
+so there is no ratings-reply task in this pack.
+
 ---
 
 ## Task Owner Logic
@@ -103,6 +132,7 @@ When creating tasks, include the relevant SKILL trigger in the "Notes / Links" f
 | Ratings Boost Flyer Design | response-drafting | `SKILL: Say "draft response to design team" for the creative brief.` |
 | Create Master Tracking Sheet | xlsx + weekly-reporting | `SKILL: Say "create spreadsheet for [client] tracking" to build the sheet.` |
 | Connect Spicy analytics data sync | — | Connect via the Spicy pipeline on the Mac Mini. No Cowork skill trigger yet. |
+| Run ezCater Diagnostic (Ops·Visibility·Packaging) | ezcater-diagnostic | `SKILL: Say "run ezCater diagnostic for [client]" to score Ops/Visibility/Packaging.` |
 | Audit existing flows and list health (Retention) | — | Manual audit. No skill yet. |
 | Audit existing campaigns (Paid) | — | Manual audit. No skill yet. |
 

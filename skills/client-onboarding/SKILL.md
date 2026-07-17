@@ -45,6 +45,7 @@ Ask user to confirm which services this client is onboarding for:
 | Delivery Marketplaces | `DM` | 15 tasks |
 | Retention (Email/SMS/Loyalty) | `RET` | 13 tasks |
 | Paid Acquisition (Meta/Google/TikTok) | `PAID` | 12 tasks |
+| Catering Marketplaces (ezCater) | `CAT` | 13 tasks |
 | Advisory | `ADV` | 8 tasks |
 
 Only generate tasks for selected services. See `references/onboarding-tasks.md` for full task details.
@@ -76,6 +77,9 @@ data_source_url: collection://1c8d3ff0-18e7-80e9-8381-000b4448cb87
 | DM First 5 Locations | DM First 5 Locations | `price_1Sn0k7FSznekd2wYk5POzUaX` | $350/loc/mo |
 | DM Locations 6+ | DM Locations 6+ | `price_1Sn0kgFSznekd2wYjOTMUtih` | $175/loc/mo |
 | Retention | Retention Lite | `price_1SfDC3FSznekd2wY5FY2QUUf` | $1,400/mo |
+| Catering Base Fee | Per-client product | Created per client | $500/mo |
+| Catering First 10 Locations | *Manual line item* | — | $150/loc/mo |
+| Catering Locations 11+ | *Manual line item* | — | $75/loc/mo |
 | Advisory | Fractional Head of Growth | `price_1SpYumFSznekd2wYC6stONcN` | $4,000/mo |
 | Advisory Lite | Advisory Lite | `price_1TCCHbFSznekd2wY1mrKsAmC` | $2,500/mo |
 | Paid Acquisition | *Custom quote* | — | Varies |
@@ -89,6 +93,14 @@ DM Monthly = $1,000 base
 
 Analytics (Spicy) is included in the DM engagement — no separate per-location line item
 (the former $60/loc Loop Analytics charge was removed when Loop was deprecated).
+
+**Catering Marketplaces (ezCater) Pricing Formula:**
+```
+Catering Monthly = $500 base
+                 + ($150 x first 10 locations)
+                 + ($75 x locations 11+)
+```
+5-location minimum. Custom pricing above 50 locations. Standalone service (not a DM add-on).
 
 **CONFIRM pricing with user before proceeding.** Clients may have negotiated custom pricing.
 
