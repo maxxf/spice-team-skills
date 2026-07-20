@@ -57,6 +57,39 @@ Post the data-collection checklist from `references/ezcater-export-sop.md`. The 
 
 Wait for the user's "done" signal. Validate at least the operational + sales exports are present.
 
+### Step 2b — Storefront visual + buyer-side audit (v1, qualitative)
+Audit the storefront the way a buyer sees it — the same lens the delivery `client-diagnostics`
+skill applies to UE/DD/GH storefronts. Catering buyers compare listings side by side in search,
+so the visual layer still moves conversion even without an impulse-browse funnel. Qualitative
+pass in v1 (no scored schema columns yet); borrow the scoring lens from the `hero-image-review`
+skill, don't invent a new rubric.
+
+**Where to look:** the public buyer view on `ezcater.com`, NOT the portal menu editor (that's
+the editing backend, and it can hang). The storefront is address-gated — set an event location
+in the store's market, search the brand, open the listing. The search results page is itself
+data: it shows ranking, badges, and points multipliers you need for the paid read below.
+
+**Sampling:** most brands run one shared menu across locations. Audit the **highest-volume
+store's** full storefront, then spot-check the **hero per store** (heroes can vary by location).
+Menu, category, and packaging findings generalize from the sampled store.
+
+Capture:
+- **Hero image** — present, on-brand, high-resolution, not a stale/pre-rebrand asset or an ezCater default
+- **Menu photo coverage** — rough % of items with real photos (flag under ~80%)
+- **Category structure** — logical order, best-sellers and headcount bundles surfaced up top
+- **Packaging presentation** — per-person pricing, headcount tiers, Feeds-10/25/50 bundles visibly displayed
+- **Buyer-side paid signals** — covers the paid read when the ezManage login is still pending: a points multiplier = ezRewards active; a "Sponsored" tag = Sponsored Listings running; a visible offer = a live promo; ranking above higher-rated peers = a Preferred Partner bid. Record as inferences to confirm in ezManage.
+
+Record findings as a short "Storefront visuals" section in the return (Step 5), and fold the
+paid signals into the paid-levers read. Where assets are missing, off-brand, or stale, **route
+a design brief to Dilli** through the standard design-brief flow (Campaign Planning DB entry +
+Slack ping in `#design-campaigns`) — the same pattern `ratings-flyer` / `hero-image-review`
+use. Never hand-write a `.docx` photo brief.
+
+> v1 is intentionally qualitative and does not feed the Packaging score. The scored version
+> (re-adding `hero_set` / `photo_coverage_pct` / `categories_ok` as optional input columns)
+> is the v2 extension — until it lands, keep visuals in the narrative, not the numbers.
+
 ### Step 3 — Build the unified input CSV
 Transform the exports into the schema in `references/ezcater-input-schema.md` (one row per
 store × month, `platform = EZ`). Mapping notes:
@@ -81,8 +114,11 @@ with fixing fundamentals and visibility spend is HOLD.
 
 ### Step 5 — Return the result
 Post back: the foundation-gate status, tier breakdown (N Green / Yellow / Red / New), the
-badge funnel line, and the top `this_cycle` actions. (Notion publishing — reusing the delivery
-orchestrator's `notion_assembly.py` + chart helpers — is the Phase 4 extension; not wired yet.)
+badge funnel line, the top `this_cycle` actions, the **Storefront visuals** section from
+Step 2b (hero / photo coverage / categories / packaging), and the **buyer-side paid signals**
+(ezRewards / Sponsored / promo / ranking) folded into the paid-levers read, plus any Dilli
+brief routed. (Notion publishing — reusing the delivery orchestrator's `notion_assembly.py` + chart
+helpers — is the Phase 4 extension; not wired yet.)
 
 ## What this reproduces
 
@@ -104,5 +140,6 @@ See `tests/test_regression_tiffs.py`.
 ## Anti-patterns
 
 - Don't guess `packaging_complete` or any metric that drives a finding — flag the gap instead.
+- Don't guess visual coverage or paid-lever status — read the live buyer-facing storefront (and ezManage when available), or flag it. Never invent a photo % or a bid rate.
 - Don't run weekly. Catering is a **monthly** service; weekly cadence breaks the capacity model.
 - Don't treat "levers off" as a fire — it's the opportunity. The `levers_all_off` finding (high) carries the action; the tier reflects actual fulfillment health.
