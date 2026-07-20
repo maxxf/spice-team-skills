@@ -57,6 +57,28 @@ Post the data-collection checklist from `references/ezcater-export-sop.md`. The 
 
 Wait for the user's "done" signal. Validate at least the operational + sales exports are present.
 
+### Step 2b — Storefront visual audit (v1, qualitative)
+While in the account, audit each store's ezCater storefront the same way the delivery
+`client-diagnostics` skill audits UE/DD/GH storefronts — catering buyers compare listings
+side by side in search, so the visual layer still moves conversion even without an
+impulse-browse funnel. This is a **qualitative** pass in v1 (no scored schema columns yet).
+Borrow the scoring lens from the `hero-image-review` skill; don't invent a new rubric.
+
+Capture, per store (or per shared brand storefront if listings are identical):
+- **Hero image** — present, on-brand, high-resolution, not a stale/pre-rebrand asset or an ezCater default
+- **Menu photo coverage** — rough % of items with real photos (flag anything under ~80%)
+- **Category structure** — logical order, best-sellers and headcount bundles surfaced up top
+- **Packaging presentation** — per-person pricing, headcount tiers, and Feeds-10/25/50 bundles visibly displayed
+
+Record findings as a short "Storefront visuals" section in the return (Step 5). Where assets
+are missing, off-brand, or stale, **route a design brief to Dilli** through the standard
+design-brief flow (Campaign Planning DB entry + Slack ping in `#design-campaigns`) — the same
+pattern `ratings-flyer` / `hero-image-review` use. Never hand-write a `.docx` photo brief.
+
+> v1 is intentionally qualitative and does not feed the Packaging score. The scored version
+> (re-adding `hero_set` / `photo_coverage_pct` / `categories_ok` as optional input columns)
+> is the v2 extension — until it lands, keep visuals in the narrative, not the numbers.
+
 ### Step 3 — Build the unified input CSV
 Transform the exports into the schema in `references/ezcater-input-schema.md` (one row per
 store × month, `platform = EZ`). Mapping notes:
@@ -81,8 +103,10 @@ with fixing fundamentals and visibility spend is HOLD.
 
 ### Step 5 — Return the result
 Post back: the foundation-gate status, tier breakdown (N Green / Yellow / Red / New), the
-badge funnel line, and the top `this_cycle` actions. (Notion publishing — reusing the delivery
-orchestrator's `notion_assembly.py` + chart helpers — is the Phase 4 extension; not wired yet.)
+badge funnel line, the top `this_cycle` actions, and the **Storefront visuals** section from
+Step 2b (hero / photo coverage / categories / packaging presentation, plus any Dilli brief
+routed). (Notion publishing — reusing the delivery orchestrator's `notion_assembly.py` + chart
+helpers — is the Phase 4 extension; not wired yet.)
 
 ## What this reproduces
 
