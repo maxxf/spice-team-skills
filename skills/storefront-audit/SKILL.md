@@ -42,14 +42,20 @@ If the user just says "audit [restaurant]" or "grade their storefront", produce 
 
 ### 1. Discovery & Data Collection
 
+> **🚨 STEP ZERO — SET AN IN-RADIUS DELIVERY ADDRESS FIRST (non-negotiable).**
+> Delivery marketplaces only show a storefront — and only show delivery as available — when your delivery address is **inside that store's delivery radius**. Auditing from the wrong address (or a browse/pickup view with no address pinned) produces two false findings every time: "delivery unavailable" and "not listed on [platform]." Both are artifacts, not facts.
+>
+> Before searching ANY platform, pin a delivery address on (or within a few blocks of) the physical store you are auditing. For a multi-location brand, **re-set the address for each location** — a single address will only unlock the stores whose radius covers it. Never conclude a brand is absent from a platform, or that delivery is off, from a single out-of-radius pass.
+
 **Find all active listings:**
 
-1. Search each platform (Uber Eats, DoorDash, Grubhub) for the brand name
-2. Try variations: full name, abbreviations, common misspellings
-3. Set delivery address to target market to unlock local listings
+1. **Set the delivery address in-radius for the store being audited** (see Step Zero). Re-set per location.
+2. Search each platform (Uber Eats, DoorDash, Grubhub) for the brand name
+3. Try variations: full name, abbreviations, common misspellings
 4. Check category pages ("Best Overall", "Top Rated", "Featured") if direct search fails
-5. Search Google "[brand] DoorDash/Uber Eats" for deep links as fallback
-6. Log all discovery attempts per market
+5. Search Google "[brand] DoorDash/Uber Eats/Grubhub" for deep links as fallback — a live deep link that fails to appear in in-app search usually means an address/radius problem, not a real absence
+6. Only after all of the above fail from a confirmed in-radius address may you record a platform as "not listed." Otherwise mark it **"unconfirmed — needs in-radius re-check."**
+7. Log all discovery attempts per market, including the exact address used
 
 **Collect for each location found:**
 - Hero/cover image presence and quality
@@ -281,6 +287,7 @@ When auditing a brand with multiple locations (chains, franchises, multi-unit gr
    - Lowest-rated location
    - 2-3 mid-range locations
    - Flag any locations with significantly different menus (franchise variance)
+4. **Map platform presence per location across ALL THREE platforms** (Uber Eats, DoorDash, Grubhub). For multi-location groups the single biggest revenue gap is often distribution — a brand live on one platform but absent from the other two. Lead the report with this. Also flag per-location config gaps that kill orders (e.g. "Delivery unavailable / Pickup only") — these are frequently unintentional and instantly fixable.
 
 **Scoring approach:**
 - Score each location individually using standard rubric
@@ -294,6 +301,17 @@ When auditing a brand with multiple locations (chains, franchises, multi-unit gr
 **Locations Audited:** [X] of [Y] total
 **Markets:** [list]
 **Date:** [date]
+
+## Platform Presence (LEAD WITH THIS)
+
+Distribution gaps are usually the #1 revenue lever for a multi-location group. Show it first, before scores.
+
+| Location | Uber Eats | DoorDash | Grubhub | Delivery Enabled? |
+|----------|-----------|----------|---------|-------------------|
+| [Addr 1] | ✅ Live | ❌ Not listed | ❌ Not listed | ⚠️ Pickup only |
+| [Addr 2] | ✅ Live | ❌ Not listed | ❌ Not listed | ⚠️ Pickup only |
+
+**Presence summary:** [e.g. "3/3 on UE, 0/3 on DD, 0/3 on GH — entire DD+GH order volume is uncaptured. Delivery is disabled on all 3 UE stores (likely a config error)."]
 
 ## Portfolio Summary
 
@@ -330,7 +348,17 @@ When auditing a brand with multiple locations (chains, franchises, multi-unit gr
 - [Location X]: [specific issue]
 - [Location Y]: [specific issue]
 
-## Portfolio-Wide Recommendations
+### Cross-Location Pricing Gaps (REQUIRED for multi-location)
+
+Same-brand items priced differently across locations erode trust and signal uncontrolled menus. Pull 8-12 anchor items (bestsellers + signature/collab items) and compare price per location. Sort by spread, largest first. Flag any spread ≥ $1.00.
+
+| Item | [Loc A] | [Loc B] | [Loc C] | Spread |
+|------|---------|---------|---------|--------|
+| [Anchor item 1] | $16.99 | $14.50 | $16.00 | **$2.49** |
+| [Anchor item 2] | $15.99 | $12.99 | $15.00 | **$3.00** |
+| [Signature/collab item] | $19.99 | $19.99 | $19.99 | $0.00 ✓ |
+
+**Read the pattern:** note which location is cheapest/most expensive overall, and whether collab/signature items stay consistent while core items drift (common failure mode). One flat brand-wide price sheet is the fix.
 
 ### Systemwide Fixes (All Locations)
 1. [Action] — affects X locations
@@ -495,25 +523,48 @@ It provides:
 1. **Connect to browser:**
    ```
    Claude in Chrome:tabs_context_mcp → get tab context
-   Claude in Chrome:navigate → go to storefront URL
+   Claude in Chrome:navigate → go to the platform home (ubereats.com / doordash.com / grubhub.com)
    ```
 
-2. **Capture hero section:**
+2. **🚨 Set an in-radius delivery address BEFORE anything else (do this per location):**
+   ```
+   Claude in Chrome:navigate → platform home
+   Claude in Chrome:find → locate the address / "Deliver to" input
+   Claude in Chrome:computer (left_click) → open the address field
+   Claude in Chrome:computer (type) → enter the STORE'S OWN street address (or a point within a few blocks)
+   Claude in Chrome:computer (left_click) → select the matched address from the dropdown
+   Claude in Chrome:computer (screenshot) → confirm the header now shows "Deliver to [in-radius address]"
+   ```
+   - Do NOT proceed until the delivery address is confirmed in the header. A pickup view or a default/out-of-radius address will hide the storefront and falsely show delivery as unavailable.
+   - For a multi-location brand, **repeat this address reset before auditing each location** — one address only unlocks stores whose radius covers it.
+   - Verify delivery availability HERE, in-radius. If the store shows delivery once the address is in-radius, delivery is enabled — regardless of what an out-of-radius view showed.
+
+3. **Search + confirm presence on each platform (UE, DD, GH):**
+   ```
+   Claude in Chrome:find → search box; query the brand name
+   Claude in Chrome:computer (screenshot) → confirm the storefront appears
+   ```
+   - If the brand does not appear, re-check the address is in-radius, try Google deep-link (`"[brand]" doordash`), then and only then record "not listed." Otherwise mark "unconfirmed — needs in-radius re-check."
+
+4. **Capture hero section:**
    ```
    Claude in Chrome:computer (screenshot) → hero image verification
    ```
+   - Judge hero on **brand fit**, not just image quality: does it represent what the brand actually sells? (e.g. a juice/smoothie brand leading with a food/toast hero is a brand-fit miss even if the photo is sharp.)
 
-3. **Walk each menu category:**
+5. **Walk each menu category:**
    ```
    Claude in Chrome:computer (left_click) → click category in sidebar
    Claude in Chrome:computer (screenshot) → capture category items
    Repeat for all categories
    ```
 
-4. **Count and document:**
+6. **Count and document:**
    - Track items with/without photos per category
    - Note any brand consistency issues
    - Capture sample screenshots for report
+   - Record the exact in-radius address used, per location, in the report's Data Sources section
+   - **Read the item + category TITLES** (use get_page_text — reliable when screenshots lag). Check two things: (a) **search keywords** — do titles contain words a customer would type, or are they purely branded ("The Mood Manager")? (b) **name hygiene** — flag leaked internal notes (`**NEW**`, `(The Rival)`, `New Price & Toppings!`) and encoding artifacts/mojibake (`AÃ§aÃ­`). List defects verbatim; they are quick, high-value fixes.
 
 **If Chrome extension unavailable:**
 - Explain limitation to user
