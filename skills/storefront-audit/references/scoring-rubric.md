@@ -110,6 +110,21 @@ Penalize:
 - Bundle/combo offerings: +2
 - Clear pricing (no "priced by add-ons" friction): +2
 
+### Search Discoverability & Name Hygiene (assess — cap Organization at 0 if severe)
+
+In-app search weights the item/category **title** most heavily. Purely branded names that a customer would never type kill discoverability.
+
+**Search keywords:**
+- Do item/category titles contain the words a customer would search (e.g. "protein smoothie", "açaí bowl", "green juice", "avocado toast")? Descriptions help, but the title carries search.
+- Fully branded titles ("The Mood Manager", "The Lean Green") are great for brand, weak for search. Best practice: brand name + a searchable descriptor ("The Lean Green — Kale Green Smoothie").
+- If ALL titles are branded with no searchable descriptor → dock Organization by 2 and flag as a discoverability gap.
+
+**Name hygiene (flag every instance — these are trust + search defects):**
+- Internal notes leaked into public names: `**NEW**`, `(The Rival)`, `New Price & Toppings!`, `DO NOT DELETE`, `Chowly Open Item`
+- Encoding artifacts / mojibake: `AÃ§aÃ­` instead of `Açaí`
+- Redundant or placeholder text in titles
+- Any instance is a quick, high-value fix — list them verbatim in the report.
+
 ---
 
 ## 4. Customer Sentiment Score (0-15 points)
