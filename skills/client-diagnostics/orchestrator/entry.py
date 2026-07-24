@@ -41,6 +41,59 @@ def _resolve_skills_root() -> Path:
 
 SKILLS_ROOT = _resolve_skills_root()
 
+# client-diagnostics package root — entry.py lives at
+# <client-diagnostics>/orchestrator/entry.py
+CLIENT_DIAG_ROOT = Path(__file__).resolve().parents[1]
+
+
+class SubSkillDispatchError(RuntimeError):
+    """One or more diagnostic sub-skills could not be run.
+
+    Raised LOUDLY at the end of Phase 2 so a degraded section is never silently
+    shipped as zeros. This is the guard for the INDAY-2026-07-23 incident: the
+    orchestrator dispatched each sub-skill via a hardcoded
+    `<sub-skill>/.venv/bin/python`; on a box without those venvs the subprocess
+    raised FileNotFoundError, Phase 2 swallowed it, and the affected report
+    section was populated with zeros — a blank diagnostic that looked complete
+    and passed conformance.
+    """
+
+    def __init__(self, failures: dict[str, str]):
+        self.failures = dict(failures)
+        sections = ", ".join(f"diagnostic-{s}" for s in sorted(failures))
+        detail = "\n".join(f"  - diagnostic-{s}: {msg}" for s, msg in sorted(failures.items()))
+        super().__init__(
+            f"{len(failures)} diagnostic sub-skill(s) failed to run: {sections}.\n"
+            "Those report sections would be blank/zero, so this run is aborted "
+            "rather than shipping a degraded diagnostic that looks complete.\n"
+            f"{detail}\n"
+            "Fix the sub-skill(s) above (e.g. run scripts/setup_venvs.sh, or read "
+            "the traceback) and re-run."
+        )
+
+
+def _resolve_sub_skill_python(short: str) -> Path:
+    """Resolve a python interpreter to run the diagnostic-<short> sub-skill.
+
+    Resolution order (portable across machines — no hardcoded Cowork path):
+      1. the sub-skill's own `.venv/bin/python` (honors scripts/setup_venvs.sh)
+      2. the client-diagnostics `.venv/bin/python` — shared orchestrator venv
+      3. `sys.executable` — the interpreter currently running the orchestrator
+
+    The sub-skills share the orchestrator's deps (pandas + matplotlib), so the
+    orchestrator's own interpreter is always a valid fallback. This means a
+    fresh checkout with no per-sub-skill venvs runs correctly instead of
+    fail-opening to zeros.
+    """
+    candidates = [
+        SKILLS_ROOT / f"diagnostic-{short}" / ".venv" / "bin" / "python",
+        CLIENT_DIAG_ROOT / ".venv" / "bin" / "python",
+    ]
+    for py in candidates:
+        if py.exists():
+            return py
+    return Path(sys.executable)
+
 
 @dataclass(frozen=True)
 class RunResult:
@@ -82,6 +135,7 @@ def run(
         ("campaigns", _dispatch_campaigns),
     ]
     statuses: dict[str, str] = {}
+    failures: dict[str, str] = {}
     with ThreadPoolExecutor(max_workers=4) as ex:
         futures = {
             ex.submit(
@@ -100,9 +154,17 @@ def run(
             try:
                 fut.result()
                 statuses[f"diagnostic-{short}"] = "ok"
-            except Exception:
+            except Exception as exc:
                 statuses[f"diagnostic-{short}"] = "failed"
+                failures[short] = f"{type(exc).__name__}: {exc}"
     state = run_state.update(layout.run_state_path, sub_skill_status=statuses)
+
+    # Fail LOUD. A sub-skill that could not run means its report section would be
+    # blank/zero — abort rather than ship a degraded diagnostic that looks
+    # complete (INDAY-2026-07-23). run_state has already recorded which sections
+    # failed, so the error and the artifact agree on what is degraded.
+    if failures:
+        raise SubSkillDispatchError(failures)
 
     # Phase 3: cross-cutting assembly
     state = run_state.update(layout.run_state_path, phase=3)
@@ -209,7 +271,12 @@ def run(
 
 
 def _load_payloads(layout: output_layout.RunLayout, statuses: dict[str, str]) -> dict[str, dict]:
-    """Load each successful sub-skill's results JSON. Skip failed sub-skills (fail-open per spec)."""
+    """Load each sub-skill's results JSON.
+
+    Phase 2 now aborts the whole run if any sub-skill failed (see
+    SubSkillDispatchError), so by the time this runs every sub-skill is "ok".
+    The status guard is kept defensively.
+    """
     payloads: dict[str, dict] = {}
     for short in ("topline", "menu", "ops", "campaigns"):
         if statuses.get(f"diagnostic-{short}") == "ok":
@@ -243,7 +310,7 @@ def _dispatch_campaigns(*, client, window_start, window_end, inputs_dir, output_
 def _dispatch_sub_skill(short: str, *, client, window_start, window_end, inputs_dir, output_path, charts_dir=None):
     skill_dir = SKILLS_ROOT / f"diagnostic-{short}"
     cmd = [
-        str(skill_dir / ".venv" / "bin" / "python"),
+        str(_resolve_sub_skill_python(short)),
         "-m", f"diagnostic_{short}.entry",
         "--client", client,
         "--window-start", window_start,
