@@ -35,16 +35,29 @@ def _aggregate_by_store(df: pd.DataFrame) -> pd.DataFrame:
     """Collapse multi-row-per-store input.
 
     Sums for spend / attributed_sales (additive across platforms+weeks);
-    means for roas / incremental_orders_per_week (rate metrics);
+    means for incremental_orders_per_week (rate metric);
     max for promo_count_active (worst-case promo stack).
+
+    ROAS is SPEND-WEIGHTED (blended = total attributed / total spend), NOT a
+    plain mean of per-row ROAS. A plain mean lets a zero-spend platform row
+    (e.g. a store that runs no Grubhub ads, so its GH ROAS is 0) drag the
+    store's ROAS into the watch band even though the money it actually spent
+    returned a healthy blend. Weight by spend so the tier reflects reality.
     """
     grouped = df.groupby("store", as_index=False).agg(
         spend=("spend", "sum"),
         attributed_sales=("attributed_sales", "sum"),
-        roas=("roas", "mean"),
+        roas_mean=("roas", "mean"),
         incremental_orders_per_week=("incremental_orders_per_week", "mean"),
         promo_count_active=("promo_count_active", "max"),
     )
+    # Blended ROAS where the store actually spent; fall back to the plain mean
+    # only when spend is zero (blended is undefined there).
+    grouped["roas"] = grouped.apply(
+        lambda r: (r["attributed_sales"] / r["spend"]) if r["spend"] > 0 else r["roas_mean"],
+        axis=1,
+    )
+    grouped = grouped.drop(columns=["roas_mean"])
     return grouped
 
 
@@ -73,8 +86,12 @@ def _classify_store_tier(row, flagged_stores: list[str]) -> tuple[str, float, li
 
     roas_red = roas < ROAS_BROKEN_THRESHOLD
     roas_yellow = ROAS_BROKEN_THRESHOLD <= roas < ROAS_HEALTHY_THRESHOLD
-    promo_yellow = promo_count >= PROMO_COUNT_HEALTHY_THRESHOLD
     inefficient_yellow = spend > 0 and inc_orders < INCREMENTAL_ORDERS_HEALTHY_THRESHOLD
+    # NOTE: promo_count is deliberately NOT a tier determinant. A store can run a
+    # stacked promo mix and still be Green if ROAS + incrementality are healthy.
+    # Over-discounting is surfaced as a NOTED observation (see over_discounting
+    # finding + the `{n} active promo(s)` margin note below), never as a Watch
+    # that downgrades the store's tier.
 
     reasons: list[str] = []
     if roas_red or is_flagged:
@@ -83,17 +100,16 @@ def _classify_store_tier(row, flagged_stores: list[str]) -> tuple[str, float, li
         if is_flagged:
             reasons.append("spend running while ops/menu broken (broken)")
         flag = "red"
-    elif roas_yellow or promo_yellow or inefficient_yellow:
+    elif roas_yellow or inefficient_yellow:
         if roas_yellow:
             reasons.append(f"blended ROAS {roas:.2f}x in 2.5–3.5x band (watch)")
-        if promo_yellow:
-            reasons.append(f"{promo_count} active promos stacked (watch)")
         if inefficient_yellow:
             reasons.append(
                 f"spend ${spend:.0f} running but only {inc_orders:.1f} incremental orders/week (watch)"
             )
         flag = "yellow"
     else:
+        # promo_count appears here only as a descriptive note, not a trigger.
         reasons.append(
             f"ROAS {roas:.2f}x, {inc_orders:.1f} incremental orders/wk, {promo_count} active promo(s)"
         )
@@ -181,7 +197,9 @@ def run(
             },
         })
 
-    # 2. over_discounting — per store, medium
+    # 2. over_discounting — per store, NOTE only (demoted from a tier trigger).
+    #    Promo stacking is a margin observation, not a tier determinant, so this
+    #    is surfaced at low severity with no internal skill/deliverable name.
     over_discounting_stores = []
     for _, row in by_store.iterrows():
         if int(row["promo_count_active"]) >= OVER_DISCOUNTING_PROMO_COUNT_THRESHOLD:
@@ -189,18 +207,18 @@ def run(
     if over_discounting_stores:
         findings.append({
             "pattern_id": "over_discounting",
-            "severity": "medium",
+            "severity": "low",
             "scope": ",".join(over_discounting_stores),
             "evidence": {
                 "stores": over_discounting_stores,
                 "promo_count_threshold": OVER_DISCOUNTING_PROMO_COUNT_THRESHOLD,
-                "note": "3+ active promos stacked — margin erosion + customer training risk.",
+                "note": (
+                    "Margin note (not a tier flag): 3+ active promos stacked — watch "
+                    "margin erosion + customer discount-training over time."
+                ),
             },
             "estimated_impact_usd": None,
-            "deliverable_trigger": {
-                "skill": "campaign-plan",
-                "params": {"stores": over_discounting_stores, "focus": "promo_consolidation"},
-            },
+            "deliverable_trigger": {"skill": "", "params": {}},
         })
 
     # 3. spend_on_broken_store — Wk 2 stub: only fires when orchestrator passes flagged_stores

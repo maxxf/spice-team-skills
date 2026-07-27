@@ -35,7 +35,24 @@ All 22 columns are required. Order doesn't matter.
 | `attributed_sales` | number | campaigns | Attributed sales from ads |
 | `roas` | number | campaigns | spend / attributed_sales |
 | `incremental_orders_per_week` | number | campaigns | Incremental orders attributable to ads |
-| `promo_count_active` | int | campaigns | Active promo count |
+| `promo_count_active` | int | campaigns | Active promo count (a NOTED margin observation, NOT a tier trigger) |
+
+### Optional ops-event columns (backward-compatible — default `0` when absent)
+
+Discrete DoorDash downtime **events**, in minutes over the window (or a count
+for cancellations). These let the ops bucket detect involuntary outages the
+smoothed uptime % hides. They are additive across rows — put a store's window
+total on one representative row (e.g. its DoorDash row) and `0` elsewhere; the
+ops sub-skill SUMs them per store. Omit them entirely and every store defaults
+to `0` (old inputs keep working).
+
+| Column | Type | Used by | Maps from DoorDash downtime category | Verdict |
+|---|---|---|---|---|
+| `auto_pause_involuntary_min` | number | ops | `Auto Pause - High Avoidable and/or POS Cancellation Rate` | **Broken → Red** |
+| `dasher_closure_min` | number | ops | `Store Closure - Dasher Reported` | **Broken → Red** |
+| `dasher_wait_pause_min` | number | ops | `Auto Pause - High Avoidable Dasher Wait Time` | Watch |
+| `merchant_closure_min` | number | ops | `OLO Merchant Triggered - Temporary Store Closure` | Watch |
+| `avoidable_ops_cancels` | int | ops | Cancellations export → `Avoidable Store Operations` (Store closed / Store operations issue) | Supporting evidence |
 
 ---
 
@@ -79,6 +96,8 @@ The orchestrator's `input_schema.validate()` enforces:
 - `week` in range 1–13
 - `rating` in range 0–5
 - `platform` in `{UE, DD, GH}`
+
+The optional ops-event columns (`auto_pause_involuntary_min`, `dasher_closure_min`, `dasher_wait_pause_min`, `merchant_closure_min`, `avoidable_ops_cancels`) are NOT required — they default to `0` when absent, so old inputs validate unchanged.
 
 Anything else (e.g. negative spend, ratings = 0 across the board) flows through to the sub-skills, which surface their own findings. The validator is the floor, not the ceiling.
 

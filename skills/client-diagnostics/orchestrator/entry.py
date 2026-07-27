@@ -18,28 +18,12 @@ from pathlib import Path
 
 from orchestrator import chart_helpers, contract, cross_cutting, output_layout, run_state
 
-def _resolve_skills_root() -> Path:
-    """Locate the directory that holds the diagnostic-* sub-skills.
-
-    Resolution order, so the pipeline runs on any machine (not just the
-    original dev box):
-      1. SPICE_SKILLS_ROOT env var — explicit override
-      2. sibling of this skill — normal plugin/repo install, where
-         diagnostic-topline/menu/ops/campaigns/action-plan sit next to
-         client-diagnostics
-      3. legacy Cowork path — Maxx's original local layout (last-resort fallback)
-    """
-    env = os.environ.get("SPICE_SKILLS_ROOT")
-    if env:
-        return Path(env).expanduser()
-    # entry.py lives at <skills_root>/client-diagnostics/orchestrator/entry.py
-    sibling_root = Path(__file__).resolve().parents[2]
-    if (sibling_root / "diagnostic-topline").is_dir():
-        return sibling_root
-    return Path("/Users/maxx/Desktop/Cowork/Skills")
-
-
-SKILLS_ROOT = _resolve_skills_root()
+# The diagnostic-* sub-skills live beside client-diagnostics in the same skills
+# directory. Resolve relative to this file so the orchestrator works from any
+# install location (plugin cache, Cowork mirror, canonical repo) rather than a
+# single hard-coded path. entry.py -> orchestrator/ -> client-diagnostics/ ->
+# skills/ (parents[2]).
+SKILLS_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass(frozen=True)
@@ -242,8 +226,15 @@ def _dispatch_campaigns(*, client, window_start, window_end, inputs_dir, output_
 
 def _dispatch_sub_skill(short: str, *, client, window_start, window_end, inputs_dir, output_path, charts_dir=None):
     skill_dir = SKILLS_ROOT / f"diagnostic-{short}"
+    # Prefer the sub-skill's own venv if it has one; otherwise fall back to the
+    # interpreter currently running the orchestrator (the client-diagnostics
+    # venv carries pandas/matplotlib, and the sub-skill packages import cleanly
+    # on the shared PYTHONPATH). This keeps the orchestrator runnable whether or
+    # not each sub-skill was independently bootstrapped with its own venv.
+    sub_venv_python = skill_dir / ".venv" / "bin" / "python"
+    python_exe = str(sub_venv_python) if sub_venv_python.exists() else sys.executable
     cmd = [
-        str(skill_dir / ".venv" / "bin" / "python"),
+        python_exe,
         "-m", f"diagnostic_{short}.entry",
         "--client", client,
         "--window-start", window_start,
@@ -253,7 +244,10 @@ def _dispatch_sub_skill(short: str, *, client, window_start, window_end, inputs_
     ]
     if charts_dir is not None:
         cmd += ["--charts-dir", str(charts_dir)]
-    env = {**os.environ, "PYTHONPATH": str(skill_dir)}
+    # Put the sub-skill dir first so `diagnostic_{short}` resolves, and keep the
+    # client-diagnostics root on the path so sub-skills can import chart_helpers.
+    pythonpath = os.pathsep.join([str(skill_dir), str(SKILLS_ROOT / "client-diagnostics")])
+    env = {**os.environ, "PYTHONPATH": pythonpath}
     subprocess.run(cmd, check=True, env=env)
 
 

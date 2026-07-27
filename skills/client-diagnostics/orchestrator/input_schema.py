@@ -23,6 +23,18 @@ REQUIRED_COLUMNS = {
     "incremental_orders_per_week", "promo_count_active",
 }
 
+# Optional ops-event columns (discrete DoorDash downtime, minutes over window;
+# avoidable_ops_cancels is a count). Backward-compatible: absent -> the ops
+# sub-skill defaults each to 0, so pre-event inputs validate and run unchanged.
+# See references/input-csv-schema.md for the category mapping.
+OPTIONAL_OPS_EVENT_COLUMNS = {
+    "auto_pause_involuntary_min",   # Auto Pause - High Avoidable and/or POS Cancellation Rate -> Broken/Red
+    "dasher_closure_min",           # Store Closure - Dasher Reported -> Broken/Red
+    "dasher_wait_pause_min",        # Auto Pause - High Avoidable Dasher Wait Time -> Watch
+    "merchant_closure_min",         # OLO Merchant Triggered - Temporary Store Closure -> Watch
+    "avoidable_ops_cancels",        # Avoidable Store Operations cancellations -> supporting evidence
+}
+
 
 class InputSchemaError(ValueError):
     pass
