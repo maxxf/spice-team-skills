@@ -234,7 +234,7 @@ That's the entire flow. The user typed one sentence at the start, dropped files 
 | Drive folder creation fails | Surface error. Common cause: missing parent folder. Create chain of parents. |
 | User says "done" but folder is empty / partial | List what's missing, ask if they want to proceed degraded or fetch more |
 | Schema validator fails on missing columns | Show the exact missing columns. Offer framework defaults. Don't silently fudge. |
-| Sub-skill subprocess fails mid-run | Orchestrator fail-opens. Tell the user the affected section is incomplete. Foundation gate auto-triggers if ops or menu fails. |
+| Sub-skill subprocess fails mid-run | Orchestrator **fails loud**: raises `SubSkillDispatchError` naming the degraded section and aborts, so a blank/zero section never ships looking complete. Read the named error, fix the sub-skill (e.g. `scripts/setup_venvs.sh` — though a missing venv now falls back to the orchestrator's own interpreter), and re-run. |
 | Drive chart upload fails | Fall back: surface failure, give local paths, user drags into Notion manually |
 | Notion publish fails | Save substituted blocks to a file, give user the path so they can retry from another session |
 
