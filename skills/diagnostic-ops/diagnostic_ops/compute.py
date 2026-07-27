@@ -1,7 +1,16 @@
 """Operations & quality computation. Emits sub-skill contract payload.
 
-Owns the per-store "ops" tier sub-bucket (framework lines 84–87). Implements 3
-patterns: low_rating_below_42, error_spike, cancellation_surge.
+Owns the per-store "ops" tier sub-bucket (framework lines 84–87). Implements
+pattern families:
+  - low_rating_below_42, error_spike, cancellation_surge (smoothed averages)
+  - involuntary_downtime_event (discrete DoorDash auto-pause / dasher-reported
+    closure) — these OVERRIDE the averages and force ops -> Broken -> Red.
+
+Why the override exists: a 90-day run averages a discrete outage down to noise.
+A store that DoorDash literally auto-paused for high avoidable/POS cancellation
+rate can still show 99% average uptime, so the smoothed bucket scored it Green.
+Involuntary events are a categorical failure signal, not a rate — they must be
+detected, not averaged.
 
 Emits NO direct radar dims — the orchestrator composes the Operations radar
 dim from this sub-skill's tier_contributions (see cross_cutting.assemble_radar).
@@ -25,26 +34,82 @@ CANCELLATION_HEALTHY_THRESHOLD = 2.0
 UPTIME_HEALTHY_THRESHOLD = 97.0
 RATING_HEALTHY_THRESHOLD = 4.5
 
+# Discrete DoorDash downtime EVENT columns (minutes, additive across rows).
+# Backward-compatible: default to 0 when a column is absent from the input.
+#   BROKEN (involuntary failure) -> ops Red, overriding averages:
+#     auto_pause_involuntary_min  = "Auto Pause - High Avoidable and/or POS
+#                                    Cancellation Rate"
+#     dasher_closure_min          = "Store Closure - Dasher Reported"
+#   WATCH (capacity / intentional) -> ops Yellow (unless a Broken event fires):
+#     dasher_wait_pause_min       = "Auto Pause - High Avoidable Dasher Wait
+#                                    Time" (capacity)
+#     merchant_closure_min        = "OLO Merchant Triggered - Temporary Store
+#                                    Closure" (intentional)
+#   Supporting evidence (not itself a trigger):
+#     avoidable_ops_cancels       = count of "Avoidable Store Operations"
+#                                   cancellations (store closed / ops issue)
+INVOLUNTARY_EVENT_COLS = ("auto_pause_involuntary_min", "dasher_closure_min")
+WATCH_EVENT_COLS = ("dasher_wait_pause_min", "merchant_closure_min")
+SUPPORTING_EVENT_COLS = ("avoidable_ops_cancels",)
+OPS_EVENT_COLS = INVOLUNTARY_EVENT_COLS + WATCH_EVENT_COLS + SUPPORTING_EVENT_COLS
+
 
 def _aggregate_by_store(df: pd.DataFrame) -> pd.DataFrame:
-    """Collapse multi-row-per-store input. Numerics → mean, hours_accurate → last."""
-    grouped = df.groupby("store", as_index=False).agg(
+    """Collapse multi-row-per-store input.
+
+    Rate metrics (rating/error/cancel/uptime) → mean; hours_accurate → last.
+    Discrete event minutes/counts → SUM (they are additive across rows and must
+    NOT be averaged away). Missing event columns default to 0.
+    """
+    df = df.copy()
+    for col in OPS_EVENT_COLS:
+        if col not in df.columns:
+            df[col] = 0
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+
+    agg_kwargs = dict(
         rating=("rating", "mean"),
         error_rate_pct=("error_rate_pct", "mean"),
         cancellation_pct=("cancellation_pct", "mean"),
         uptime_pct=("uptime_pct", "mean"),
         hours_accurate=("hours_accurate", "last"),
     )
+    for col in OPS_EVENT_COLS:
+        agg_kwargs[col] = (col, "sum")
+    grouped = df.groupby("store", as_index=False).agg(**agg_kwargs)
     return grouped
 
 
+def _event_min(row, col) -> float:
+    try:
+        return float(row[col])
+    except (KeyError, TypeError, ValueError):
+        return 0.0
+
+
 def _classify_store_tier(row) -> tuple[str, float, list[str]]:
-    """Return (flag, score, reasons) for one store. Per framework lines 84–87."""
+    """Return (flag, score, reasons) for one store. Per framework lines 84–87.
+
+    Discrete involuntary downtime events OVERRIDE the smoothed averages: an
+    involuntary auto-pause or a dasher-reported closure forces Red regardless of
+    a healthy average uptime/error/rating. Intentional/capacity events (merchant
+    closure, dasher-wait pause) force at least Watch.
+    """
     rating = float(row["rating"])
     error = float(row["error_rate_pct"])
     cancel = float(row["cancellation_pct"])
     uptime = float(row["uptime_pct"])
     hours_ok = bool(row["hours_accurate"])
+
+    # Discrete DoorDash downtime events (minutes over the window)
+    auto_pause_inv = _event_min(row, "auto_pause_involuntary_min")
+    dasher_closure = _event_min(row, "dasher_closure_min")
+    dasher_wait = _event_min(row, "dasher_wait_pause_min")
+    merchant_closure = _event_min(row, "merchant_closure_min")
+    avoidable_cancels = _event_min(row, "avoidable_ops_cancels")
+
+    involuntary_event_red = auto_pause_inv > 0 or dasher_closure > 0
+    watch_event = dasher_wait > 0 or merchant_closure > 0
 
     error_red = error > ERROR_RATE_FOUNDATION_THRESHOLD
     cancel_red = cancel > CANCELLATION_HIGH_THRESHOLD
@@ -58,7 +123,17 @@ def _classify_store_tier(row) -> tuple[str, float, list[str]]:
     rating_yellow = RATING_FOUNDATION_THRESHOLD <= rating < RATING_HEALTHY_THRESHOLD
 
     reasons: list[str] = []
-    if error_red or cancel_red or uptime_red or rating_red or hours_red:
+    if involuntary_event_red or error_red or cancel_red or uptime_red or rating_red or hours_red:
+        # Involuntary downtime events lead the reasons — they are the override.
+        if auto_pause_inv > 0:
+            reasons.append(
+                f"DoorDash auto-paused {auto_pause_inv:.0f} min on high avoidable/POS "
+                "cancel rate (broken)"
+            )
+        if dasher_closure > 0:
+            reasons.append(f"dasher-reported store closure {dasher_closure:.0f} min (broken)")
+        if avoidable_cancels > 0 and involuntary_event_red:
+            reasons.append(f"{avoidable_cancels:.0f} avoidable store-ops cancellations")
         if error_red:
             reasons.append(f"error rate {error:.1f}% > 5% (broken)")
         if cancel_red:
@@ -70,7 +145,17 @@ def _classify_store_tier(row) -> tuple[str, float, list[str]]:
         if hours_red:
             reasons.append("hours mismatch flagged (broken)")
         flag = "red"
-    elif error_yellow or cancel_yellow or uptime_yellow or rating_yellow:
+    elif watch_event or error_yellow or cancel_yellow or uptime_yellow or rating_yellow:
+        if merchant_closure > 0:
+            reasons.append(
+                f"merchant-triggered temporary closure {merchant_closure:.0f} min "
+                "(intentional — watch)"
+            )
+        if dasher_wait > 0:
+            reasons.append(
+                f"auto-paused {dasher_wait:.0f} min on high dasher wait time "
+                "(capacity — watch)"
+            )
         if error_yellow:
             reasons.append(f"error rate {error:.1f}% in 2–5% band (watch)")
         if cancel_yellow:
@@ -98,7 +183,14 @@ def _classify_store_tier(row) -> tuple[str, float, list[str]]:
         + 0.25 * uptime_component
         + 0.15 * cancel_component
     )
-    score = round(1.0 + 9.0 * blend, 2)
+    score = 1.0 + 9.0 * blend
+    # A discrete outage event must not read as a near-perfect score just because
+    # the smoothed averages are clean. Cap the score to match the flag.
+    if flag == "red":
+        score = min(score, 3.0)
+    elif flag == "yellow" and watch_event:
+        score = min(score, 6.5)
+    score = round(score, 2)
     return flag, score, reasons
 
 
@@ -215,6 +307,67 @@ def run(*, client: str, window_start: str, window_end: str, df: pd.DataFrame) ->
             "deliverable_trigger": {"skill": "", "params": {}},
         })
 
+    # 4. involuntary_downtime_event — per store, foundation. A discrete DoorDash
+    #    auto-pause (high avoidable/POS cancel rate) or a dasher-reported closure
+    #    is an involuntary ops failure that the smoothed averages hide.
+    involuntary_evidence: dict[str, dict] = {}
+    for _, row in by_store.iterrows():
+        ap = _event_min(row, "auto_pause_involuntary_min")
+        dc = _event_min(row, "dasher_closure_min")
+        if ap > 0 or dc > 0:
+            involuntary_evidence[str(row["store"])] = {
+                "auto_pause_involuntary_min": ap,
+                "dasher_closure_min": dc,
+                "avoidable_ops_cancels": _event_min(row, "avoidable_ops_cancels"),
+            }
+    if involuntary_evidence:
+        stores = sorted(involuntary_evidence)
+        findings.append({
+            "pattern_id": "involuntary_downtime_event",
+            "severity": "foundation",
+            "scope": ",".join(stores),
+            "evidence": {
+                "stores": stores,
+                "per_store": involuntary_evidence,
+                "note": (
+                    "Involuntary DoorDash downtime (auto-pause on high avoidable/POS "
+                    "cancel rate, or dasher-reported closure). Fix-first before scaling "
+                    "spend — overrides healthy average uptime."
+                ),
+            },
+            "estimated_impact_usd": None,
+            "deliverable_trigger": {"skill": "", "params": {}},
+        })
+
+    # 5. merchant_closure_watch — per store, medium. Intentional / capacity
+    #    downtime (merchant-triggered temporary closure, high dasher-wait pause).
+    watch_evidence: dict[str, dict] = {}
+    for _, row in by_store.iterrows():
+        mc = _event_min(row, "merchant_closure_min")
+        dw = _event_min(row, "dasher_wait_pause_min")
+        if (mc > 0 or dw > 0) and str(row["store"]) not in involuntary_evidence:
+            watch_evidence[str(row["store"])] = {
+                "merchant_closure_min": mc,
+                "dasher_wait_pause_min": dw,
+            }
+    if watch_evidence:
+        stores = sorted(watch_evidence)
+        findings.append({
+            "pattern_id": "downtime_watch_event",
+            "severity": "medium",
+            "scope": ",".join(stores),
+            "evidence": {
+                "stores": stores,
+                "per_store": watch_evidence,
+                "note": (
+                    "Intentional/capacity downtime (merchant-triggered temporary closure "
+                    "or high dasher-wait auto-pause). Watch — not an involuntary failure."
+                ),
+            },
+            "estimated_impact_usd": None,
+            "deliverable_trigger": {"skill": "", "params": {}},
+        })
+
     sentiment_pct, rating_basis = _customer_sentiment(df, portfolio_rating_mean)
 
     # Drafted layer
@@ -279,6 +432,13 @@ def run(*, client: str, window_start: str, window_end: str, df: pd.DataFrame) ->
                 "all_hours_accurate": all_hours_accurate,
                 "store_count": int(len(by_store)),
                 "red_ops_store_count": n_red,
+                # Discrete downtime-event roll-ups (minutes over window)
+                "involuntary_downtime_min": float(
+                    by_store[list(INVOLUNTARY_EVENT_COLS)].sum().sum()
+                ) if len(by_store) else 0.0,
+                "watch_downtime_min": float(
+                    by_store[list(WATCH_EVENT_COLS)].sum().sum()
+                ) if len(by_store) else 0.0,
                 # Unified cross-platform Customer Sentiment (framework spec)
                 "customer_sentiment_pct": sentiment_pct,
                 "rating_basis": rating_basis,

@@ -1,22 +1,27 @@
-/* Spice Design System · Foundations Release 001
+/* Spice Design System · V.1-aligned (Release 003)
    Canonical client-diagnostics report stylesheet.
-   Source of truth: claude.ai/design Spice | Design System.
-   Single-column, 1040px max, Geist stack, ink+spice palette.
-   Do NOT hand-edit per client — restyle here, regenerate. */
-
-/* Spice Design System · Foundations Release 001 — tokens applied verbatim */
+   Source of truth: Dilli's "Spice Design System V.1" (Notion 396d3ff0…, publ. 2026-07-06)
+   — values from that guide's machine-readable #design-tokens block:
+   Chili #ff3b00, Cream #fcf3ed surface, Espresso #201916 text, Cocoa/Sand neutrals,
+   status green #1f6b34 / amber #7a4f0a / red #8e2626, Geist + Geist Mono, 12px card radius.
+   NOTE: V.1 is a 16:9 deck system; this HTML report applies V.1 TOKENS to a document
+   layout (V.1 itself defines no report layout). Do NOT hand-edit per client — restyle here.
+   Token NAMES are load-bearing: build_deck.js parses spice/spice-tint/ink-0/ink-200/
+   ink-500/ink-700/ink-900/cream from :root. Keep the names, change the values. */
 :root{
---ink-0:#fff;--ink-50:#fafafa;--ink-100:#f4f4f4;--ink-200:#e8e8e8;--ink-300:#d4d4d4;
---ink-400:#a3a3a3;--ink-500:#737373;--ink-600:#525252;--ink-700:#2a2a2a;--ink-900:#0a0a0a;
---spice:#fa4803;--spice-hover:#e33d00;--spice-tint:#fff1ec;--cream:#fcf5ec;
---ok:#14532d;--warn:#7c2d12;--err:#991b1b;
---ok-tint:#f0f7f1;--warn-tint:#fdf3ee;--err-tint:#fdf0ef;
---font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif}
+--ink-0:#fff;--ink-50:#f7f0e9;--ink-100:#fcf3ed;--ink-200:#e6ddd5;--ink-300:#d8ccc3;
+--ink-400:#a89b93;--ink-500:#6f635b;--ink-600:#493b35;--ink-700:#332822;--ink-900:#201916;
+--spice:#ff3b00;--spice-hover:#9b2c0a;--spice-tint:#fcd7c9;--cream:#fcf3ed;
+--ok:#1f6b34;--warn:#7a4f0a;--err:#8e2626;
+--ok-tint:#d7f0d9;--warn-tint:#fbead0;--err-tint:#fad6d6;
+--card-bd:rgba(73,59,53,.12);--shadow:-4px 4px 12px rgba(73,59,53,.10);
+--font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+--font-mono:'Geist Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace}
 *{box-sizing:border-box}
 body{margin:0;font-family:var(--font-sans);background:var(--ink-100);
 color:var(--ink-900);line-height:1.55;font-size:15px;-webkit-font-smoothing:antialiased}
-.doc{max-width:1040px;margin:28px auto;background:var(--ink-0);padding:56px 72px 72px;
-box-shadow:0 1px 0 rgba(10,10,10,.04),0 1px 2px rgba(10,10,10,.04);border-radius:8px}
+.doc{max-width:1040px;margin:28px auto;background:var(--cream);padding:56px 72px 72px;
+box-shadow:var(--shadow);border-radius:12px}
 img{max-width:100%;height:auto;display:block}
 .meta{color:var(--ink-500);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
 font-weight:500;margin-bottom:12px}
@@ -52,17 +57,17 @@ font-weight:600}
 .tl-sub{font-size:12px;color:var(--ink-500);line-height:1.45}
 /* hero KPI cards */
 .hero{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:28px}
-.stat{flex:1 1 200px;min-width:190px;border:1px solid var(--ink-200);border-radius:8px;
-padding:16px}
+.stat{flex:1 1 200px;min-width:190px;background:var(--ink-0);border:.5px solid var(--spice);
+border-radius:12px;box-shadow:var(--shadow);padding:16px}
 .stat.alert-stat{background:var(--err-tint);border-color:#f3d4d2}
 .stat .lbl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-500);
 font-weight:600}
-.stat .val{font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.2;margin:6px 0 4px}
+.stat .val{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.2;margin:6px 0 4px}
 .stat.alert-stat .val{color:var(--err)}
 .stat .sub{font-size:12px;color:var(--ink-500)}
 .dn{color:var(--err);font-weight:600}.up{color:var(--ok);font-weight:600}
-.radar-wrap{text-align:center;border:1px solid var(--ink-200);border-radius:8px;
-padding:24px;margin-bottom:14px}
+.radar-wrap{text-align:center;background:var(--ink-0);border:1px solid var(--ink-200);
+border-radius:12px;box-shadow:var(--shadow);padding:24px;margin-bottom:14px}
 .radar-wrap img{max-width:480px;width:100%;margin:0 auto}
 .cap{font-size:13px;color:var(--ink-700);line-height:1.6;margin:12px 0 28px}
 .cap .pill{display:inline-block;background:var(--err-tint);color:var(--err);font-weight:600;
@@ -72,25 +77,10 @@ font-size:12px;padding:2px 10px;border-radius:999px;margin-right:6px}
 padding:16px 20px;margin-bottom:10px}
 .wro .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;
 margin-bottom:6px}
-.wro .fig{font-size:22px;font-weight:600;margin:8px 0;letter-spacing:-.01em}
+.wro .fig{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:600;margin:8px 0;letter-spacing:-.01em}
 .wro-f{border-left-color:var(--ok);background:var(--ok-tint)}.wro-f .tag{color:var(--ok)}
 .wro-r{border-left-color:var(--err);background:var(--err-tint)}.wro-r .tag{color:var(--err)}
 .wro-o{border-left-color:var(--spice);background:var(--spice-tint)}.wro-o .tag{color:var(--spice)}
-/* the levers — actionable distillation of the opportunity */
-.levers{display:flex;flex-wrap:wrap;gap:12px;margin:6px 0 28px}
-.lever{flex:1 1 280px;min-width:262px;border:1px solid var(--ink-200);
-border-top:3px solid var(--spice);border-radius:8px;padding:18px 20px;background:var(--ink-0)}
-.lever .n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;
-border-radius:50%;background:var(--spice);color:#fff;font-size:13px;font-weight:700;margin-bottom:10px}
-.lever h4{font-size:15px;font-weight:600;margin:0 0 8px;letter-spacing:-.01em}
-.lever .mv{display:flex;align-items:baseline;gap:9px;margin:4px 0 2px}
-.lever .cur{font-size:22px;font-weight:600;letter-spacing:-.01em}
-.lever .arw{color:var(--ink-400);font-weight:600}
-.lever .tgt{font-size:14px;color:var(--ok);font-weight:600}
-.lever .lever-unit{font-size:12px;color:var(--ink-500)}
-.lever .mech{font-size:12.5px;color:var(--ink-600);margin-top:9px;line-height:1.5}
-.lever .mech b{color:var(--ink-900);font-weight:600}
-.lever .imp{display:block;font-size:12px;color:var(--spice);font-weight:600;margin-top:8px}
 /* action items */
 .ai{border:1px solid var(--ink-200);border-left:3px solid var(--ink-300);border-radius:6px;
 padding:12px 16px;margin-bottom:8px;background:var(--ink-50)}
@@ -105,7 +95,8 @@ th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-
 font-weight:600}
 td.r{color:var(--err);font-weight:600}td.g{color:var(--ok);font-weight:600}
 td.a{color:var(--warn);font-weight:600}
-.panel{border:1px solid var(--ink-200);border-radius:8px;padding:20px;margin-bottom:16px}
+.panel{background:var(--ink-0);border:1px solid var(--ink-200);border-radius:12px;
+box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
 .panel h3{margin-top:0}
 .panel img{width:100%;display:block;margin:6px 0}
 .daypart{background:var(--spice-tint);border-left:3px solid var(--spice);border-radius:6px;
@@ -114,7 +105,7 @@ padding:16px 20px;margin:8px 0 24px;font-size:14px}
 .dq{font-size:12px;color:var(--ink-500);background:var(--ink-50);border:1px solid var(--ink-200);
 border-radius:6px;padding:12px 16px;margin:24px 0}
 .dq .ok{color:var(--ok);font-weight:600}.dq .warn{color:var(--warn);font-weight:600}
-details{border:1px solid var(--ink-200);border-radius:8px;padding:14px 18px;margin-bottom:8px}
+details{background:var(--ink-0);border:1px solid var(--ink-200);border-radius:12px;padding:14px 18px;margin-bottom:8px}
 summary{font-weight:600;font-size:15px;cursor:pointer}
 details[open]{padding-bottom:18px}
 .detail-body{margin-top:14px;padding-top:14px;border-top:1px solid var(--ink-200);font-size:13px}

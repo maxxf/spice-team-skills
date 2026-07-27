@@ -50,7 +50,8 @@ Drop into `dd/`.
 | ☐ | **Frequent Customers %** | Insights → Customer Insights → Frequent customers | Screenshot if no CSV. **Required for radar's Re-order dim.** |
 | ☐ | **Sponsored Listings performance** | Marketing → Sponsored Listings → 90d → Export | ROAS, spend, attributed sales. |
 | ☐ | **Promos export** | Marketing → Promotions → All promotions → Export | Promo type, depth, dates. |
-| ☐ | **Operations Quality** | Operations Quality tab → 90d → Export | Cancellations, errors, downtime. Usually 1 to 4 separate files. Drop them all. |
+| ☐ | **Operations Quality — downtime (categorized)** | Operations Quality → **view by store → Downtime** → 90d → Export | **REQUIRED, and the category column must be preserved.** The export includes `Downtime Category - Short` / `Downtime Category - Description` and `Minutes Downtime` per store. **Do NOT collapse this to a single uptime %** — the ops bucket reads it by category to detect involuntary events (auto-pause on high avoidable/POS-cancel rate, dasher-reported closure = Broken/Red) vs intentional/capacity ones (merchant-triggered closure, dasher-wait pause = Watch). A single uptime number averages these outages away. |
+| ☐ | **Operations Quality — cancellations + errors** | Operations Quality tab → 90d → Export | Cancellations (keep the `Cancellation Category` column — `Avoidable Store Operations` corroborates involuntary downtime) + errors. Usually 1 to 4 separate files. Drop them all. |
 | ☐ | **Store-level errors** | Operations → Errors → by store → Export | Drives the per-store error breakdown. |
 
 Note: enterprise clients (e.g., goop) get ad spend invoiced separately. The portal exports are source-of-truth for marketing attribution + ad spend. The financial CSV alone won't have ads.

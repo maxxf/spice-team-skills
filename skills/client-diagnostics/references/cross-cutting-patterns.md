@@ -20,14 +20,24 @@ Each sub-bucket scored Healthy / Watch / Broken:
 - **Broken**: CVR <20% below benchmark, OR photo coverage <50%, OR 2+ categories empty, OR no hero
 
 **Ops performance**
-- **Healthy**: error rate <2%, cancellation <2%, uptime >97%, rating ≥4.5, hours accurate
-- **Watch**: error rate 2–5%, OR cancellation 2–5%, OR uptime 90–97%, OR rating 4.2–4.5
-- **Broken**: error rate >5%, OR cancellation >5%, OR uptime <90%, OR rating <4.2, OR repeated hours-mismatch incidents
+- **Healthy**: error rate <2%, cancellation <2%, uptime >97%, rating ≥4.5, hours accurate, no involuntary downtime events
+- **Watch**: error rate 2–5%, OR cancellation 2–5%, OR uptime 90–97%, OR rating 4.2–4.5, OR an intentional/capacity downtime event (merchant-triggered temporary closure, high dasher-wait auto-pause)
+- **Broken**: error rate >5%, OR cancellation >5%, OR uptime <90%, OR rating <4.2, OR repeated hours-mismatch incidents, OR an **involuntary downtime event** (DoorDash auto-pause on high avoidable/POS-cancel rate, or a dasher-reported store closure)
+
+> Discrete downtime **events override the smoothed averages** — read the DoorDash
+> downtime export by category, don't collapse it to one uptime %. See
+> `diagnostic-framework.md` → "Discrete downtime EVENTS override the smoothed
+> averages" for the full category → verdict table. Involuntary events force
+> Broken even at 99% average uptime.
 
 **Campaign performance**
-- **Healthy**: blended ROAS ≥3.5x, spend efficient relative to incremental orders, no over-discounting
-- **Watch**: ROAS 2.5–3.5x, OR promo stack ≥2 active, OR spend running but <10 incremental orders/week
+- **Healthy**: blended ROAS ≥3.5x, spend efficient relative to incremental orders
+- **Watch**: ROAS 2.5–3.5x, OR spend running but <10 incremental orders/week
 - **Broken**: ROAS <2.5x, OR ad spend running while ops Broken (money on fire), OR no campaigns active and store qualifies for them
+
+> **Promo count is a margin NOTE, not a tier determinant.** A stacked promo mix
+> no longer forces a Watch. ROAS is spend-weighted (blended), not a mean of
+> per-row ROAS. See `diagnostic-framework.md`.
 
 ### Rollup rule
 
@@ -39,7 +49,7 @@ Each sub-bucket scored Healthy / Watch / Broken:
 | Launched <60 days, insufficient data | 🆕 **New** | Awareness investment + diagnostic re-run at 60-day mark to assign permanent tier |
 
 **Edge cases:**
-- **Ops Broken always wins.** A store with Broken ops is Red, regardless of Menu/Campaign scores. Money burning at a broken store is the fastest revenue leak.
+- **Ops Broken always wins → Red.** A store with Broken ops is Red, regardless of Menu/Campaign scores. This now actually fires on discrete involuntary downtime events (auto-pause / dasher-reported closure) because those events are detected, not averaged away. Money burning at a broken store — or spend pushed into a store DoorDash keeps pausing — is the fastest revenue leak.
 - **New trumps the others.** If launched <60 days, the store is New, even if data already looks good. Don't stamp Green on a store that hasn't seen a normal cycle.
 - **Single-platform stores.** If a store only has data on 1 of UE/DD/GH, score the available platform and note the limitation. Don't blend zeros.
 
