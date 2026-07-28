@@ -13,7 +13,7 @@ description: >
   to brief a client's campaign performance for a week. Works for every marketplace client; for
   client-specific config (paths, report templates, store list, spend cap) read that client's block.
 team: marketplace
-version: 1.1.0
+version: 1.0.0
 ---
 
 # Campaign Briefing (Tuesday) — all clients
@@ -205,9 +205,29 @@ cleanly where Markdown tables don't. Design lane: frontend-design / dataviz, NOT
   vs cap · $ headroom · blended ROAS · WoW efficiency) → two columns (What's happening / Changing
   this week) → receipts table color-coded by move (green = raise · amber = test · blue = retarget) →
   Watching strip → bottom line. No italics.
-- Deliver via `/deploy` → a hosted link that unfurls in Slack, works on mobile, and can be gated for
-  client-facing channels. Post the link alongside the text flash for readers who don't click through.
 - Scale the receipts rows to what changed; keep it to one card.
+
+**Render a PNG and deploy it ungated.** Slack cannot unfurl a gated URL — behind a password it
+shows a login redirect, not the card, which defeats the point of making a visual. And the Slack
+MCP has no file-upload tool, so the image needs a public URL to appear inline at all. The flash
+card therefore deploys **public**, and `/deploy`'s sensitivity classifier will not catch this on
+its own: it matches on filenames, and a file called `W30-flash-card.html` reads as harmless.
+
+Before deploying, say plainly in chat that the card carries the client's revenue and campaign
+economics and will sit on an open URL, then deploy public. Do not gate it and then wonder why the
+Slack preview is blank.
+
+- Deploy both the `.png` and the `index.html` in the same app so `https://{app}.indigo-hq.com/{card}.png`
+  is a direct image URL Slack can unfurl, with the page available for anyone who clicks through.
+- Post the link alongside the text flash for readers who don't click through.
+- If a client-facing channel ever needs the gate back, switch that specific deploy to `password` or
+  `company` mode and accept that the image will not preview — send the PNG as a file in that case.
+
+**Image sizing — this is what breaks in practice.** Slack renders an inline image at roughly 700px
+wide and scales the whole thing down to fit. A 2400px-wide card gets squashed to about 29% and the
+type becomes unreadable. Orientation is not the problem; width is. Author the Slack card at
+**~760 logical px wide** and render at 2x (≈1520px), so Slack scales it barely at all. Vertical is
+fine at that width. Keep the full-detail card as a separate, wider artifact for the hosted page.
 
 ### Mode B — Full Weekly Refresh
 Run the client's campaign-sheet update and weekly-report build per their config block / template.
