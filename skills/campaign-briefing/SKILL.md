@@ -74,6 +74,41 @@ Automated pulls have hit an "Accept Uber Advertising Terms" wall and CDP/portal 
 has account access — accept the terms once, manually, to clear the wall. Screenshots time out
 intermittently; reading the page DOM is more reliable than screenshotting.
 
+**Synthetic clicks hang both portals.** Verified 2026-07-28 on goop. Page loads and DOM reads are
+reliable; every scripted click — account selector, pagination, date picker, rows-per-page, Export —
+times out and leaves the page unresponsive until reload. Do not burn attempts retrying the click.
+Two workarounds carry the pull:
+
+1. **Switching Uber accounts without the selector.** Clicking the account selector hangs. Load
+   `advertiser.uber.com/campaigns/manage/groups?adAccountUuid=<uuid>` instead — that switches the
+   session, after which `/campaigns/manage` renders the correct client. The plain
+   `/campaigns/manage?adAccountUuid=` form is ignored; it must be the `/groups` route. Client
+   uuids live in that client's prior `ue_*_pull_*.md` files. goop is
+   `49523e0b-f393-40aa-811c-e74538b59855`.
+2. **Paging tables from in-page JavaScript.** Driving the next-page button from page JS works where
+   synthetic clicks do not. Read the table, click next, wait ~2s, repeat, accumulating rows and
+   stopping when a page's contents repeat. This produced all 84 goop campaigns and all 27 offers in
+   one pass. Chunk the output when reading it back — large dumps truncate in transit.
+
+**Still blocked after both:** the Uber **date range**. The picker cannot be driven, so the portal
+default (trailing 14 days up to yesterday) is what you get. That is NOT the Mon–Sun closed week.
+Either re-pull manually on the right window or label every Uber figure as a 14-day read — never
+present it as the week's number.
+
+**DoorDash's Campaigns tab does not paginate at all.** The page indicator advances while the table
+keeps showing the same first rows, so you silently re-read page 1. Verify the row contents actually
+changed before trusting a multi-page DD pull. Use Reports for anything campaign-level, per the
+standing rule.
+
+### Never blend windows to hit the cap number
+If the platforms come back on different windows — e.g. Uber on trailing 14 days and DoorDash on
+7 or 90 — the marketing-spend-vs-cap percentage is **not computable**. Report each platform's own
+percentage where it stands alone, say the portfolio number is pending, and move on. A blended
+number built from mismatched windows is a fabricated number, and it is the one figure clients
+quote back. Note also that Ads Manager never exposes total Uber sales: ad-attributed and
+offer-attributed sales overlap and neither is a store total, so the Uber percentage needs Uber
+Eats Manager, a separate portal.
+
 ## Phase 3 — Analysis
 
 ### 3a. Budget-pacing outliers (active campaigns only)
@@ -170,9 +205,29 @@ cleanly where Markdown tables don't. Design lane: frontend-design / dataviz, NOT
   vs cap · $ headroom · blended ROAS · WoW efficiency) → two columns (What's happening / Changing
   this week) → receipts table color-coded by move (green = raise · amber = test · blue = retarget) →
   Watching strip → bottom line. No italics.
-- Deliver via `/deploy` → a hosted link that unfurls in Slack, works on mobile, and can be gated for
-  client-facing channels. Post the link alongside the text flash for readers who don't click through.
 - Scale the receipts rows to what changed; keep it to one card.
+
+**Render a PNG and deploy it ungated.** Slack cannot unfurl a gated URL — behind a password it
+shows a login redirect, not the card, which defeats the point of making a visual. And the Slack
+MCP has no file-upload tool, so the image needs a public URL to appear inline at all. The flash
+card therefore deploys **public**, and `/deploy`'s sensitivity classifier will not catch this on
+its own: it matches on filenames, and a file called `W30-flash-card.html` reads as harmless.
+
+Before deploying, say plainly in chat that the card carries the client's revenue and campaign
+economics and will sit on an open URL, then deploy public. Do not gate it and then wonder why the
+Slack preview is blank.
+
+- Deploy both the `.png` and the `index.html` in the same app so `https://{app}.indigo-hq.com/{card}.png`
+  is a direct image URL Slack can unfurl, with the page available for anyone who clicks through.
+- Post the link alongside the text flash for readers who don't click through.
+- If a client-facing channel ever needs the gate back, switch that specific deploy to `password` or
+  `company` mode and accept that the image will not preview — send the PNG as a file in that case.
+
+**Image sizing — this is what breaks in practice.** Slack renders an inline image at roughly 700px
+wide and scales the whole thing down to fit. A 2400px-wide card gets squashed to about 29% and the
+type becomes unreadable. Orientation is not the problem; width is. Author the Slack card at
+**~760 logical px wide** and render at 2x (≈1520px), so Slack scales it barely at all. Vertical is
+fine at that width. Keep the full-detail card as a separate, wider artifact for the hosted page.
 
 ### Mode B — Full Weekly Refresh
 Run the client's campaign-sheet update and weekly-report build per their config block / template.
