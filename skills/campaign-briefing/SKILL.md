@@ -13,7 +13,7 @@ description: >
   to brief a client's campaign performance for a week. Works for every marketplace client; for
   client-specific config (paths, report templates, store list, spend cap) read that client's block.
 team: marketplace
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Campaign Briefing (Tuesday) — all clients
