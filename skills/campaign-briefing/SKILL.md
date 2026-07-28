@@ -13,7 +13,7 @@ description: >
   to brief a client's campaign performance for a week. Works for every marketplace client; for
   client-specific config (paths, report templates, store list, spend cap) read that client's block.
 team: marketplace
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Campaign Briefing (Tuesday) — all clients
@@ -73,6 +73,41 @@ client goes out Tuesday.
 Automated pulls have hit an "Accept Uber Advertising Terms" wall and CDP/portal timeouts. The team
 has account access — accept the terms once, manually, to clear the wall. Screenshots time out
 intermittently; reading the page DOM is more reliable than screenshotting.
+
+**Synthetic clicks hang both portals.** Verified 2026-07-28 on goop. Page loads and DOM reads are
+reliable; every scripted click — account selector, pagination, date picker, rows-per-page, Export —
+times out and leaves the page unresponsive until reload. Do not burn attempts retrying the click.
+Two workarounds carry the pull:
+
+1. **Switching Uber accounts without the selector.** Clicking the account selector hangs. Load
+   `advertiser.uber.com/campaigns/manage/groups?adAccountUuid=<uuid>` instead — that switches the
+   session, after which `/campaigns/manage` renders the correct client. The plain
+   `/campaigns/manage?adAccountUuid=` form is ignored; it must be the `/groups` route. Client
+   uuids live in that client's prior `ue_*_pull_*.md` files. goop is
+   `49523e0b-f393-40aa-811c-e74538b59855`.
+2. **Paging tables from in-page JavaScript.** Driving the next-page button from page JS works where
+   synthetic clicks do not. Read the table, click next, wait ~2s, repeat, accumulating rows and
+   stopping when a page's contents repeat. This produced all 84 goop campaigns and all 27 offers in
+   one pass. Chunk the output when reading it back — large dumps truncate in transit.
+
+**Still blocked after both:** the Uber **date range**. The picker cannot be driven, so the portal
+default (trailing 14 days up to yesterday) is what you get. That is NOT the Mon–Sun closed week.
+Either re-pull manually on the right window or label every Uber figure as a 14-day read — never
+present it as the week's number.
+
+**DoorDash's Campaigns tab does not paginate at all.** The page indicator advances while the table
+keeps showing the same first rows, so you silently re-read page 1. Verify the row contents actually
+changed before trusting a multi-page DD pull. Use Reports for anything campaign-level, per the
+standing rule.
+
+### Never blend windows to hit the cap number
+If the platforms come back on different windows — e.g. Uber on trailing 14 days and DoorDash on
+7 or 90 — the marketing-spend-vs-cap percentage is **not computable**. Report each platform's own
+percentage where it stands alone, say the portfolio number is pending, and move on. A blended
+number built from mismatched windows is a fabricated number, and it is the one figure clients
+quote back. Note also that Ads Manager never exposes total Uber sales: ad-attributed and
+offer-attributed sales overlap and neither is a store total, so the Uber percentage needs Uber
+Eats Manager, a separate portal.
 
 ## Phase 3 — Analysis
 
