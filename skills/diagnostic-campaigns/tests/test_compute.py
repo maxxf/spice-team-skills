@@ -72,7 +72,9 @@ def test_low_roas_high_spend_emits_high_finding():
     assert "A" in matching[0]["deliverable_trigger"]["params"]["stores"]
 
 
-def test_over_discounting_emits_medium_finding():
+def test_over_discounting_emits_low_severity_note():
+    """Promo stacking is demoted to a NOTE: low-severity, no tier downgrade, and
+    no internal skill/deliverable name leaked into the finding."""
     df = pd.DataFrame({
         "store": ["A"],
         "platform": ["UE"],
@@ -83,11 +85,34 @@ def test_over_discounting_emits_medium_finding():
         "promo_count_active": [4],  # >= 3 — over-discounting
     })
     payload = compute.run(client="x", window_start="2026-01-01", window_end="2026-04-01", df=df)
-    medium_findings = [f for f in payload["computed"]["findings"] if f["severity"] == "medium"]
-    matching = [f for f in medium_findings if f["pattern_id"] == "over_discounting"]
+    matching = [f for f in payload["computed"]["findings"] if f["pattern_id"] == "over_discounting"]
     assert len(matching) == 1
-    assert matching[0]["deliverable_trigger"]["skill"] == "campaign-plan"
-    assert matching[0]["deliverable_trigger"]["params"]["focus"] == "promo_consolidation"
+    assert matching[0]["severity"] == "low"
+    # Client-safe: no internal skill name / focus token in the deliverable trigger.
+    assert matching[0]["deliverable_trigger"]["skill"] == ""
+    assert matching[0]["deliverable_trigger"]["params"] == {}
+    # And the store is NOT downgraded by promo count alone (ROAS + orders healthy).
+    assert payload["computed"]["tier_contributions"]["A"]["flag"] == "green"
+
+
+def test_store_roas_is_spend_weighted_not_plain_mean():
+    """A store that runs healthy paid on UE/DD but ZERO Grubhub ads must not be
+    dragged into the watch band by GH's roas=0 row. Blended ROAS = total
+    attributed / total spend = 14313/2835 ≈ 5.05x -> Green, not Yellow."""
+    df = pd.DataFrame({
+        "store": ["NYP", "NYP", "NYP"],
+        "platform": ["UE", "DD", "GH"],
+        "spend": [1432.21, 1403.22, 0.0],
+        "attributed_sales": [8713.12, 5600.27, 0.0],
+        "roas": [6.08, 3.99, 0.0],
+        "incremental_orders_per_week": [17.0, 18.85, 0.0],
+        "promo_count_active": [3, 4, 1],
+    })
+    payload = compute.run(client="x", window_start="2026-01-01", window_end="2026-04-01", df=df)
+    tc = payload["computed"]["tier_contributions"]["NYP"]
+    assert tc["flag"] == "green", tc
+    joined = " ".join(tc["reasons"]).lower()
+    assert "watch" not in joined
 
 
 def test_tier_classification_red_when_roas_below_25():

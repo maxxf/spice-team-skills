@@ -350,6 +350,70 @@ def build_page_blocks(
 
 
 # ---------------------------------------------------------------------------
+# Executive summary — one merged top block (foundation status + risk + do-first
+# + doc roadmap). Consumed by the HTML/PDF exporter.
+# ---------------------------------------------------------------------------
+
+def build_exec_summary(
+    *,
+    payloads: dict[str, dict],
+    radar: dict[str, float],
+    tier_rollup: dict[str, dict],
+    action_plan: dict,
+    foundation_gate: dict,
+) -> dict:
+    """Return the merged executive-summary block.
+
+    Shape: {"gated": bool, "headline": str, "bullets": list[str]}.
+
+    Foundation status is folded into the headline (no standalone alert). The
+    bullets carry the three things a reader needs up top: biggest risk, the
+    single do-first action, and a one-line roadmap of what's inside the doc.
+    """
+    gated = bool(foundation_gate.get("triggered"))
+    wro = _derive_wro(action_plan=action_plan, radar=radar,
+                      foundation_gate=foundation_gate)
+
+    if gated:
+        triggers_summary = _summarize_triggers(foundation_gate.get("triggers") or [])
+        headline = (
+            f"Foundation gate triggered. {triggers_summary}. "
+            "All scaling on hold; foundation actions only."
+        )
+    else:
+        headline = f"Foundation clear. Biggest lever: {wro['opportunity']}."
+
+    # Do-first action — foundation clearance when gated, else the top red action.
+    tier_groups = action_plan.get("tier_groups", {}) or {}
+    red = tier_groups.get("red", {}) or {}
+    if gated:
+        do_first = "Clear the foundation gate before any scaling."
+    else:
+        red_findings = red.get("finding_actions", []) or []
+        red_auto = red.get("auto_actions", []) or []
+        portfolio = action_plan.get("portfolio_actions", []) or []
+        if red_findings:
+            do_first = _format_finding(red_findings[0])
+        elif red_auto:
+            do_first = (red_auto[0] or {}).get("action") or "—"
+        elif portfolio:
+            do_first = (portfolio[0] or {}).get("action") or "—"
+        else:
+            do_first = wro["risk"]
+
+    roadmap = ("60-second view, Brand Health Radar, Win / Risk / Opportunity / "
+               "Decision, the This Week action board, and full per-area detail.")
+
+    bullets = [
+        f"Biggest risk: {wro['risk']}",
+        f"Do first: {do_first}",
+        f"Inside: {roadmap}",
+    ]
+
+    return {"gated": gated, "headline": headline, "bullets": bullets}
+
+
+# ---------------------------------------------------------------------------
 # Helpers — content derivation
 # ---------------------------------------------------------------------------
 
@@ -492,7 +556,60 @@ def _derive_wro(*, action_plan: dict, radar: dict[str, float], foundation_gate: 
     else:
         opp = "—"
 
-    return {"win": win, "risk": risk, "opportunity": opp}
+    # Decision — the one strategic call for the window.
+    if foundation_gate.get("triggered"):
+        decision = "Hold all scaling until the foundation gate clears."
+    else:
+        red_stores = len(red.get("stores", []) or [])
+        green = tier_groups.get("green", {}) or {}
+        green_stores = len(green.get("stores", []) or [])
+        if red_stores:
+            decision = (f"Fix {red_stores} red store(s) first, "
+                        f"then scale {green_stores} green store(s).")
+        elif green_stores:
+            decision = f"Scale {green_stores} green store(s)."
+        else:
+            decision = "Hold; no clear scale or fix signal this window."
+
+    return {"win": win, "risk": risk, "opportunity": opp, "decision": decision}
+
+
+def _derive_kanban(*, action_plan: dict, foundation_gate: dict) -> list[tuple]:
+    """Return the This Week / Next 2 Weeks / Later action board.
+
+    Red-tier actions are urgent (This Week), yellow-tier are near-term
+    (Next 2 Weeks), green-tier + portfolio actions are Later. When the
+    foundation gate is triggered, clearing it is prepended to This Week.
+    """
+    tier_groups = action_plan.get("tier_groups", {}) or {}
+    red = tier_groups.get("red", {}) or {}
+    yellow = tier_groups.get("yellow", {}) or {}
+    green = tier_groups.get("green", {}) or {}
+    portfolio = action_plan.get("portfolio_actions", []) or []
+
+    def actions_of(group: dict) -> list[str]:
+        out: list[str] = []
+        for a in group.get("auto_actions", []) or []:
+            out.append((a or {}).get("action") or "(unnamed)")
+        for f in group.get("finding_actions", []) or []:
+            out.append(_format_finding(f))
+        return out
+
+    this_week = actions_of(red)
+    if foundation_gate.get("triggered"):
+        summary = _summarize_triggers(foundation_gate.get("triggers") or [])
+        this_week = [f"Clear foundation gate: {summary}"] + this_week
+
+    next_two = actions_of(yellow)
+    later = actions_of(green) + [
+        (a or {}).get("action") or "(unnamed)" for a in portfolio
+    ]
+
+    return [
+        ("This Week", this_week),
+        ("Next 2 Weeks", next_two),
+        ("Later", later),
+    ]
 
 
 def _format_finding(f: dict) -> str:

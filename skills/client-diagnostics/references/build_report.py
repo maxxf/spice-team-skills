@@ -629,7 +629,7 @@ def build(run_dir: pathlib.Path) -> str:
 {dq_footer(fj)}
 
 <div class="half" style="color:var(--ink-900);background:var(--ink-100)">Detailed Findings</div>
-<h2>Full analyst depth</h2>
+<h2>Full detail</h2>
 
 {toggles}
 

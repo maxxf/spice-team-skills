@@ -9,6 +9,7 @@ findings list.
 """
 import json
 import os
+import pathlib
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -18,28 +19,12 @@ from pathlib import Path
 
 from orchestrator import chart_helpers, contract, cross_cutting, output_layout, run_state
 
-def _resolve_skills_root() -> Path:
-    """Locate the directory that holds the diagnostic-* sub-skills.
-
-    Resolution order, so the pipeline runs on any machine (not just the
-    original dev box):
-      1. SPICE_SKILLS_ROOT env var — explicit override
-      2. sibling of this skill — normal plugin/repo install, where
-         diagnostic-topline/menu/ops/campaigns/action-plan sit next to
-         client-diagnostics
-      3. legacy Cowork path — Maxx's original local layout (last-resort fallback)
-    """
-    env = os.environ.get("SPICE_SKILLS_ROOT")
-    if env:
-        return Path(env).expanduser()
-    # entry.py lives at <skills_root>/client-diagnostics/orchestrator/entry.py
-    sibling_root = Path(__file__).resolve().parents[2]
-    if (sibling_root / "diagnostic-topline").is_dir():
-        return sibling_root
-    return Path("/Users/maxx/Desktop/Cowork/Skills")
-
-
-SKILLS_ROOT = _resolve_skills_root()
+# The diagnostic-* sub-skills live beside client-diagnostics in the same skills
+# directory. Resolve relative to this file so the orchestrator works from any
+# install location (plugin cache, Cowork mirror, canonical repo) rather than a
+# single hard-coded path. entry.py -> orchestrator/ -> client-diagnostics/ ->
+# skills/ (parents[2]).
+SKILLS_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass(frozen=True)
@@ -100,8 +85,14 @@ def run(
             try:
                 fut.result()
                 statuses[f"diagnostic-{short}"] = "ok"
-            except Exception:
+            except Exception as exc:
+                # Do NOT swallow. A section we cannot produce must not be
+                # zero-filled and shipped as if complete.
                 statuses[f"diagnostic-{short}"] = "failed"
+                raise SubSkillDispatchError(
+                    f"diagnostic-{short} could not be dispatched, so the "
+                    f"{short} section would be incomplete: {exc}"
+                ) from exc
     state = run_state.update(layout.run_state_path, sub_skill_status=statuses)
 
     # Phase 3: cross-cutting assembly
@@ -240,10 +231,41 @@ def _dispatch_campaigns(*, client, window_start, window_end, inputs_dir, output_
                         inputs_dir=inputs_dir, output_path=output_path, charts_dir=charts_dir)
 
 
+class SubSkillDispatchError(RuntimeError):
+    """A diagnostic sub-skill could not be dispatched at all.
+
+    Raised instead of marking the sub-skill "failed" and continuing. Guards the
+    INDAY-2026-07-23 failure mode: a dispatch that could not even start (missing
+    interpreter, crashed subprocess) was swallowed, the affected section was then
+    zero-filled by the assembler, and a blank diagnostic shipped looking complete.
+    A run that cannot produce a section must fail loudly and name that section.
+    """
+
+
+def _resolve_sub_skill_python(short: str) -> pathlib.Path:
+    """Return an interpreter that actually exists for ``diagnostic-<short>``.
+
+    Prefers the sub-skill's own venv; falls back to the interpreter running the
+    orchestrator (the client-diagnostics venv carries pandas/matplotlib and the
+    sub-skill packages import cleanly on the shared PYTHONPATH). Never returns a
+    non-existent hardcoded path.
+    """
+    sub_venv_python = SKILLS_ROOT / f"diagnostic-{short}" / ".venv" / "bin" / "python"
+    if sub_venv_python.exists() and os.access(sub_venv_python, os.X_OK):
+        return sub_venv_python
+    return pathlib.Path(sys.executable)
+
+
 def _dispatch_sub_skill(short: str, *, client, window_start, window_end, inputs_dir, output_path, charts_dir=None):
     skill_dir = SKILLS_ROOT / f"diagnostic-{short}"
+    # Prefer the sub-skill's own venv if it has one; otherwise fall back to the
+    # interpreter currently running the orchestrator (the client-diagnostics
+    # venv carries pandas/matplotlib, and the sub-skill packages import cleanly
+    # on the shared PYTHONPATH). This keeps the orchestrator runnable whether or
+    # not each sub-skill was independently bootstrapped with its own venv.
+    python_exe = str(_resolve_sub_skill_python(short))
     cmd = [
-        str(skill_dir / ".venv" / "bin" / "python"),
+        python_exe,
         "-m", f"diagnostic_{short}.entry",
         "--client", client,
         "--window-start", window_start,
@@ -253,7 +275,10 @@ def _dispatch_sub_skill(short: str, *, client, window_start, window_end, inputs_
     ]
     if charts_dir is not None:
         cmd += ["--charts-dir", str(charts_dir)]
-    env = {**os.environ, "PYTHONPATH": str(skill_dir)}
+    # Put the sub-skill dir first so `diagnostic_{short}` resolves, and keep the
+    # client-diagnostics root on the path so sub-skills can import chart_helpers.
+    pythonpath = os.pathsep.join([str(skill_dir), str(SKILLS_ROOT / "client-diagnostics")])
+    env = {**os.environ, "PYTHONPATH": pythonpath}
     subprocess.run(cmd, check=True, env=env)
 
 
