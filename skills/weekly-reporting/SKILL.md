@@ -242,6 +242,14 @@ Omit `--profile-json` if no Notion profile was fetched in Phase 1.
 - KPI targets from client profile (if available)
 - Extraction agent's own validation flags
 
+**Continuity checks (soft — flag as a Performance Flag, never silently pass):**
+These catch things that are invisible in a weekly total but obvious in a daily series. Added 2026-07 after a
+5-day collapse in DoorDash ad-driven customer volume on a live account went unnoticed for three weeks.
+- **Marketing volume anomaly** — any day where ad-driven orders or ad-attributed customers fall >60% below the trailing 14-day daily mean. Report the date range and estimate the lost orders against the prior run rate.
+- **Zero-spend day on an active campaign** — an Active campaign with $0 spend on a day it was scheduled to run. Almost always a paused/expired campaign nobody re-enabled.
+- **Store coverage** — count platform stores vs stores carrying at least one active campaign. Any store with zero active marketing is a flag, not a footnote. Name the dark stores.
+- **Duplicate campaigns** — two Active campaigns at the same store targeting the same audience on the same platform. They compete with each other and split attribution. Flag for immediate pause of one.
+
 **If validation FAILS (exit code 1):**
 1. **HALT** — do NOT proceed to Notion generation
 2. Show the user the specific failures from `OUTPUT/validation_report.md`
@@ -516,6 +524,24 @@ WoW = change from prior week (e.g., `+5%`, `-$1,200`). vs 4wk Avg = change from 
 | Metric | This Week |
 |--------|-----------|
 
+### Section 5.5: Customer Economics *(new — include whenever DD Customer insights was pulled)*
+The unit-economics view. This is the section that should get read first by an owner or CFO, so keep it to one table plus one sentence.
+
+| Metric | This Week | WoW | Note |
+|--------|-----------|-----|------|
+| CAC (range) | `$X – $Y` | | low = ads spend only, high = all marketing spend |
+| 90-day LTV, new customer | `$X` | | portal-measured |
+| LTV:CAC | `X.Xx – Y.Yx` | | inside 90 days — say so |
+| Payback | `X.X orders` | | <1 order is the strong version |
+| Lapsed pool | `N customers` | | ordered 45d–1y ago |
+| Recapture rate | `X.X%` | | lapsed customers won back ÷ pool |
+| Ticket gap | `-$X.XX` | | ad-driven ticket vs storefront average |
+
+One sentence underneath, in the client's language, e.g.
+*"Every $1 of DoorDash ad spend returned $3.70 of customer value within 90 days."*
+
+**Lead the client conversation with LTV:CAC and payback, not ROAS.** ROAS stays in Section 5 as a channel-efficiency metric. If only one number survives into the exec summary, it is LTV:CAC.
+
 ### Section 6: Location Performance
 Summary table across all locations. **Max 7 columns** to keep it scannable:
 
@@ -599,6 +625,22 @@ The platform payout columns (`Total payout` on UE, `Net total` on DD, `merchant_
 - `$0.99` flat marketing fee = always an offer redemption fee, never ad spend
 - `Channel = "Marketplace"` filter on all metrics
 - Completed = `Transaction type = "Order"` AND `Sales (excl. tax)` > 0
+- **Marketing portal is `ads.doordash.com/portal/business/<id>/`** (moved 2026-07). Campaign exports come from its **Reports** tab (`Campaign performance`, view by `Day, Store`). The portal degrades on 20+ store accounts — the Campaigns tab times out consistently and the Performance tab and portal root follow after a few interactions. Capture early, prefer Reports exports, don't retry a wedged page more than twice. Full reference: `skills/campaign-plan/references/playbooks/doordash-ads-portal.md`.
+- **Ads summary and Promotions summary carry different update timestamps** (observed ~21h apart). Check both before summing them for a period.
+- **Category share is UTC; daypart is local time**, on the same page. Do not cross-reference without adjusting.
+- **Never use the portal store count as a coverage denominator** — it includes shut-down virtual brands. Count against the client's canonical location list.
+- **Always report blended ROAS** = (ads sales + promo sales) ÷ (ads spend + promo spend). The portal shows ads-only and promo-only separately and both overstate. Ads-only and promo-only go underneath the blended number, never instead of it.
+- **DD offer campaigns are uncapped on budget.** Details show "No cap on average weekly budget"; Sponsored Listings show "$0 avg weekly budget / Automatic bid". Budget utilisation is therefore not computable and "limited by budget" never applies. The throttle is the **cost-per-order ceiling** — that is the lever to raise spend on a winner. Do not write budget-pacing % for DD.
+
+### DoorDash Customer Economics (new — from the Customer insights tab)
+Pull these weekly alongside the campaign export. They feed Section 5.5 below.
+- Customer breakdown: total / new / lapsed / existing, for **Customers from ads** and **Overall customers**
+- Customer purchase trends: active customer count + the four recency buckets → sizes the lapsed pool
+- Customer long-term value (90d): average customer value, ticket, order rate for **New** and **Lapsed**
+
+Derived every week: **CAC range** (ads spend ÷ ad-attributed new customers → low; total marketing spend ÷ same → high), **LTV:CAC range**, **payback in orders**, **lapsed pool**, **recapture rate**, **ticket gap** (ad-driven new-customer ticket − storefront average).
+
+Known bug (2026-07-27): the "Overall customers" toggle inside the long-term-value module hangs the page. Use the "Customers from ads" view and note the gap.
 
 ### Grubhub
 - Ad Spend is NOT in the settlement CSV — leave as $0 unless separate ad data provided

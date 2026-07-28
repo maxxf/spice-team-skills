@@ -65,12 +65,15 @@ A 4.3-star store with 3% inaccuracy will waste ad dollars every time. We've watc
 - Start at $0.50-$1.00 CPC, test 3 ad groups, measure 7-day ROAS
 - Tablet disconnection issues directly cause lost orders. Silver Lake lost ~20 estimated orders from a single outage dropping uptime to 91.4%
 - **Friday-depth tweak (added June 2026):** deeper promo on Friday only, standard depth other days, takes share at peak auction without bleeding margin all week. Drove goop Pasadena to best-of-year sales week. Pair with ratings flyer to compound the volume-spike review flywheel.
+- **Ads portal rebuilt July 2026.** Moved to `ads.doordash.com/portal/business/<id>/`. Now publishes measured 90-day customer LTV, ad-attributed new/lapsed/existing cohorts, a 12-month recency decay curve, and category share vs submarket competitors. Full reference with gotchas: `references/playbooks/doordash-ads-portal.md`. **Read that before any DD pull.**
+- **DD campaigns are uncapped on budget.** Offers show "No cap on average weekly budget"; Sponsored Listings show "$0 avg weekly budget / Automatic bid". Budget pacing % is not computable and must never appear in a DD report. The lever for spending more on a winner is the **cost-per-order ceiling**.
+- **Never use the portal store count as a coverage denominator.** It includes shut-down virtual brands and closed storefronts. Count against the client's own canonical location list.
 
 ### Uber Eats
 - Leads in major metros: LA, NYC, Chicago
 - Algorithm rewards: acceptance rate, preparation time accuracy, photo coverage
 - Uber One members drive disproportionate volume. Optimize for subscriber discovery
-- Better ad platform than DoorDash. More targeting options, better ROAS tracking, audience segmentation for new customer acquisition
+- Stronger *bidding* controls than DoorDash: real budget caps, manual and auto bid strategies, keyword and geo targeting, more granular pacing data. ⚠️ **Revised July 2026:** UE is no longer the better platform for *customer* reporting. DoorDash's rebuilt ads portal publishes measured 90-day LTV, new/lapsed/existing cohort splits and a lapsed-pool curve that UE does not expose. Use UE for bid control, DD for customer economics.
 - Photo quality matters more on UE than DD. Invest in professional hero image
 - Prep time accuracy directly impacts algorithm ranking. Work with kitchen to set realistic times, not aspirational ones
 - Restaurant Ads (auto-bidding) for launch, manual bidding after 14 days of data
@@ -237,6 +240,43 @@ Orders, GMV, net payout, AOV, error rate, avg prep time, uptime, rating. Always 
 - Repeat rate by acquisition channel
 - Revenue per customer over 90 days
 - Net payout % (the metric that actually matters to restaurant operators)
+
+### DoorDash now supplies the customer economics (added 2026-07)
+
+This playbook has asked for CAC and 90-day revenue per customer since it was written. We used to have to model them. As of the `ads.doordash.com` portal rebuild, DoorDash publishes them directly — **Customer insights** gives ad-attributed new/lapsed/existing counts, a 12-month recency decay curve, and a measured 90-day LTV with ticket and order rate.
+
+**Standing metric set for every DD client:**
+
+| Metric | Source | Why it beats ROAS |
+|---|---|---|
+| CAC range | ads spend ÷ ad-attributed new customers (low) → all marketing spend ÷ same (high) | A range is honest; a single CAC is a guess dressed up |
+| LTV90 | Customer insights → long-term value → New | Measured, not modelled |
+| LTV:CAC | LTV90 ÷ CAC | Survives a CFO. ROAS does not. |
+| Payback in orders | CAC ÷ ad-driven new-customer ticket | "<1 order" is the strongest sentence in any report |
+| Lapsed pool + recapture rate | recency buckets; lapsed-from-ads ÷ pool | Sizes the reactivation opportunity in customers, not vibes |
+| Ticket gap | ad-driven new-customer ticket − storefront average | Usually negative. That is a menu problem, not an ads problem. |
+| Category share vs submarket | Performance → Average category share | The one competitive KPI operators grasp instantly |
+
+**Report blended ROAS, always.** The portal shows ads-only and promo-only ROAS in separate cards; both overstate. Blended = (ads sales + promo sales) ÷ (ads spend + promo spend). On goop in July 2026 that was 6.97x blended against a 10.69x ads-only card — quoting the card to a client who can open the same portal is an avoidable credibility loss.
+
+### In-window ROAS understates acquisition (added 2026-07, from the goop DD re-cut)
+
+**Established.** New customers reorder inside the attribution window, and DoorDash now publishes how often. The portal's average order rate for a cohort *is* the 90-day value multiple, by arithmetic identity: `LTV90 = average ticket × average order rate`. Verified on goop ($41.49 × 2.17 = $90.03 against a published $90.22).
+
+So a New-audience campaign's 90-day value is its in-window ROAS times the cohort order rate. On goop that turned 5.2x into roughly 11.3x. This is arithmetic on published numbers, not a modelling choice.
+
+**Rule: never cut a New-audience campaign on in-window ROAS alone.** Apply the multiple first.
+
+**Hypothesis, not established.** The mirror claim — that Existing-customer campaigns are *overstated* because they reach people who would have ordered anyway — is plausible and untested. Two blockers:
+
+1. The portal's LTV module has **New** and **Lapsed** cohorts only. There is no measured multiple for Existing customers.
+2. No Spice client has an incrementality test on record, so the non-incremental share is unsized.
+
+**Rule: never scale an Existing-audience campaign on in-window ROAS alone**, and never tell a client their existing-customer spend is waste. The defensible ask is a stepped pullback (§4): 20% less spend, one location, 14 days, matched control.
+
+**On Meta-Rule 4.** "Retention delivers 14x better ROAS than acquisition" has never been incrementality-tested and may be partly the same measurement artifact. It stays in force as a default until tested, but it is not evidence in an allocation argument. Meta-Rule 7 and §4 have required these tests for a year and as of July 2026 none existed. Fix that before the next allocation debate.
+
+Full portal reference, including data-freshness and timezone gotchas: `references/playbooks/doordash-ads-portal.md`.
 
 ### Reporting Cadence to Client
 - EOW Slack/email snapshot with 3-5 bullets: what's up, what's down, what's next

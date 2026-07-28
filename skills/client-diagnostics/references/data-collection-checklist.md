@@ -40,7 +40,11 @@ Drop into `ue/`.
 
 If the client has **UE Ads Manager Access = No**, skip the Ads campaigns list (skill runs Tier 1 offer-only attribution). Note in the manifest.
 
-## DoorDash — Merchant Portal (`mxportal.doordash.com`)
+## DoorDash — Merchant Portal (`mxportal.doordash.com`) + Ads portal (`ads.doordash.com`)
+
+> **Portal split (2026-07).** Financials and Operations Quality stay on `mxportal.doordash.com`.
+> All marketing — campaigns, performance, and the new **Customer insights** — moved to
+> `ads.doordash.com/portal/business/<business_id>/`. Both pulls are required.
 
 Drop into `dd/`.
 
@@ -48,12 +52,28 @@ Drop into `dd/`.
 |---|---|---|---|
 | ☐ | **Financial simplified transactions (PER-ORDER)** | Financials → Statements → custom date 90d → Download CSV | "Simplified" view. **One row per order. REQUIRED** — must include the per-order local timestamp column (`Timestamp local time` / order datetime). This file is the source for the weekly **trend** chart AND the **daypart heatmap**. A store-aggregated summary export does NOT substitute. |
 | ☐ | **Frequent Customers %** | Insights → Customer Insights → Frequent customers | Screenshot if no CSV. **Required for radar's Re-order dim.** |
-| ☐ | **Sponsored Listings performance** | Marketing → Sponsored Listings → 90d → Export | ROAS, spend, attributed sales. |
-| ☐ | **Promos export** | Marketing → Promotions → All promotions → Export | Promo type, depth, dates. |
+| ☐ | **Campaign performance export** | `ads.doordash.com` → Reports → Create report → `Campaign performance`, view by **Day, Store**, 90d | Replaces the old Sponsored Listings + Promos exports. Ads and promos in one file. Name it `<client>-dd-daystore-<start>-<end>`. |
 | ☐ | **Operations Quality** | Operations Quality tab → 90d → Export | Cancellations, errors, downtime. Usually 1 to 4 separate files. Drop them all. |
 | ☐ | **Store-level errors** | Operations → Errors → by store → Export | Drives the per-store error breakdown. |
 
+### DoorDash Ads portal — Customer insights (`ads.doordash.com/portal/business/<id>/customer/insights`)
+
+**This is the retention-opportunity sizing pull. It takes about 60 seconds and it reframes the whole diagnostic.** No CSV export exists yet — screenshot each module into `dd/screenshots/`.
+
+| ☐ | Capture | Where | Why it matters |
+|---|---|---|---|
+| ☐ | **Customer breakdown** — both toggles | Customer insights → toggle **Customers from ads** *and* **Overall customers**, 90d | Total / new / lapsed / existing. The ads-vs-overall split shows what marketing actually produced vs what the brand produced. |
+| ☐ | **Customer purchase trends** | Same page, second module | Active customer count + four recency buckets (<45d, 45–90d, 90d–6mo, 6mo–1y). **This sizes the lapsed pool — the single biggest untapped number in most diagnostics.** |
+| ☐ | **90-day LTV — New and Lapsed tabs** | Same page, third module | Average customer value, ticket, order rate. Gives you real LTV:CAC instead of ROAS. |
+| ☐ | **Performance tab aggregates** | `ads.doordash.com` → Performance | Organic / Ads / Promo / Ads+Promo sales split, daypart heat map, and **Average category share vs submarket competitors** — a competitive KPI clients understand immediately. |
+
+Known portal issues as of 2026-07-27. The **Overall customers** toggle inside the *long-term value* module hangs the page (use the ads view and note the gap). And the portal as a whole degrades on 20+ store accounts: the **Campaigns** tab times out consistently, and after a few interactions the Performance tab and portal root stop responding too. **Capture everything in as few interactions as possible, early in the session**, and use the Reports export path for anything campaign-level. Full reference: `skills/campaign-plan/references/playbooks/doordash-ads-portal.md`.
+
+The **Customer insights** route is `/customer/insights`, not `/customer-insights` — the hyphenated form 404s and looks like a permissions error.
+
 Note: enterprise clients (e.g., goop) get ad spend invoiced separately. The portal exports are source-of-truth for marketing attribution + ad spend. The financial CSV alone won't have ads.
+
+**Interpreting the recency split — do not call it a leak by default.** A 25–35% 45-day-active rate is normal for multi-unit fast casual on 3P. Compare against the Spice cross-client benchmark table before framing it as a problem; absent a benchmark, present it as an unworked opportunity ("N customers ordered in the past year but not the past 45 days") rather than a failure. Overstating it costs credibility with operators who know their own category.
 
 ## Grubhub — Grubhub for Restaurants (`restaurant.grubhub.com`)
 
@@ -141,6 +161,8 @@ Confirm all of the following before telling Claude the folder is ready:
 - [ ] **UE Repeat Customers, DD Frequent Customers %, and UE conversion funnel are captured per location, legible and machine-readable** (the required captures above). GH repeat is optional but note if unavailable.
 - [ ] Re-order rate is sourced for at least UE OR DD (GH optional). If neither, flag as a critical gap (the diagnostic will surface "no organic moat" patterns differently)
 - [ ] **Per-order DD financial-transactions + GH finance exports are present and carry a per-order timestamp** (so weekly trend + daypart heatmap are derivable). If a per-order file is genuinely unavailable for a platform, note it explicitly in `manifest.md` — that, and only that, justifies deferring trend/daypart
+- [ ] **DD Customer insights captured** — all three modules (breakdown both toggles, purchase trends, 90-day LTV New + Lapsed). Without these the diagnostic has no CAC, no LTV:CAC, and no lapsed-pool sizing. Note the "Overall customers" LTV toggle bug if it blocks you.
+- [ ] **Store coverage counted** — platform store count vs stores carrying at least one active campaign. Dark stores get named in `manifest.md`, not glossed.
 - [ ] Location list matches store names appearing in the platform exports (so joins work)
 - [ ] **Source-export date stamps reviewed** — if they disagree with the manifest/Slack window header, the export dates win; note the discrepancy in `manifest.md`
 - [ ] Screenshots are dated within the last 7 days (so the storefront audit reflects current state)

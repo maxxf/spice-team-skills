@@ -164,6 +164,7 @@ runs GH; never silently omit a platform the client is on. Iterate until approved
 
 - `references/playbooks/what-works.md` — proven plays (data → action → result, with receipts).
 - `references/playbooks/marketplace-playbook.md` — the operating framework (foundations, attribution, incrementality, platform intel).
+- `references/playbooks/doordash-ads-portal.md` — the DoorDash ads portal: what it exposes, data-freshness and timezone gotchas, known defects, the metric set it unlocks, and which conclusions are established vs still hypothesis. **Read before any DoorDash pull.**
 
 These aren't reference reading; they're the **strategy filter**. When authoring the strategy summary, proposing new campaigns, or refreshing the plan, run the proposal through these rules:
 
@@ -432,29 +433,82 @@ When you say *"update the campaign plan for [client]"*, the skill walks you thro
 
 ### 🔴 DoorDash
 
-**A. DD Sponsored Listings performance**
-*Feeds: Ads Reporting + Active Campaigns ad rows*
+> **Portal moved (2026-07).** DoorDash marketing now lives at **`ads.doordash.com/portal/business/<business_id>/`**
+> with four tabs: **Performance**, **Customer insights** (route is `/customer/insights`, not `/customer-insights`),
+> **Campaigns**, **Reports**. The old `mxportal.doordash.com` → Marketing path still resolves but is the legacy
+> surface and does not expose customer economics. **Use `ads.doordash.com` for all pulls below.**
+>
+> **The portal degrades on large multi-location accounts.** On a 20-store business the Campaigns tab timed out
+> on every attempt, and after a handful of interactions the Performance tab and the `/portal` root stopped
+> responding too. This is whole-SPA instability, not one broken tab.
+> **Working practice:** capture everything early in the session and in as few interactions as possible;
+> prefer **Reports** exports over live browsing; don't retry a wedged page more than twice.
+>
+> Full portal reference (data-freshness and timezone gotchas, known defects, established vs hypothesis):
+> `references/playbooks/doordash-ads-portal.md`.
 
-- **Where:** `mxportal.doordash.com` → **Marketing** → **Sponsored Listings** → **Export**
+**A. DD Campaign performance (ads + promos in one export)** — *primary pull, replaces A and B below on new portal*
+*Feeds: Ads Reporting + Offers Reporting + Active Campaigns rows*
+
+- **Where:** `ads.doordash.com` → **Reports** → **Create report** → Type `Campaign performance`
+- **View by:** `Day, Store` (always). Add a second pull at `Day, Ad group` when you need creative/ad-group detail.
 - **Date range:** trailing 7 days
-- **Required columns:** `Campaign Name`, `Location`, `Spend`, `Orders`, `Attributed Sales`
-- **DD does NOT expose Impressions/Clicks/CTR for SLs** — Ads Reporting marks those `n/a` for DD rows. That's correct, not missing data.
-- **Save as:** `inputs/dd_ads_<weekstart>.csv`
+- **Save as:** `inputs/dd_campaigns_<weekstart>.csv`
+- **DD does NOT expose Impressions/Clicks/CTR for Sponsored Listings** — mark those `n/a`. Correct, not missing.
+- **Report naming — REQUIRED.** Name the report in the portal
+  `{client}-dd-{granularity}-{YYYYMMDD}-{YYYYMMDD}` (e.g. `goop-dd-daystore-20260720-20260726`).
+  Ad-hoc names ("report", "report 2", "90 day") make the report list unusable and cause duplicate
+  re-pulls of windows we already have. Check the existing report list before creating a new one.
 
-**B. DD Promotions performance**
-*Feeds: Offers Reporting + Active Campaigns offer rows*
+**B. DD Customer insights** — *new surface, pull every week*
+*Feeds: Customer Economics block (see below) + reactivation planning*
 
-- **Where:** DD Portal → **Marketing** → **Promotions** → **All Promotions** → **Export**
-- **Date range:** trailing 7 days
-- **Required columns:** `Promotion Name`, `Location(s)`, `Promo Type`, `Threshold`, `Discount`, `Redemptions`, `Promo Spend`, `Attributed Sales`, `New Customers`, `% New`
-- **Save as:** `inputs/dd_offers_<weekstart>.csv`
-- **Watch for:** `$0.99` flat fee = offer redemption fee, NOT ad spend.
+- **Where:** `ads.doordash.com` → **Customer insights**. Screenshot or transcribe; there is no CSV export yet.
+- **Capture all three modules:**
+  1. **Customer breakdown** — toggle **Customers from ads** *and* **Overall customers**. Record total / new / lapsed / existing for each.
+  2. **Customer purchase trends** — active customer count and the four recency buckets (<45d, 45–90d, 90d–6mo, 6mo–1y). This sizes the lapsed pool.
+  3. **Customer long-term value over 90 days** — record **New** and **Lapsed** tabs: average customer value, average ticket, average order rate.
+- **Known bug (as of 2026-07-27):** the **Overall customers** toggle inside the *long-term value* module hangs the page. Pull the **Customers from ads** view; note the gap rather than retrying.
+- **Save as:** `inputs/dd_customer_insights_<weekstart>.md`
 
-**C. DD Financial Transactions** *(optional if weekly-reporting already ran)*
+**C. DD Performance tab aggregates**
+*Feeds: Dashboard KPIs + the blended-ROAS line*
+
+- **Where:** `ads.doordash.com` → **Performance**
+- **Capture:** Ads summary (sales / orders / spend / ROAS), Promotions summary (same four), total sales split by **Organic / Ads / Promo / Ads+Promo**, and **Average category share** vs submarket competitors.
+- **Always compute blended ROAS** = (ads sales + promo sales) ÷ (ads spend + promo spend). The tab shows ads-only and promo-only ROAS side by side; quoting either alone overstates performance. See "Blended ROAS is the headline" below.
+
+**D. DD Financial Transactions** *(optional if weekly-reporting already ran)*
 *Feeds: Location Tier "Platform Sales WTD" column for DD*
 
-- **Where:** DD Portal → **Financials** → **Statements** → 7d → Simplified CSV
+- **Where:** DD Merchant Portal → **Financials** → **Statements** → 7d → Simplified CSV
 - **Or:** weekly-reporting `OUTPUT/by_location.csv`.
+
+### Customer economics — derive these every week (all platforms, DD first)
+
+The DoorDash portal now publishes the inputs for real unit economics. Compute and carry these in the tracker:
+
+| Metric | Formula | Note |
+|---|---|---|
+| **CAC (low)** | ads spend ÷ ad-attributed new customers | Best case — assumes promo spend acquired nobody |
+| **CAC (high)** | total marketing spend ÷ ad-attributed new customers | Conservative bound. Always report the range, never a single number. |
+| **LTV90** | portal: Customer long-term value → New customers | Measured, not modelled |
+| **LTV:CAC** | LTV90 ÷ CAC | Report the range. Inside 90 days — say so; it is not lifetime. |
+| **Payback (orders)** | CAC ÷ ad-driven new-customer ticket | "<1 order" is the strongest version of this story |
+| **Lapsed pool** | active customers × % in the 45d–1y buckets | The reactivation TAM |
+| **Recapture rate** | ad-attributed lapsed customers ÷ lapsed pool | Single best measure of retention work |
+| **Ticket gap** | ad-driven new-customer ticket − storefront average ticket | Negative = ads buy cheaper baskets → menu/upsell workstream, not an ads fix |
+
+**Blended ROAS is the headline.** Report blended first, then ads-only and promo-only underneath.
+Quoting ads-only ROAS to a client who can open the same portal and compute blended is a credibility loss
+we do not need to take.
+
+**Immediate ROAS is not the ranking metric for acquisition campaigns.** New-customer campaigns look worst
+on in-window ROAS and can be the best on 90-day value, because new customers reorder inside the window
+(portal gives the order rate directly). Before recommending a cut to any New-audience campaign, multiply
+its ROAS by the measured 90-day order rate. Conversely, Existing-customer campaigns post the highest
+in-window ROAS and are the most likely to be paying for orders that would have happened anyway —
+**never scale an Existing-audience campaign on ROAS alone without an incrementality read.**
 
 ### 🟦 Grubhub *(skip if client doesn't run GH paid placement)*
 
