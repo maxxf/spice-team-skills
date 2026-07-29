@@ -13,7 +13,7 @@ description: >
   to brief a client's campaign performance for a week. Works for every marketplace client; for
   client-specific config (paths, report templates, store list, spend cap) read that client's block.
 team: marketplace
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Campaign Briefing (Tuesday) — all clients
@@ -200,12 +200,43 @@ or plain text for emphasis everywhere.
 
 #### Visual flash card (recommended for client shares)
 Alongside the text flash, render a branded one-card visual and share it as a link — Slack renders it
-cleanly where Markdown tables don't. Design lane: frontend-design / dataviz, NOT content voice.
-- Layout (single card, one screen, flat): header (`{client}` · W[XX] · date) → KPI row (marketing %
-  vs cap · $ headroom · blended ROAS · WoW efficiency) → two columns (What's happening / Changing
-  this week) → receipts table color-coded by move (green = raise · amber = test · blue = retarget) →
-  Watching strip → bottom line. No italics.
-- Scale the receipts rows to what changed; keep it to one card.
+cleanly where Markdown tables don't.
+
+**Do NOT hand-author the card layout. Fill a JSON file and run the renderer.**
+
+```bash
+python3 skills/campaign-briefing/scripts/render_flash_card.py my-week.json out/
+```
+
+That writes `out/flash-card.html` and `out/flash-card.png`. Copy
+`assets/flash-card-example.json` (a filled-in goop W30 week) as your starting point and replace the
+values. The script owns every layout decision — card width, chart geometry, colour assignment,
+autocrop — so the same data always produces the same card.
+
+This is deliberate. The layout used to be described here in prose, and prose cannot be reproduced:
+two people running this skill on the same week got two different cards, because the dumbbell chart's
+x-positions have to be computed and nobody computes them the same way twice. If the card needs to
+change, change the script, not the description.
+
+The data contract is documented at the top of `render_flash_card.py`. In short:
+
+- `paired[]` — one entry per store that runs both a Lapsed and a New-audience campaign. This is the
+  spine of the card, so build it first: for each store, ROAS and pacing for both audiences plus both
+  weekly budgets. Where Lapsed out-returns New while New holds the larger budget, that is the
+  reallocation finding and the chart shows it without commentary.
+- `others[]` — every remaining active location, with `tone` set to `lapsed` / `new` / `info` /
+  `neutral`. Tone drives colour, so it must encode meaning: reserve `info` for the one location you
+  are flagging for investigation, and leave the merely-fine ones `neutral`.
+- `axis_max` — the chart ceiling. Anything above it is drawn clipped with an arrowhead and the axis
+  is labelled as clipped. Set this below your top outlier on purpose: one 3566% campaign against a
+  0–3600 axis flattens every other bar into noise.
+
+Colour rules the script enforces, worth knowing so you don't fight them: two hues plus grey, never
+cycled. Teal is Lapsed, amber is New, blue is investigate, grey is neutral. The same hue means the
+same thing in the chart, the pacing bars and the ROAS column.
+
+Numbers are rendered exactly as supplied — the script does no arithmetic on performance figures, so
+it cannot invent or round a value into something you did not pull.
 
 **Render a PNG and deploy it ungated.** Slack cannot unfurl a gated URL — behind a password it
 shows a login redirect, not the card, which defeats the point of making a visual. And the Slack

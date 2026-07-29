@@ -1,0 +1,31 @@
+{
+  "client": "goop kitchen",
+  "week": "W30",
+  "date": "Tue 28 Jul 2026",
+  "headline": "<g>Lapsed</g> beats <o>New</o> at all seven paired stores — and New holds the bigger budget at all seven.",
+  "dek": "Uber Eats, trailing 14 days. Lapsed <b>1242%</b> on $13.8K · New <b>425%</b> on $17.3K · <b>$11,775/wk</b> sits on the weaker side.",
+  "axis_max": 1500,
+  "paired": [
+    { "store": "Santa Monica",   "lapsed": 3566, "new": 809, "lapsed_budget": "$500",   "new_budget": "$800",   "lapsed_paced": 92, "new_paced": 96 },
+    { "store": "Sherman Oaks",   "lapsed": 1432, "new": 488, "lapsed_budget": "$800",   "new_budget": "$1,225", "lapsed_paced": 95, "new_paced": 82 },
+    { "store": "Pico-Robertson", "lapsed": 1270, "new": 321, "lapsed_budget": "$1,800", "new_budget": "$2,170", "lapsed_paced": 88, "new_paced": 71 },
+    { "store": "Larchmont",      "lapsed": 1152, "new": 512, "lapsed_budget": "$900",   "new_budget": "$1,050", "lapsed_paced": 91, "new_paced": 78 },
+    { "store": "Studio City",    "lapsed": 1014, "new": 282, "lapsed_budget": "$1,300", "new_budget": "$2,400", "lapsed_paced": 88, "new_paced": 56 },
+    { "store": "Beverly Hills",  "lapsed": 951,  "new": 494, "lapsed_budget": "$1,000", "new_budget": "$1,750", "lapsed_paced": 92, "new_paced": 72 },
+    { "store": "Silver Lake",    "lapsed": 892,  "new": 325, "lapsed_budget": "$2,295", "new_budget": "$2,380", "lapsed_paced": 80, "new_paced": 66 }
+  ],
+  "others": [
+    { "location": "Venice",       "audience": "New + Lapsed",      "budget": "ad group budget", "paced": null, "roas": 1406, "tone": "lapsed" },
+    { "location": "South Bay",    "audience": "New + Lapsed",      "budget": "$2,250", "paced": 85, "roas": 880, "tone": "lapsed" },
+    { "location": "Williamsburg", "audience": "New",               "budget": "$2,800", "paced": 94, "roas": 861, "tone": "lapsed" },
+    { "location": "Pasadena",     "audience": "All",               "budget": "$2,500", "paced": 93, "roas": 704, "tone": "neutral" },
+    { "location": "Berkeley",     "audience": "Sponsored listing", "budget": "$2,000", "paced": 93, "roas": 585, "tone": "neutral" },
+    { "location": "Midtown West", "audience": "New + Lapsed",      "budget": "$5,500", "paced": 62, "roas": 572, "tone": "info" },
+    { "location": "San Jose",     "audience": "All",               "budget": "$1,500", "paced": 93, "roas": 506, "tone": "neutral" },
+    { "location": "Costa Mesa",   "audience": "New + Lapsed",      "budget": "$3,200", "paced": 86, "roas": 487, "tone": "new" },
+    { "location": "Sunnyvale",    "audience": "New + Lapsed",      "budget": "$1,100", "paced": 94, "roas": 401, "tone": "new" }
+  ],
+  "footnote": "23 active campaigns of 84 · all 28 locations carry at least one",
+  "bottom_line": "<b>Reallocate before spending more.</b> New can't spend what it already holds; Lapsed is capped. Raise Santa Monica Lapsed off $500/wk, cut Studio City New-to-Brand, and ask why Midtown West leaves $2.1K/wk unspent on the biggest budget on the account.",
+  "foot": "Uber Ads Manager, trailing 14 days (07/14–07/28), account verified goop Kitchen. DoorDash marketing is 6.51% of DD sales against the 10% cap; no portfolio figure — the windows don't match."
+}
