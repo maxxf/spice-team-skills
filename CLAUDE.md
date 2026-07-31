@@ -46,28 +46,42 @@ Key rules:
 - Vary paragraph length wildly. One sentence. Then five. Then two.
 - End with a forward-looking thought or a punch, not a summary.
 
-## Active Clients (update monthly)
+## Active Clients
+
+Source of truth is the Notion Clients DB — this snapshot is for quick context. Grouped by active service.
 
 ### Delivery Marketplaces
-goop Kitchen, BDS (Brooklyn Dumpling Shop), Everytable, Capriotti's, Teleferic Barcelona, PRET, Fresh Kitchen, Abby's Bagels, Ahipoki, Awan/Dayglow, MBFS, Menya Ultra, Cal's Corner, Health Nut, Bowld Kitchen, Ambiyan Kitchen, Counter Service, Temaki To Go, Gertie, Moltn
+Abby's Bagels, Ahipoki, AWAN, BDS (Brooklyn Dumpling Shop), Brasa Peruvian, Capriotti's, Counter Service, Dayglow Coffee, Everytable, Fresh Kitchen, goop Kitchen, Menya Ultra, My Big Fat Shawarma (MBFS), PRET, The Chicken Shop, Tiff's Treats, Virgil's BBQ (Alicart), Westville
 
-### Retention / Paid Acquisition
-[update as clients are added]
+### Retention
+Ahipoki, Health Nut, My Big Fat Shawarma
+
+### Advisory
+Everytable, Fresh Kitchen, goop Kitchen, Westville
+
+### Paid Media
+Counter Service
+
+### Past clients (inactive — kept for memory, do NOT treat as active)
+Teleferic Barcelona, Cal's Corner, Bowld Kitchen, Ambiyan Kitchen, Temaki To Go, Gertie, Moltn
 
 ### Pipeline
-Track in Notion Sales Pipeline. Active prospects include Curry Up Now (13 locations, Meeting Booked), Counter Service expansion (10 locations), The Carbon Bar/Snack Bar, Main Squeeze Juice Co., Tacoria, Wing Snob.
+Tracked live in the Notion Sales Pipeline CRM. Don't hardcode prospect names here — ask Cowork or check the CRM for the current list.
 
 ## Team
 
-- **Maxx Freedman**: Founder/CEO. Sales, strategy, product (Spice Agent). Runs all client relationships and closes deals.
-- **David Pliego**: Operations/systems. Handles UTM tracking, holiday/vacation calendar, internal tooling. Weekly 1:1 with Maxx.
-- **Rodrigo**: Delivery/marketplace operations. Client-facing execution.
-- **Rui**: Marketplace operations. Weekly 1:1 with Maxx (Wednesdays).
-- **Manish Kumar**: Data/analytics. Weekly tracker updates, campaign performance data (goop, others).
-- **Ana**: Growth Manager.
-- **Santiago**: Ops Analyst (incoming). Senior, expected to be client-facing soon.
-- **Notice Media**: Content/social media partner (separate Slack workspace). Handles LinkedIn, newsletter distribution.
-- **Design contractors**: Fabio, Michelle, Morena (each has #design-spice-[name] channel)
+- **Maxx Freedman**: Founder/CEO. Sales, strategy, product (Spicy). Runs client relationships and closes deals.
+- **Rodrigo Gutierrez**: GM, 3P (marketplace) lead. Client-facing execution.
+- **Ana Pernett**: GM.
+- **Daniel Ramirez**: GM.
+- **Santiago López**: Senior Ops Analyst. Client-facing.
+- **Manish Kumar**: Analytics / ops. Weekly trackers, campaign performance data.
+- **Dulari Fernando**: Ops / data (part-time).
+- **David Pliego**: Paid Media Specialist (part-time).
+- **Dilli Dias**: Designer. Hero images, flyers, email templates, landing pages (via the design-brief flow).
+- **Diline G**: EA. Onboarding chase, CRM upkeep, content coordination.
+- **Harol**: Retention Specialist (took over retention from Tomas).
+- **Spicy Nugget**: the AI employee/agent — runs skills and scheduled ops. Not a task owner.
 
 ## Slack Architecture
 
@@ -79,10 +93,10 @@ Track in Notion Sales Pipeline. Active prospects include Curry Up Now (13 locati
 | #spice-digest | Digest/summary posts |
 | #spice-website-leads | Inbound lead notifications |
 | #team-spice | General team channel |
-| #content-spice-linkedin | Content pipeline coordination with Notice Media |
+| #content-spice-linkedin | Content pipeline coordination |
 | #int-[client] | Internal channel per client (e.g., #int-goop-kitchen) |
 | #ext-[client]-spice | External shared channel with client |
-| #design-spice-[name] | Design contractor channels |
+| #design-campaigns | Design briefs to Dilli |
 
 ## Notion Structure
 
@@ -105,11 +119,11 @@ Track in Notion Sales Pipeline. Active prospects include Curry Up Now (13 locati
 - 12:30-1:30: Block
 
 ### Weekly Pattern
-- **Monday**: Team Standup (12pm), Client calls afternoon (BDS, Teleferic, gK, PRET, Caps), Agent/app work (3:30-5:30)
-- **Tuesday**: Biweekly syncs (Goop x DoorDash marketing)
-- **Wednesday**: Rui 1:1, Everytable sync
+- **Monday**: Team Standup (12pm), client calls afternoon (BDS, gK, PRET, Caps, Fresh Kitchen), product/app work (3:30-5:30)
+- **Tuesday**: Biweekly syncs (goop x DoorDash marketing)
+- **Wednesday**: Everytable sync
 - **Thursday**: Open client calls, sales calls
-- **Friday**: Gertie (6am), lighter schedule
+- **Friday**: lighter schedule
 - **Sunday evening**: Weekly prep
 
 ## Deliverable Formats (org standard — applies to every skill)
@@ -165,10 +179,9 @@ Coach mode. Direct feedback, named owners, clear deadlines. First-principles thi
 
 ## Active Projects Beyond Client Work
 
-- **Spice Agent**: AI product in development. Daily calendar block. Key contact: Shrikar. MXPilot partnership evaluated.
-- **Hiring**: Santiago (Ops Analyst, incoming). Data Analyst, Retention Specialist still open.
-- **Newsletter**: "Spicy Nuggets" weekly on Beehiiv
-- **Notice Media**: Content partnership for LinkedIn + social
+- **Spicy**: Spice's software product, in active development. Daily calendar block.
+- **Newsletter**: "Spicy Nuggets" weekly on Beehiiv.
+- **Hiring**: open roles tracked internally — ask Maxx for the current list.
 
 ## Standard Pricing Reference
 [Pull from Notion Sales Pipeline and populate. Used by post-sale-proposal skill.]
@@ -186,7 +199,7 @@ Coach mode. Direct feedback, named owners, clear deadlines. First-principles thi
 | "audit [restaurant]" / "grade their storefront" | storefront-audit |
 | "menu sheet for [client]" / "optimize menu" | optimized-menu-sheet |
 | "newsletter" / "spicy nuggets" / "what's happening in delivery" | spicy-nuggets-newsletter |
-| "mine content" / "what can we post" / "pull content for Notice" | content-mining |
+| "mine content" / "what can we post" / "pull content" | content-mining |
 | "onboard [client]" / "set up [client] workspace" | client-onboarding |
 | "contractor agreement for [name]" | contractor-agreement |
 | "humanize" / "make this sound human" / "de-AI this" | humanizer |
@@ -249,4 +262,4 @@ Spicy Nugget is the AI employee running 24/7 on the Mac Mini. When a task is ope
 
 ---
 
-*Last updated March 11, 2026. Sources: Notion databases, Circleback meetings, Slack channels, Gmail, workspace artifacts, calendar events.*
+*Last updated July 31, 2026. Team from HQ team directory; clients pulled live from the Notion Clients DB. Sources: Notion databases, HQ knowledge, Slack, calendar.*
