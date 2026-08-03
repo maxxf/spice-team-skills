@@ -1,0 +1,26 @@
+# Manual holiday supplement — used ONLY for countries the `holidays` Python
+# library can't yet cover for the target year.
+#
+# Why this exists: Sri Lanka (LK) gazettes its public holidays — especially the
+# monthly lunar Poya days — late each year, so the library has no LK 2026 data.
+# Until it does, LK holidays must be maintained here by hand.
+#
+# Format:
+#   holidays:
+#     <ISO2 country>:
+#       "YYYY-MM-DD": "Holiday name"
+#
+# ACTION REQUIRED (David / Maxx): the list below covers only the FIXED-DATE
+# Sri Lanka national holidays. The 12+ lunar Poya days and any gazetted
+# one-offs are NOT included and MUST be added from the official Sri Lanka
+# 2026 holiday gazette, or Dilli's Poya days off will be missed.
+
+holidays:
+  LK:
+    "2026-01-14": "Tamil Thai Pongal Day"
+    "2026-02-04": "National Independence Day"
+    "2026-04-13": "Day prior to Sinhala & Tamil New Year"
+    "2026-04-14": "Sinhala & Tamil New Year Day"
+    "2026-05-01": "May Day"
+    "2026-12-25": "Christmas Day"
+    # TODO(David/Maxx): add 2026 Poya days + gazetted holidays from the official gazette.
