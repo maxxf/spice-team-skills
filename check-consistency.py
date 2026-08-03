@@ -23,20 +23,73 @@ REPO = os.path.dirname(os.path.abspath(__file__))
 IGNORE_DIRS = {".venv", "__pycache__", "node_modules", ".git", ".pytest_cache"}
 
 
-def skill_hash(skill_dir):
-    """Stable content hash of a skill (all files, path-sorted)."""
-    h = hashlib.sha256()
-    files = []
+def load_ignore(skill_dir):
+    """Parse the skill's own .gitignore so locally-generated, git-ignored files
+    (e.g. references/package.json, package-lock.json from `npm install`) never
+    count as content divergence. Without this, a Cowork copy where deps were
+    installed diverges from the committed monolith over pure build artifacts —
+    phantom drift that trains everyone to push with --no-verify.
+
+    Supports the pattern shapes this repo actually uses: blank/#comment,
+    trailing-slash dir names, *.ext suffixes, bare basenames, and rooted
+    relative paths (references/package.json). Returns a predicate over a
+    skill-relative POSIX path."""
+    dir_names = set(IGNORE_DIRS)
+    suffixes, names, paths = set(), set(), set()
+    gi = os.path.join(skill_dir, ".gitignore")
+    try:
+        with open(gi, encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except OSError:
+        lines = []
+    for raw in lines:
+        pat = raw.strip()
+        if not pat or pat.startswith("#"):
+            continue
+        pat = pat.lstrip("/")               # anchored-to-root and un-anchored treated alike
+        if pat.endswith("/"):
+            dir_names.add(pat.rstrip("/").rsplit("/", 1)[-1])
+        elif pat.startswith("*.") and "/" not in pat:
+            suffixes.add(pat[1:])           # "*.pyc" -> ".pyc"
+        elif "/" in pat:
+            paths.add(pat)
+        else:
+            names.add(pat)
+
+    def ignored(rel):                       # rel is skill-relative, POSIX-style
+        parts = rel.split("/")
+        if any(p in dir_names for p in parts[:-1]):
+            return True
+        base = parts[-1]
+        if base in dir_names or base in names or rel in paths:
+            return True
+        return any(base.endswith(s) for s in suffixes)
+
+    return ignored
+
+
+def _walk_files(skill_dir):
+    """Yield skill-relative POSIX paths of files that are NOT git-ignored."""
+    ignored = load_ignore(skill_dir)
     for root, dirs, fnames in os.walk(skill_dir):
-        dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
+        rel_root = os.path.relpath(root, skill_dir)
+        dirs[:] = [d for d in dirs
+                   if not ignored(("" if rel_root == "." else rel_root + "/") + d)]
         for fn in fnames:
-            if fn.endswith(".pyc"):
+            rel = fn if rel_root == "." else rel_root + "/" + fn
+            rel = rel.replace(os.sep, "/")
+            if fn.endswith(".pyc") or ignored(rel):
                 continue
-            files.append(os.path.join(root, fn))
-    for fp in sorted(files):
-        h.update(os.path.relpath(fp, skill_dir).encode())
+            yield rel
+
+
+def skill_hash(skill_dir):
+    """Stable content hash of a skill (all non-ignored files, path-sorted)."""
+    h = hashlib.sha256()
+    for rel in sorted(_walk_files(skill_dir)):
+        h.update(rel.encode())
         try:
-            with open(fp, "rb") as f:
+            with open(os.path.join(skill_dir, rel), "rb") as f:
                 h.update(f.read())
         except OSError:
             pass
@@ -44,9 +97,12 @@ def skill_hash(skill_dir):
 
 
 def newest_mtime(skill_dir):
-    times = [os.path.getmtime(os.path.join(r, f))
-             for r, d, fs in os.walk(skill_dir)
-             for f in fs if not any(p in r for p in IGNORE_DIRS)]
+    times = []
+    for rel in _walk_files(skill_dir):
+        try:
+            times.append(os.path.getmtime(os.path.join(skill_dir, rel)))
+        except OSError:
+            pass
     return max(times, default=0.0)
 
 

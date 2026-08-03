@@ -5,12 +5,18 @@
 # enforcement that prevents the weekly-reporting / campaign-plan drift from
 # happening again. Emergency override: git push --no-verify
 REPO="$(git rev-parse --show-toplevel)"
-EXTRA=""
+# Build args as positional params so each token is passed as its own argv entry
+# regardless of the invoking shell. Unquoted "$EXTRA" relied on POSIX word
+# splitting, which zsh does NOT do — there the whole string reached argparse as
+# one arg ("unrecognized arguments: --extra ..."). "$@" is split-safe and also
+# survives spaces in $HOME. On Maxx's machine this also diffs against the Cowork
+# authoring source to catch weekly-reporting / campaign-plan drift.
+set --
 if [ -d "$HOME/Desktop/Cowork/Skills" ]; then
-  EXTRA="--extra cowork=$HOME/Desktop/Cowork/Skills"
+  set -- --extra "cowork=$HOME/Desktop/Cowork/Skills"
 fi
 echo "[pre-push] checking skill consistency..."
-if ! python3 "$REPO/check-consistency.py" $EXTRA; then
+if ! python3 "$REPO/check-consistency.py" "$@"; then
   echo "" >&2
   echo "PUSH BLOCKED: skill divergence detected (see above)." >&2
   echo "Reconcile every divergent skill to one source before pushing." >&2
