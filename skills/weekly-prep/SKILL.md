@@ -1,6 +1,6 @@
 ---
 name: weekly-prep
-description: Sunday-evening operating brief for Maxx that feeds Monday's team standup; plus a Monday "push to standup" sync (Part 4). Trigger on "weekly prep", "prep for the week", "Sunday prep", "get ready for Monday", "push prep to standup", "fill the standup", "Monday standup sync". An action-first operating brief driven off the live CRM, Circleback, Gmail, and Stripe — NOT a newsletter or status digest.
+description: Sunday-evening operating brief for Maxx that feeds Monday's team standup, including the weekly Client Health Scorecard (one scored row per active client from call notes + reporting); plus a Monday "push to standup" sync (Part 4). Trigger on "weekly prep", "prep for the week", "Sunday prep", "get ready for Monday", "client health scorecard", "how are clients doing", "push prep to standup", "fill the standup", "Monday standup sync". An action-first operating brief driven off the live CRM, Circleback, Gmail, and Stripe — NOT a newsletter or status digest.
 ---
 
 # Weekly Prep (Operating Brief)
@@ -33,7 +33,16 @@ Roster (source of truth — verify, don't hardcode from memory):
 - Confirm the active roster against Notion + `CLAUDE.md` before crediting anyone.
 - **Departed (no credit): Cesar, Rui, Tomas.** Roster changes — re-verify each run; if a status is ambiguous, check before crediting or omitting.
 
-Date math: Monday = tomorrow. "Last week" = previous Mon–Sun. "This week" = upcoming Mon–Fri.
+**Date math — compute it, never assume "tomorrow".** The task is scheduled for Sunday but has repeatedly fired on Monday; assuming Monday = tomorrow then produces a brief for *next* week and the Monday sync finds no current prep. Always derive from the actual day of week:
+
+```bash
+DOW=$(date '+%u')                                  # 1=Mon … 7=Sun
+if [ "$DOW" -eq 7 ]; then MON=$(date -v+1d '+%Y-%m-%d')          # Sunday → tomorrow
+else MON=$(date -v-$((DOW-1))d '+%Y-%m-%d'); fi                  # Mon–Sat → this week's Monday
+FRI=$(date -j -v+4d -f '%Y-%m-%d' "$MON" '+%Y-%m-%d')            # note: -v BEFORE -f
+```
+
+The brief covers `MON`–`FRI`. "Last week" = the 7 days before `MON`. If the run day isn't Sunday, say so in the source line (e.g. "this task normally runs Sun; it fired Monday, so it covers the current week the Monday standup consumes").
 
 ---
 
@@ -108,8 +117,16 @@ Email is more recent than meeting notes — where they conflict, email wins for 
 - If the sheet can't be read, emit **`FORECAST UNAVAILABLE — P&L not read this run`** and report Stripe realized only — never invent a forecast or fall back to a vault estimate.
 - Report **P&L forecast total + the realized-vs-forecast variance** (Stripe realized ÷ P&L forecast). This variance is the real signal: how much of the planned book has actually landed in Stripe. The gap = the non-MRR layer (one-time/project/performance/catering) + not-yet-realized ramp — name the biggest driver if one stands out. (Reference only, Jul 2026: P&L forecast `$100,352` total revenue vs ~$81.3K Stripe realized MRR ≈ 81% realized — verify against the live sheet, don't reprint.)
 
-### 7. Churn scoring
-Score every active client 0/1/2 on five dimensions — **Pay** (late/disputed billing), **Eng** (responsiveness, attendance, POC churn), **Perf** (sales/conversion/rating trend), **Ops** (platform/menu/campaign blockers), **Rel** (lead changes, tension). Total /10 → 🔴 High (6+), 🟡 Monitor (3–5), Healthy (0–2). Compare to last week's prep (fetch the prior archive page) and note score changes + why. Surface only clients scoring 3+.
+### 7. Client health scoring (feeds the §5 scorecard)
+Score **every active client** 0/1/2 on five dimensions — **Pay** (late/disputed billing), **Eng** (responsiveness, attendance, POC churn), **Perf** (sales/conversion/rating trend), **Ops** (platform/menu/campaign blockers), **Rel** (lead changes, tension). Total /10 → 🔴 High (6+), 🟡 Monitor (3–5), 🟢 Healthy (0–2). Fetch last week's archive page and diff every score to set the risk arrow.
+
+**Score all of them, surface all of them.** The old rule (only show 3+) hid the healthy book and made "no news" indistinguishable from "not checked". The scorecard shows every paying client.
+
+Alongside the score, capture two fields per client — these are what make the row useful, and both must be **sourced, not inferred**:
+- **The week's number** — the one reporting metric that defines the client's week (net sales, ROAS, net payout, redemptions, uptime). From the weekly report or the client call. No number available → `no report`. Never invent or carry forward last week's.
+- **What moved** — one clause from *this week's* call notes, recap email, or platform rep thread. The fact, not a summary. Nothing happened → `quiet — no call`.
+
+**Roster completeness gate.** Before writing the scorecard, cross-check the client list against live Stripe subscriptions (§6). Any client billing money that has no scorecard row is a miss — add it with `no report` rather than omitting it. Name any client you couldn't score and why.
 
 ---
 
@@ -151,27 +168,41 @@ From §4. Grouped by stage, bullets (no tables). Skip empty stages. One italic l
 ```
 Keep CRM cleanup / data-quality notes OUT of the doc (those go to Maxx in chat — §4 step 5).
 
-### 3. Content Pipeline Review
-Read the content DB: `python3 tools/notion_db_read.py content`. Output: (a) what's scheduled to publish this week (`Status` = Scheduled/Approved, `Publish Date` in the week) with links, (b) up to 3 *new* post-worthy topics from recent client work (fresh ideas or `Pillar` = Source Material), one line each with a timely angle. ~8 lines.
-
-### 4. Team Highlights — last week
+### 3. Team Highlights — last week
 One line per **active** member: the single best thing they shipped, with a metric. Include EVERY active teammate (someone being transitioned out is still active — neutral line; only the *departed* are omitted). Cross-check the roster so no one is silently dropped. End with one "client performance wins" line for results not tied to one person.
 
-### 5. Onboarding Updates
-New-client onboarding only, **sourced from §3 (the onboarding DB read), not meeting notes.** Lead with the real category totals: 🚨 Blockers / 🔴 Overdue / ⚠️ At Risk / ✅ On Track. One line per active onboarding: the gating task, its category, the owner to tag, the next concrete step. Recently-won-but-not-yet-onboarding = a single roll-up line.
+### 4. Onboarding Updates
+New-client onboarding only, **sourced from Part 1 §3 (the onboarding DB read), not meeting notes.** Lead with the real category totals: 🚨 Blockers / 🔴 Overdue / ⚠️ At Risk / ✅ On Track. One line per active onboarding: the gating task, its category, the owner to tag, the next concrete step. Recently-won-but-not-yet-onboarding = a single roll-up line.
 
-### 6. Client Churn Risk
-**One scored bullet per client — no separate table:** `🔴/🟡 **Client (score)** — issue + owner + this-week move`. 🔴 High (6+) first, then 🟡 Monitor (3–5); only 3+ shown. If also a §1 priority, write `see §1`. Note score changes vs last week. End with `Lost:` if any.
+Exclude **zombie rows** — tasks 60+ days past due on accounts that launched months ago (stale ratings flyers, hero A/B tests never closed). They are DB hygiene, not onboarding risk. Count them in one closing line and name the owner who should bulk-close them; never let them inflate the blocker count.
+
+### 5. Client Health Scorecard
+**The weekly read on the whole book.** One table, one row per active client, worst first. This replaces the old churn-risk prose section — same five-dimension score from Part 1 §7, rendered so it can be scanned in about thirty seconds.
+
+| Client | Health | The week's number | What moved | Next move → owner |
+|---|---|---|---|---|
+| Westville | 🟡 4 ▼ | $55.4K, best in 4 wks | discounts spiked to $4.4K; BOGO 25 redemptions | swap lemonade BOGO for veg → Daniel |
+| goop | 🟢 2 ▬ | W28 $1.41M | UES opens Aug 3, holiday hours until ops clears | confirm test orders → Ro |
+
+Rules, all of them enforced:
+- **Health** = `dot + score + arrow`. Arrow is risk direction vs last week's prep: **▲ rising · ▬ flat · ▼ improving**. Put that legend once under the table.
+- **Sort** 🔴 → 🟡 → 🟢, score descending inside each band. The top of the table is always where the attention goes.
+- **Every active client appears**, including healthy ones. Roster gate in Part 1 §7 is what guarantees it.
+- **Cells ≤ 12 words.** If a client needs more room than that, it belongs in §1 and the row reads `see §1`.
+- **No "monitor" as a next move.** Every row gets a real action and a named human. If the honest answer is that nothing needs doing, write `hold — nothing due` and leave the owner blank.
+- **Never invent a number.** `no report` is a legitimate and useful cell; a fabricated metric poisons the one artifact meant to be trusted at a glance.
+
+Under the table, three short lines only when they apply: **Score moves** (any client whose score changed 2+ points, with the why), **Service ends / freezes** (upcoming, not yet lost), **Lost:**.
 
 ### Standup Summary — copy/paste (formatted, NOT code blocks)
 The one intentional consolidation (its job is to be pasted into the standup doc). Render as **real formatted content** — proper sub-headings + bullet/numbered lists — NOT inside code fences. Use the standup's exact section names as `###` sub-headings, in order:
-- **MRR / Goal** → one bold line: **Stripe realized MRR** (§6) + RAG dot + gap to $100K, then the **P&L forecast** + realized-vs-forecast variance in parentheses (e.g. `~$81.3K realized 🟡 — $18.7K to goal (P&L forecast $100.4K total rev; 81% realized)`). Realized (Stripe) is the goal number; forecast (P&L) is context. Never a vault estimate.
-- **`### Pipeline Updates`** → bullets: **Recently Won** / **Proposal Shared** / **Meeting Booked** / **Pitched** / **Chase**.
+- **MRR / Goal** → one bold line: **Stripe realized MRR** (Part 1 §6) + RAG dot + gap to $100K, then the **P&L forecast** + realized-vs-forecast variance in parentheses (e.g. `~$81.3K realized 🟡 — $18.7K to goal (P&L forecast $100.4K total rev; 81% realized)`). Realized (Stripe) is the goal number; forecast (P&L) is context. Never a vault estimate.
+- **`### Pipeline Updates`** → **condensed, not a re-list of §2.** One line of stage counts with dollar totals, then the named chase list. Anything Won this week gets its own line.
 - **`### 🏆 Big Wins This Week (All)`** → numbered list, top 5, `win — owner`.
 - **`### Onboarding Updates`** → counts + the one client needing attention.
-- **Churn Risk** (bold sub-label) → **Red** / **Watch** / portfolio health / Lost.
+- **Churn Risk** (bold sub-label) → **Red** names only · **Watch** names only · one portfolio-health line (`N red / N watch / N healthy`) · Lost.
 
-Names-and-numbers, not sentences. Skip any block that maps to nothing rather than inventing a target.
+**Keep this block short — it is a paste target, not a second copy of the brief.** Names and numbers, no sentences, no re-describing anything already in §1–§5. Hard cap: 15 lines. Skip any block that maps to nothing rather than inventing a target. When the Part 4 sync runs it writes these blocks directly.
 
 ---
 
@@ -199,8 +230,8 @@ The standup doc "🌶️ Spice | Weekly Standup" is a row in **DB: Team Meetings
 2. **Fill only-if-empty:** for each section, write only if it's still placeholder/empty. If a human already filled it, **skip and report the skip** — never clobber teammate input.
 3. **Map from the prep page:**
    - `## Pipeline Updates` ← prep §2 (stages + chase). Omit the internal CRM-cleanup note.
-   - `## 🏆 Big Wins This Week (All)` ← prep §4, numbered with attribution.
-   - `## Onboarding Updates` (+ `Churn Risk` sub-bullets) ← prep §5 + §6 Red/Yellow one-liners.
+   - `## 🏆 Big Wins This Week (All)` ← prep §3 (Team Highlights), numbered with attribution.
+   - `## Onboarding Updates` (+ `Churn Risk` sub-bullets) ← prep §4 + the 🔴/🟡 rows of the §5 scorecard, names only.
    - Exec Summary toggle → **2026 Company Goals** table → `MRR to 100k` row → **Status cell** = the **Stripe realized** MRR + RAG dot + gap to goal (e.g. `~$81.3K — $18.7K to goal 🟡`). The `MRR to 100k` cell tracks REALIZED (Stripe), not the P&L forecast — the goal is realized recurring. Keep the P&L forecast/variance in the prep's MRR line, not this cell.
 4. **NEVER touch:** the inline linked DB view in Exec Summary; any per-person toggle (Accomplishments / Top Priorities / Something Fun); the Announcements callout.
 5. **Report** which sections were filled, which were skipped, and the standup page link.
@@ -213,7 +244,9 @@ The standup doc "🌶️ Spice | Weekly Standup" is a row in **DB: Team Meetings
 - **Reading DBs via MCP query/search instead of the reader** → blocked (plan gate) or lossy (dropped rows). Always use `tools/notion_db_read.py`; fallback only on exit 3/5, and say so.
 - **False "clean"** (AR/churn/onboarding) when the read actually failed → must be `UNAVAILABLE`, never "clean".
 - **Pipeline stages inferred from calls/emails** → wrong stages. CRM `Deal stage` is ground truth.
-- **Onboarding hand-derived from meetings** → soft, wrong counts. Pull §5 from the onboarding DB.
+- **Onboarding hand-derived from meetings** → soft, wrong counts. Pull §4 from the onboarding DB.
+- **A scorecard row with an invented number or a "monitor" next move** → the one artifact meant to be trusted at a glance becomes untrustworthy. `no report` and `hold — nothing due` are the honest cells.
+- **A paying client missing from the scorecard** → the roster gate (Part 1 §7) exists to catch this. Cross-check against live Stripe subs every run.
 - **Sourcing from the standup** → circular. Client meetings, sales calls, 1:1s, biweeklies, Notion, Gmail, Stripe only.
 - **Crediting departed teammates** → exclude them.
 - **Conflating realized and forecast** → Stripe MRR (realized) and the P&L (forecast, incl. non-MRR) measure different things. Report both + the variance; the `MRR to 100k` goal cell tracks realized only. Never "reconcile" one to the other or call the gap an error.
@@ -227,7 +260,8 @@ The standup doc "🌶️ Spice | Weekly Standup" is a row in **DB: Team Meetings
 - §1 anchored to Maxx-only leverage (≥1 offense, ≥1 build), with reassignments called out?
 - Anyone departed credited? (must be no)
 - Anything sourced from the standup meeting itself? (must be no)
-- Do the standup blocks paste cleanly into the exec-summary structure?
+- Scorecard: does **every** live-Stripe client have a row, is every number sourced (or `no report`), and does every row name an owner?
+- Do the standup blocks paste cleanly into the exec-summary structure, and is that block under 15 lines?
 
 ---
 
