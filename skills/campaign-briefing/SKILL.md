@@ -253,21 +253,32 @@ same thing in the chart, the pacing bars and the ROAS column.
 Numbers are rendered exactly as supplied — the script does no arithmetic on performance figures, so
 it cannot invent or round a value into something you did not pull.
 
-**Render a PNG and deploy it ungated.** Slack cannot unfurl a gated URL — behind a password it
-shows a login redirect, not the card, which defeats the point of making a visual. And the Slack
-MCP has no file-upload tool, so the image needs a public URL to appear inline at all. The flash
-card therefore deploys **public**, and `/deploy`'s sensitivity classifier will not catch this on
-its own: it matches on filenames, and a file called `W30-flash-card.html` reads as harmless.
+**Render a PNG, then deploy the card gated.** Gated is the default for any card carrying client
+numbers, and there is no version of this where you skip it because the preview looks nicer.
 
-Before deploying, say plainly in chat that the card carries the client's revenue and campaign
-economics and will sit on an open URL, then deploy public. Do not gate it and then wonder why the
-Slack preview is blank.
+The tradeoff is real, so here it is straight. A gated link will not unfurl as an image in Slack.
+Behind a password Slack gets a login redirect, so the preview comes up blank. The Slack MCP has no
+file-upload tool either, so you cannot drop the PNG into the channel as an attachment instead. You
+do not get both the inline image and the gate. Pick the gate.
 
-- Deploy both the `.png` and the `index.html` in the same app so `https://{app}.indigo-hq.com/{card}.png`
-  is a direct image URL Slack can unfurl, with the page available for anyone who clicks through.
-- Post the link alongside the text flash for readers who don't click through.
-- If a client-facing channel ever needs the gate back, switch that specific deploy to `password` or
-  `company` mode and accept that the image will not preview — send the PNG as a file in that case.
+What actually works:
+
+- Post the text flash inline in Slack. It carries the same numbers, in the channel, with no public
+  page sitting anywhere.
+- Deploy the card through `/deploy` in `password` or `company` mode and link it under the text
+  flash, for anyone who wants the visual.
+- Before you deploy, say in chat what the card contains and which gate you set.
+
+Ungated is allowed only when the card has no client revenue, no campaign economics, and no
+client-identifying data. All three, not two of three. A blank template or a made-up example
+qualifies. A weekly flash for a real client never does. When you do have a genuinely clean card,
+deploy both the `.png` and the `index.html` into the same app so
+`https://{app}.indigo-hq.com/{card}.png` is a direct image URL Slack can unfurl.
+
+Judge the content, not the filename. `/deploy`'s sensitivity classifier only matches filenames, so
+`W30-flash-card.html` full of a client's revenue reads as harmless and ships public. A
+non-sensitive verdict from that check tells you nothing about what is inside the file. Open the
+card and look.
 
 **Image sizing — this is what breaks in practice.** Slack renders an inline image at roughly 700px
 wide and scales the whole thing down to fit. A 2400px-wide card gets squashed to about 29% and the
