@@ -34,6 +34,18 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 _GID_CACHE: dict = {}  # sheet_id -> {tab_title: gid}; cleared when tabs are added
 
+# Process-level write mode. The six per-tab writers (write_dashboard, write_ads_reporting,
+# ...) all funnel into write_full_tab but don't take safety flags themselves, so refresh.py
+# sets the mode once at startup rather than threading dry_run through six signatures.
+# Process-global is acceptable here because this is a CLI tool: one run, one mode.
+# Explicit per-call kwargs still win over the mode.
+_WRITE_MODE: dict = {"dry_run": False, "force_shrink": False, "now": ""}
+
+
+def set_write_mode(dry_run: bool = False, force_shrink: bool = False, now: str = "") -> None:
+    """Set the default write mode for this process. Call once, early."""
+    _WRITE_MODE.update({"dry_run": dry_run, "force_shrink": force_shrink, "now": now})
+
 # Canonical named ranges for the v2 9-tab structure (Santi + Ro's goop Sheet as the
 # reference: 1YaKsQnbRuKcEGdwfeFRU34HPhLNda8YyQ3HtHdI5yYU). These are the ONLY ranges
 # the skill writes. Indices are (start_row, end_row, start_col, end_col), 0-indexed,
@@ -92,8 +104,79 @@ STATUS_EMOJI_MAP = {"🟢": "Live", "🟦": "Approved", "🔵": "Proposed", "�
 
 _SVC_CACHE = None
 
+# Sheets API methods that change the spreadsheet. In dry-run these are intercepted and
+# never executed; everything else (get, values.get) passes through so a dry run can still
+# read current state to build its diff.
+_MUTATING_METHODS = {"update", "append", "clear", "batchUpdate", "batchClear",
+                     "create", "copyTo", "batchUpdateByDataFilter"}
+
+
+class _NoOpRequest:
+    """Stands in for an API request object in dry-run. Executing it does nothing."""
+
+    def __init__(self, label: str):
+        self._label = label
+
+    def execute(self, *_a, **_kw):
+        _DRY_RUN_BLOCKED.append(self._label)
+        return {}
+
+
+def _wrap(value, path: str):
+    """Wrap API resource objects, pass plain data straight through.
+
+    A read's .execute() returns the response dict, and callers subscript it or call .get()
+    on it. Wrapping that would turn every dry-run read into an AttributeError, so only
+    non-data objects (further API resources) get the guard.
+    """
+    if value is None or isinstance(value, (dict, list, tuple, set, str, bytes,
+                                           int, float, bool)):
+        return value
+    return _DryRunGuard(value, path)
+
+
+class _DryRunGuard:
+    """Wraps the Sheets client so mutating calls are inert during a dry run.
+
+    Why a wrapper and not a flag in each writer: dry-run used to be honoured only by the
+    writers that happened to check it, so `--dry-run` still wrote History, Archive, Account
+    Learnings and the Dashboard. Twenty-nine call sites each needing to remember a check is
+    a guarantee that will keep leaking. Gating the one object they all go through makes
+    "writes nothing" true by construction rather than by discipline.
+    """
+
+    def __init__(self, inner, path: str = ""):
+        self._inner = inner
+        self._path = path
+
+    def __getattr__(self, name):
+        attr = getattr(self._inner, name)
+        path = f"{self._path}.{name}" if self._path else name
+        if name in _MUTATING_METHODS and callable(attr):
+            def blocked(*_a, **_kw):
+                return _NoOpRequest(path)
+            return blocked
+        if callable(attr):
+            def wrapped(*a, **kw):
+                return _wrap(attr(*a, **kw), path)
+            return wrapped
+        return _wrap(attr, path)
+
+
+# Mutating calls suppressed by the guard during the current run, for reporting.
+_DRY_RUN_BLOCKED: list = []
+
+
+def dry_run_blocked() -> list:
+    """Mutating API calls the dry-run guard suppressed, in order."""
+    return list(_DRY_RUN_BLOCKED)
+
+
 def _service():
-    """Return the cached Sheets API client (built once per process)."""
+    """Return the cached Sheets API client (built once per process).
+
+    In dry-run mode the client is wrapped so no call can modify the spreadsheet.
+    """
     global _SVC_CACHE
     if _SVC_CACHE is None:
         if not os.path.exists(KEY):
@@ -104,6 +187,8 @@ def _service():
         from googleapiclient.discovery import build
         creds = service_account.Credentials.from_service_account_file(KEY, scopes=SCOPES)
         _SVC_CACHE = build("sheets", "v4", credentials=creds, cache_discovery=False)
+    if _WRITE_MODE.get("dry_run"):
+        return _DryRunGuard(_SVC_CACHE)
     return _SVC_CACHE
 
 
@@ -115,15 +200,18 @@ def get_metadata(sheet_id: str) -> dict:
         fields="sheets.properties,namedRanges",
     ).execute()
     tabs = {s["properties"]["title"]: s["properties"]["sheetId"] for s in meta.get("sheets", [])}
+    widths = {s["properties"]["title"]:
+              s["properties"].get("gridProperties", {}).get("columnCount", 0)
+              for s in meta.get("sheets", [])}
     nr = {n["name"]: n for n in meta.get("namedRanges", [])}
-    return {"tabs": tabs, "named_ranges": nr}
+    return {"tabs": tabs, "named_ranges": nr, "widths": widths}
 
 
 def _add_tab(svc, sheet_id: str, title: str, headers: list[str], hidden: bool = False) -> int:
     """Create a tab with the given title + a header row. Returns the new sheetId (gid).
     Hidden tabs (History) start collapsed; visible tabs (Account Learnings) are normal."""
     req = {"addSheet": {"properties": {"title": title, "hidden": hidden, "gridProperties": {
-        "rowCount": 1000, "columnCount": max(8, len(headers))
+        "rowCount": 1000, "columnCount": max(MIN_TAB_COLUMNS, len(headers))
     }}}}
     r = svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": [req]}).execute()
     gid = r["replies"][0]["addSheet"]["properties"]["sheetId"]
@@ -185,6 +273,13 @@ TEMPLATE_TABS = {
 # Forward-planning tabs created blank for the GM (skill never writes them).
 FORWARD_PLAN_TABS = ["Q2 Plan", "Q3 Plan", "Q4 Plan"]
 
+# Minimum grid width for a created tab. A new tab used to get 8 columns, which is narrower
+# than the writers need: write_dashboard merges J4:K4 (columns 10-11) and Archive spans
+# A:L (12). The result was a first refresh on a freshly provisioned client dying with
+# "Range (Dashboard!J4:K4) exceeds grid limits. Max columns: 8" — Abby's Bagels, 2026-08-05.
+# 26 (A:Z) matches the A:Z ranges the append paths already use.
+MIN_TAB_COLUMNS = 26
+
 
 def ensure_template_tabs(sheet_id: str, dry_run: bool = False, include_forward: bool = True) -> dict:
     """Idempotent: ensure all canonical v2 tabs exist. Data tabs created empty (writers fill
@@ -193,6 +288,7 @@ def ensure_template_tabs(sheet_id: str, dry_run: bool = False, include_forward: 
     meta = get_metadata(sheet_id)
     svc = _service()
     created, existing = [], []
+    widened = _widen_narrow_tabs(svc, sheet_id, meta, dry_run=dry_run)
     for title, spec in TEMPLATE_TABS.items():
         if title in meta["tabs"]:
             existing.append(title); continue
@@ -210,7 +306,33 @@ def ensure_template_tabs(sheet_id: str, dry_run: bool = False, include_forward: 
             _add_tab(svc, sheet_id, title, [], hidden=False)
             _GID_CACHE.pop(sheet_id, None)
             created.append(title)
-    return {"created": created, "existing": existing}
+    return {"created": created, "existing": existing, "widened": widened}
+
+
+def _narrow_tabs(meta: dict) -> list[str]:
+    """Canonical tabs whose grid is too narrow for the writers. Pure, so it is testable."""
+    return sorted(t for t in TEMPLATE_TABS
+                  if t in meta.get("tabs", {})
+                  and 0 < meta.get("widths", {}).get(t, 0) < MIN_TAB_COLUMNS)
+
+
+def _widen_narrow_tabs(svc, sheet_id: str, meta: dict, dry_run: bool = False) -> list[str]:
+    """Widen canonical tabs created before MIN_TAB_COLUMNS was raised.
+
+    Repairs in place rather than only fixing new sheets: Abby's Bagels was provisioned with
+    8-column tabs, and without this its first refresh keeps failing on the Dashboard merge.
+    Widening only ever adds empty columns, so it cannot lose data.
+    """
+    narrow = _narrow_tabs(meta)
+    if not narrow or dry_run:
+        return [f"{t} (dry run)" for t in narrow] if dry_run else []
+    reqs = [{"updateSheetProperties": {
+        "properties": {"sheetId": meta["tabs"][t],
+                       "gridProperties": {"columnCount": MIN_TAB_COLUMNS}},
+        "fields": "gridProperties.columnCount",
+    }} for t in narrow]
+    svc.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": reqs}).execute()
+    return narrow
 
 
 def setup_named_ranges(sheet_id: str, dry_run: bool = False) -> dict:
@@ -284,9 +406,21 @@ def create_tab(sheet_id: str, title: str, allow_protected: bool = False) -> int:
     return r["replies"][0]["addSheet"]["properties"]["sheetId"]
 
 
-def clear_range(sheet_id: str, range_or_name: str, allow_protected: bool = False) -> None:
-    """Clear values in a range (named or A1)."""
+def clear_range(sheet_id: str, range_or_name: str, allow_protected: bool = False,
+                dry_run: bool = False, skip_guard: bool = False, now: str = "") -> None:
+    """Clear values in a range (named or A1). Snapshots first — a clear is unrecoverable
+    without one, and Sheets version history is a manual, slow fallback."""
     assert_safe_to_write(sheet_id, range_or_name, allow_protected=allow_protected)
+    if not skip_guard:
+        import write_guard
+
+        before = read_range(sheet_id, range_or_name)
+        if dry_run:
+            print(write_guard.render_diff(range_or_name, before, []))
+            return
+        write_guard.save_snapshot(sheet_id, range_or_name, before, now, note="pre-clear")
+    elif dry_run:
+        return
     _service().spreadsheets().values().clear(
         spreadsheetId=sheet_id, range=range_or_name, body={},
     ).execute()
@@ -381,7 +515,9 @@ def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
                    col_header_rows: list[int] | None = None,
                    value_input: str = "RAW",
                    freeze_rows: int = 0, freeze_cols: int = 0, title_rows: int = 0,
-                   allow_protected: bool = False) -> int:
+                   allow_protected: bool = False,
+                   dry_run: bool = False, force_shrink: bool = False,
+                   skip_guard: bool = False, now: str = "") -> int:
     """Clear a skill-owned tab and write `matrix` from A1. Applies light formatting:
     section_header_rows (0-indexed) get a bold cream band; col_header_rows get the Spice
     Orange header style. freeze_rows/freeze_cols pin headers/labels while scrolling.
@@ -390,10 +526,49 @@ def write_full_tab(sheet_id: str, tab: str, matrix: list[list[Any]],
     value_input defaults to RAW — these are presentation tabs of pre-formatted strings
     ($, %, ROAS-x), so RAW prevents Sheets coercing e.g. "+2.8%" → 0.028. Pass
     "USER_ENTERED" only when you want Sheets to parse numbers/formulas (e.g. Active
-    Campaigns, where WTD numeric columns should stay sortable)."""
+    Campaigns, where WTD numeric columns should stay sortable).
+
+    Write safety (see write_guard.py):
+      dry_run      — render the diff, write nothing, return 0.
+      force_shrink — allow a row-count drop past the threshold, when the shrink is real.
+      skip_guard   — bypass snapshot + gate. Only the restore path should set this.
+      now          — timestamp label for the snapshot; callers pass a real one."""
     assert_safe_to_write(sheet_id, f"'{tab}'!A1", allow_protected=allow_protected)
     svc = _service()
     gid = _tab_gid(sheet_id, tab)
+
+    # --- write safety (US-002) -------------------------------------------------
+    # The clear below is destructive and used to run BEFORE the `if not matrix`
+    # check further down — so an empty matrix wiped the tab and wrote nothing.
+    # That is exactly what blanked goop's Sheet on 2026-06-16. Snapshot, then gate,
+    # then clear. Order matters.
+    dry_run = dry_run or _WRITE_MODE["dry_run"]
+    force_shrink = force_shrink or _WRITE_MODE["force_shrink"]
+    now = now or _WRITE_MODE["now"]
+
+    if not skip_guard:
+        import write_guard
+
+        before = read_range(sheet_id, f"'{tab}'!A1:Z1000")
+        verdict = write_guard.evaluate(tab, before, matrix, force_shrink=force_shrink)
+
+        if dry_run:
+            print(write_guard.render_diff(tab, before, matrix))
+            if not verdict["allow"]:
+                print(f"    WOULD BLOCK: {verdict['reason']}")
+            return 0
+
+        if not verdict["allow"]:
+            raise write_guard.WriteBlocked(verdict["reason"])
+
+        write_guard.save_snapshot(sheet_id, tab, before, now,
+                                  note=f"pre-write {verdict['before_rows']}->{verdict['after_rows']} rows")
+    elif dry_run:
+        # skip_guard is the restore path; a dry-run restore is still a no-op write.
+        print(f"  {tab}: dry-run, guard skipped — {len(matrix)} rows would be written")
+        return 0
+    # ---------------------------------------------------------------------------
+
     # Clear the whole tab's values (formatting persists, but we re-apply below).
     svc.spreadsheets().values().clear(spreadsheetId=sheet_id, range=f"'{tab}'!A1:Z1000", body={}).execute()
     # Unmerge any leftover merged cells from a prior layout BEFORE writing. Writing a 2D array

@@ -16,8 +16,11 @@ Usage:
 from __future__ import annotations
 import argparse
 import io
+import json
 import os
 import sys
+import threading
+import time
 import warnings
 
 warnings.filterwarnings("ignore")  # silence py3.9 EOL FutureWarnings
@@ -26,22 +29,52 @@ KEY = os.path.expanduser("~/.config/spice/google-sheets-writer.json")
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 INPUTS_FOLDER_NAME = "Campaign Plan Inputs"
 FOLDER_MIME = "application/vnd.google-apps.folder"
+NATIVE_MIME_PREFIX = "application/vnd.google-apps"
+
+# Cache manifest lives beside the downloaded inputs. Dot-prefixed so the CSV
+# readers that glob the inputs dir never pick it up as data.
+MANIFEST_NAME = ".drive-cache.json"
+
+# The pull is latency-bound, not bandwidth-bound: measured 2026-08-05 against
+# goop's largest week, every file costs a fixed ~0.55s round trip regardless of
+# size, so 19 files took 16s while the bytes themselves needed under 4s.
+# Downloading in parallel is what makes this fast; 8 is well inside Drive's
+# per-user rate limits.
+MAX_WORKERS = 8
 
 _DRIVE = None
+_LOCAL = threading.local()
+
+
+def _credentials():
+    if not os.path.exists(KEY):
+        raise FileNotFoundError(
+            f"service-account key missing at {KEY}; see references/google-service-account-setup.md."
+        )
+    from google.oauth2 import service_account
+    return service_account.Credentials.from_service_account_file(KEY, scopes=SCOPES)
 
 
 def _drive():
     global _DRIVE
     if _DRIVE is None:
-        if not os.path.exists(KEY):
-            raise FileNotFoundError(
-                f"service-account key missing at {KEY}; see references/google-service-account-setup.md."
-            )
-        from google.oauth2 import service_account
         from googleapiclient.discovery import build
-        creds = service_account.Credentials.from_service_account_file(KEY, scopes=SCOPES)
-        _DRIVE = build("drive", "v3", credentials=creds, cache_discovery=False)
+        _DRIVE = build("drive", "v3", credentials=_credentials(), cache_discovery=False)
     return _DRIVE
+
+
+def _thread_drive():
+    """A Drive client owned by the calling thread.
+
+    googleapiclient service objects wrap a single non-thread-safe httplib2
+    connection, so parallel downloads must not share one.
+    """
+    client = getattr(_LOCAL, "drive", None)
+    if client is None:
+        from googleapiclient.discovery import build
+        client = build("drive", "v3", credentials=_credentials(), cache_discovery=False)
+        _LOCAL.drive = client
+    return client
 
 
 def find_subfolder(name: str, parent_id: str) -> str | None:
@@ -112,23 +145,156 @@ def list_input_files(weekstart_folder_id: str) -> list[dict]:
     return r.get("files", [])
 
 
-def download_inputs(weekstart_folder_id: str, local_dir: str) -> list[str]:
-    """Download all files in the weekstart folder to local_dir. Returns list of local paths."""
-    from googleapiclient.http import MediaIoBaseDownload
+# ---- local cache ----
+
+def _cache_key(f: dict) -> str:
+    """Identity of a remote file's contents: size plus last-modified stamp."""
+    return f"{int(f.get('size') or 0)}:{f.get('modifiedTime', '')}"
+
+
+def _manifest_path(local_dir: str) -> str:
+    return os.path.join(local_dir, MANIFEST_NAME)
+
+
+def _read_manifest(local_dir: str) -> dict:
+    """Previously downloaded files as {name: cache_key}. Unreadable = empty."""
+    try:
+        with open(_manifest_path(local_dir)) as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else {}
+    except (FileNotFoundError, NotADirectoryError):
+        return {}
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"   (cache manifest unreadable, re-downloading everything: {e})")
+        return {}
+
+
+def _write_manifest(local_dir: str, manifest: dict) -> None:
     os.makedirs(local_dir, exist_ok=True)
-    drive = _drive()
-    files = list_input_files(weekstart_folder_id)
-    paths = []
+    tmp = _manifest_path(local_dir) + ".part"
+    with open(tmp, "w") as fh:
+        json.dump(manifest, fh, indent=2, sort_keys=True)
+    os.replace(tmp, _manifest_path(local_dir))
+
+
+def _plan_downloads(files: list[dict], local_dir: str, manifest: dict,
+                    force: bool = False) -> tuple[list[dict], list[str]]:
+    """Split remote files into (needs download, already valid locally).
+
+    A cache hit requires all three of: the manifest recorded this exact
+    size+modifiedTime, the local file exists, and its byte count still matches
+    the remote size. Trusting the manifest alone would serve a deleted or
+    half-written file as if it were good data.
+    """
+    todo: list[dict] = []
+    cached: list[str] = []
     for f in files:
         local = os.path.join(local_dir, f["name"])
-        req = drive.files().get_media(fileId=f["id"], supportsAllDrives=True)
-        with open(local, "wb") as fh:
+        native = str(f.get("mimeType", "")).startswith(NATIVE_MIME_PREFIX)
+        size = int(f.get("size") or 0)
+        hit = (
+            not force
+            and not native
+            and manifest.get(f["name"]) == _cache_key(f)
+            and os.path.exists(local)
+            and os.path.getsize(local) == size
+        )
+        if hit:
+            cached.append(local)
+        else:
+            todo.append(f)
+    return todo, cached
+
+
+def _worker_count(n_files: int, max_workers: int = MAX_WORKERS) -> int:
+    return max(1, min(n_files, max_workers))
+
+
+def _download_one(f: dict, local_dir: str) -> str:
+    """Fetch a single file. Writes to a .part file and renames on success so an
+    interrupted pull can never leave a truncated file that looks complete."""
+    from googleapiclient.http import MediaIoBaseDownload
+    local = os.path.join(local_dir, f["name"])
+    tmp = local + ".part"
+    req = _thread_drive().files().get_media(fileId=f["id"], supportsAllDrives=True)
+    try:
+        with open(tmp, "wb") as fh:
             dl = MediaIoBaseDownload(fh, req)
             done = False
             while not done:
                 _, done = dl.next_chunk()
-        paths.append(local)
-    return paths
+        os.replace(tmp, local)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+    return local
+
+
+def download_inputs(weekstart_folder_id: str, local_dir: str, force: bool = False,
+                    max_workers: int = MAX_WORKERS, progress: bool = True) -> list[str]:
+    """Download all files in the weekstart folder to local_dir.
+
+    Files already present and unchanged since the last pull are reused, so a
+    re-run in the same week costs one listing call. Returns local paths for
+    every input file, cached or freshly downloaded.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    os.makedirs(local_dir, exist_ok=True)
+    files = list_input_files(weekstart_folder_id)
+    if not files:
+        return []
+
+    manifest = _read_manifest(local_dir)
+    todo, cached = _plan_downloads(files, local_dir, manifest, force=force)
+
+    if progress and cached:
+        print(f"   {len(cached)} of {len(files)} input file(s) already local, reusing")
+    if not todo:
+        return sorted(cached)
+
+    total = len(todo)
+    done_count = 0
+    lock = threading.Lock()
+    started = time.time()
+    fetched: list[str] = []
+    failures: list[tuple[str, BaseException]] = []
+
+    if progress:
+        print(f"   pulling {total} file(s) from Drive with {_worker_count(total, max_workers)} parallel workers…")
+
+    with ThreadPoolExecutor(max_workers=_worker_count(total, max_workers)) as pool:
+        futures = {pool.submit(_download_one, f, local_dir): f for f in todo}
+        for fut in as_completed(futures):
+            f = futures[fut]
+            try:
+                path = fut.result()
+            except BaseException as e:  # noqa: BLE001 — reported below, never silently dropped
+                failures.append((f["name"], e))
+                continue
+            fetched.append(path)
+            manifest[f["name"]] = _cache_key(f)
+            with lock:
+                done_count += 1
+                if progress:
+                    print(f"   [{done_count}/{total}] {f['name']}", flush=True)
+
+    _write_manifest(local_dir, manifest)
+
+    if progress:
+        mb = sum(os.path.getsize(p) for p in fetched) / 1e6
+        print(f"   pulled {len(fetched)} file(s), {mb:.1f} MB in {time.time() - started:.1f}s")
+
+    if failures:
+        for name, e in failures:
+            print(f"   ✗ {name}: {e}", file=sys.stderr)
+        raise RuntimeError(
+            f"{len(failures)} of {total} Drive input file(s) failed to download: "
+            + ", ".join(n for n, _ in failures)
+        )
+
+    return sorted(fetched + cached)
 
 
 # ---- CLI ----
@@ -152,10 +318,12 @@ def _cmd_list(args):
 
 
 def _cmd_download(args):
-    paths = download_inputs(args.folder_id, args.local_dir)
+    started = time.time()
+    paths = download_inputs(args.folder_id, args.local_dir, force=args.force)
     for p in paths:
         print(f"  ✓ {p}")
-    print(f"({len(paths)} file{'s' if len(paths) != 1 else ''} downloaded to {args.local_dir})")
+    print(f"({len(paths)} file{'s' if len(paths) != 1 else ''} in {args.local_dir}, "
+          f"{time.time() - started:.1f}s total)")
 
 
 def _cmd_find(args):
@@ -185,6 +353,8 @@ def main():
     p = sub.add_parser("download", help="download all files in a weekstart folder to local dir")
     p.add_argument("--folder-id", required=True)
     p.add_argument("--local-dir", required=True)
+    p.add_argument("--force", action="store_true",
+                   help="re-download everything, ignoring files already cached locally")
 
     args = ap.parse_args()
     {"ensure": _cmd_ensure, "find": _cmd_find, "list": _cmd_list, "download": _cmd_download}[args.cmd](args)

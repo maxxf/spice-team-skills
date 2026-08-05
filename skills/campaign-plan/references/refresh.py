@@ -50,8 +50,7 @@ def _sheets_write_blocked_msg(client, reason):
         "You're almost certainly running inside Cowork, whose sandbox can't reach your Mac's\n"
         "home directory or Google's network. This is expected — not a skill bug.\n\n"
         "Fix — run where the key + open network live:\n"
-        f"  1) Your own Mac:  ./run_local.sh {client}          (see RUN-LOCALLY.md)\n"
-        f"  2) The Mac Mini:  Slack \"@Spicy publish the {client} campaign sheet\"\n"
+        f"  Run it from your own Mac:  ./run_local.sh {client}     (setup in RUNBOOK.md)\n"
         f"{bar}"
     )
 
@@ -74,10 +73,15 @@ def _monday_of(d: dt.date) -> dt.date:
     return d - dt.timedelta(days=d.weekday())
 
 
-def _maybe_pull_from_drive(cfg: dict, weekstart: str) -> int:
+def _maybe_pull_from_drive(cfg: dict, weekstart: str, force: bool = False) -> int:
     """If the config has a drive_folder_id, download the Campaign Plan Inputs / <weekstart>/
-    files into <data_dir>/inputs/ so the bridge can read them. Returns count downloaded.
-    Silent no-op if drive_inputs module can't auth or folder is missing."""
+    files into <data_dir>/inputs/ so the bridge can read them. Returns count available.
+    Silent no-op if drive_inputs module can't auth or folder is missing.
+
+    Files unchanged since the last pull are reused, so re-running a client in the
+    same week costs one listing call instead of a full re-download. Pass
+    force=True to ignore the cache; --no-drive-pull skips the pull entirely and
+    uses whatever is already in data_dir (the direct-attachment escape hatch)."""
     folder_id = cfg.get("drive_folder_id")
     data_dir = cfg["data_dir"]
     if not folder_id:
@@ -92,11 +96,10 @@ def _maybe_pull_from_drive(cfg: dict, weekstart: str) -> int:
         print(f"   (no 'Campaign Plan Inputs / {weekstart}/' folder yet — using existing data_dir contents)")
         return 0
     local_inputs = os.path.join(data_dir, "inputs")
-    paths = download_inputs(ws_folder, local_inputs)
+    print(f"→ pulling inputs from Drive `Campaign Plan Inputs/{weekstart}/`…")
+    paths = download_inputs(ws_folder, local_inputs, force=force)
     if paths:
-        print(f"→ pulled {len(paths)} input file(s) from Drive `Campaign Plan Inputs/{weekstart}/`:")
-        for p in paths:
-            print(f"    {os.path.basename(p)}")
+        print(f"→ {len(paths)} input file(s) ready in {local_inputs}")
     return len(paths)
 
 
@@ -149,6 +152,12 @@ def _v2_refresh(cfg, args, tracker_csv, data_dir, weekstart, display):
     import v2_aggregate as agg
     import slack_draft as sd
     import key_takeaways as kt
+
+    # Write safety (US-002). Set once — the per-tab writers pick it up via write_full_tab.
+    sw.set_write_mode(dry_run=args.dry_run, force_shrink=args.force_shrink,
+                      now=dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
+    if args.dry_run:
+        print("\n=== DRY RUN — no cells will be written ===\n")
 
     sheet_id = cfg["sheet_id"]
     # Friendly week label for the Dashboard title: "W22 (May 25–May 31)" derived from the
@@ -490,15 +499,51 @@ def main():
     ap.add_argument("--overwrite-perf", action="store_true")
     ap.add_argument("--no-push", action="store_true", help="Skip publishing to the live Google Sheet (file only).")
     ap.add_argument("--no-drive-pull", action="store_true", help="Skip pulling inputs from Drive folder (uses local data_dir only).")
+    ap.add_argument("--force-drive-pull", action="store_true", help="Re-download every Drive input, ignoring files already cached locally from an earlier run this week.")
     ap.add_argument("--force-inputs", action="store_true", help="Bypass the input-validation gate (publish even if exports look wrong/missing).")
     ap.add_argument("--no-notion-pull", action="store_true", help="Skip the REST Notion pull; use the existing campaigns_json (e.g. an MCP pull written in Cowork).")
+    ap.add_argument("--skip-doctor", action="store_true", help="Bypass the preflight gate (debugging only — it exists because silent failures cost real runs).")
+    ap.add_argument("--dry-run", action="store_true", help="Render the diff for every tab and write nothing.")
+    ap.add_argument("--force-shrink", action="store_true", help="Allow a row-count drop past the safety threshold, when the shrink is real (campaigns ended, locations closed).")
     args = ap.parse_args()
 
-    cfg_path = os.path.join(SKILL, "clients", f"{args.client}.json")
-    if not os.path.exists(cfg_path):
-        sys.exit(f"no config at {cfg_path}. Create clients/{args.client}.json (see clients/goop-kitchen.json).")
-    with open(cfg_path) as f:
-        cfg = json.load(f)
+    # Config resolves HQ-first, plugin bundle as fallback — so adding a client is not
+    # a plugin release. See references/client_config.py.
+    import client_config
+    try:
+        cfg = client_config.load(args.client)
+    except FileNotFoundError as e:
+        sys.exit(str(e))
+    cfg_path = cfg["_config_path"]
+    print(f"→ config: {cfg_path} [{cfg['_config_source']}]")
+
+    # Preflight. Every failure that historically cost the team a run was silent or
+    # generic; refuse to start rather than error halfway through a live write.
+    if not args.skip_doctor:
+        import doctor as _doctor
+
+        _rep = _doctor.Report()
+        _doctor.check_env(_rep)
+        _fatal = [r for r in _rep.failed
+                  if r["check"] in ("google credential", "google python deps")]
+        if not _fatal:
+            try:
+                _drive = _doctor.google_clients()
+                _doctor.check_client(_rep, _drive, args.client, cfg)
+            except Exception as e:  # noqa: BLE001
+                _rep.add("env", "google auth", _doctor.FAIL,
+                         f"{type(e).__name__}: {str(e)[:200]}",
+                         "credential is present but unusable")
+        if _rep.failed:
+            print("\nPreflight failed — not starting the refresh:\n")
+            for r in _rep.failed:
+                print(f"  FAIL {r['scope']}/{r['check']}: {r['detail']}")
+                if r["fix"]:
+                    print(f"       fix: {r['fix']}")
+            print(f"\nFull report: python3 references/doctor.py --client {args.client}")
+            sys.exit(1)
+        for r in _rep.warned:
+            print(f"  warn {r['scope']}/{r['check']}: {r['detail']}")
 
     # Preflight (fail FAST, before the slow Drive pull + data build): the v2 path writes the
     # live Google Sheet directly and has no local-file fallback. If the service-account key
@@ -524,7 +569,7 @@ def main():
     # Step 0 — PULL FROM DRIVE: download this week's inputs from the client's Drive folder
     # into <data_dir>/inputs/. Falls back gracefully if folder doesn't exist.
     if not args.no_drive_pull:
-        _maybe_pull_from_drive(cfg, weekstart)
+        _maybe_pull_from_drive(cfg, weekstart, force=args.force_drive_pull)
 
     # Step 0.5 — INPUT GATE: validate the dropped platform exports BEFORE anything is written.
     # Refuses to publish on a missing/wrong/truncated export (the enforcement point — a bad file

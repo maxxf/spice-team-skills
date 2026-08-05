@@ -235,7 +235,7 @@ The sheet holds **reporting** (Dashboard/Active Campaigns/Ads/Offers/History/Exp
 
 1. **PLAN (GM, ongoing)** — Notion DB is the source of truth. Every campaign logged with current Status, Segment, Locations, Start/End Date, ROAS Target. Set **Client Review Since** when items enter client review. If it's not in the DB, it's not in the plan.
 2. **PULL (Ops, when fresh data is available)** — drop platform exports into the client's **`Campaign Plan Inputs / <weekstart>/`** Drive folder. Typically Sun night or Mon AM after weekly-reporting runs.
-3. **RUN (GM, when warranted)** — regenerate the live Sheet in place + **produce a Slack draft** in Ro's format. **⚠ Writing the live Sheet needs the Google service-account key at `~/.config/spice/google-sheets-writer.json`, which the Cowork sandbox does NOT have** — a Cowork run now fails fast with instructions instead of erroring silently. Run where the key + open network live: **`./run_local.sh <client>`** on your own Mac (one-time setup in RUN-LOCALLY.md), or Slack **`@Spicy publish the <client> campaign sheet`** to run it on the always-on Mac Mini. Either way the skill pulls the Drive folder + Notion DB, then writes the Sheet.
+3. **RUN (GM or Ops, when warranted)** — regenerate the live Sheet in place + **produce a Slack draft** in Ro's format. **⚠ Writing the live Sheet needs the Google service-account key at `~/.config/spice/google-sheets-writer.json`, which the Cowork sandbox does NOT have** — a Cowork run fails fast with instructions instead of erroring silently. **The supported runner is Claude Code on your own Mac** — one-time setup in **[RUNBOOK.md](RUNBOOK.md)**, which is now the operating doc: **`./run_local.sh <client>`**. Run `--dry-run` first to see every change as a diff and write nothing. The Mac Mini is *not* a supported runner — it was announced as one twice (2026-07-01, 2026-07-07), never validated, and its weekly job failed every week from Apr 12 to Jul 21 until the job was killed. Treat it as an unsupported convenience; nothing here depends on it. The skill pulls the Drive folder + Notion DB, runs the preflight doctor, then writes the Sheet.
 4. **COMMUNICATE (GM, Monday)** — review the Slack draft, edit, send to `#ext-[client]-spice`. The Sheet link is stable; the note explains what moved. Run the governor over the script's draft before any of that; see below.
 
 ### The Monday Slack note (GM-authored from a draft the skill provides)
@@ -304,7 +304,7 @@ The service account already has access via the "1. Active" share. The skill read
 Each client has a config at `clients/<slug>.json` (display name, data dir, input filenames, output path, Drive folder, Slack channel). Once the inputs are in the data dir, the whole update is:
 
 ```bash
-cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
+cd <your installed campaign-plan skill folder>
 python3 references/refresh.py --client <slug> [--as-of YYYY-MM-DD]
 ```
 
@@ -587,12 +587,12 @@ If only platform exports without the wizard's structure are available, the skill
 
 ## Phase 2: Run the update
 
-First-time setup (once per machine): `python3 -m pip install --user openpyxl google-auth google-api-python-client` (see `RUN-LOCALLY.md`; run commands with plain `python3`). (The two google packages are only needed for the live-Sheet publish step; openpyxl alone suffices for file-only output.)
+First-time setup (once per machine): `python3 -m pip install --user openpyxl google-auth google-api-python-client` (see `RUNBOOK.md`; run commands with plain `python3`). (The two google packages are only needed for the live-Sheet publish step; openpyxl alone suffices for file-only output.)
 
 The render takes the Phase 0 tracker CSV and (optionally) the performance CSV:
 
 ```bash
-cd /Users/maxx/Desktop/Cowork/Skills/campaign-plan
+cd <your installed campaign-plan skill folder>
 python3 references/build_campaign_plan_xlsx.py \
   --client "<display name>" \
   --tracker-csv /tmp/campaign-data-<client>/<client>_tracker.csv \

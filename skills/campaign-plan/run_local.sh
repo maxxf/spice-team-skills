@@ -21,5 +21,9 @@ if ! "$PY" -c "import googleapiclient, google.oauth2.service_account" 2>/dev/nul
   echo "   (or set SPICE_PY to a venv python that has them)"
   exit 1
 fi
-echo "→ Refreshing '$CLIENT' locally — this writes the live Google Sheet."
+if [[ " $* " == *" --dry-run "* ]]; then
+  echo "→ Refreshing '$CLIENT' locally — DRY RUN, nothing will be written."
+else
+  echo "→ Refreshing '$CLIENT' locally — this writes the live Google Sheet."
+fi
 "$PY" "$HERE/references/refresh.py" --client "$CLIENT" "$@"

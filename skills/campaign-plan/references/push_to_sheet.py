@@ -107,7 +107,7 @@ def main():
                 "the Cowork network wall, not a setup problem.\n\n"
                 f"Your finished workbook is ready here:\n  {args.xlsx}\n\n"
                 "Publish it one of two ways:\n"
-                f"  1) From your own Mac:  bash run_local.sh {args.client}   (see RUN-LOCALLY.md)\n"
+                f"  1) From your own Mac:  bash run_local.sh {args.client}   (see RUNBOOK.md)\n"
                 "  2) Manual: open the client's Sheet -> File -> Import -> Upload that .xlsx\n"
                 "     -> \"Replace current sheet\" (about 2 minutes).\n"
                 + "-" * 66 + "\n")

@@ -30,6 +30,22 @@ sys.path.insert(0, HERE)  # allow importing sibling reference modules (drive_inp
 
 
 def main():
+    """Thin shim over provision.py.
+
+    Kept because the SOP and muscle memory both say `new_client.py`. All the real work —
+    native-Sheet creation, idempotent adoption, tracker tab detection, config write,
+    preflight — lives in provision.py so there is one provisioning path, not two that
+    drift.
+    """
+    argv = sys.argv[1:]
+    if "--no-initial-refresh" in argv:
+        argv.remove("--no-initial-refresh")  # provision never refreshes; it verifies
+    sys.argv = [sys.argv[0]] + argv
+    import provision
+    sys.exit(provision.main())
+
+
+def _legacy_main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--slug", required=True, help="filesystem-safe slug (e.g. goop-kitchen, pret)")
     ap.add_argument("--display-name", required=True, help="title shown in the workbook + Sheet name")
