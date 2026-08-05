@@ -22,27 +22,34 @@ This email is sent by Maxx or Diline immediately after SOW signature. It introdu
 ```
 Subject: Onboarding: {restaurant_name} <> Spice
 
-{first_name} — allow me to formally welcome you to Spice 🌶. We are excited to be partnering with you and {restaurant_name}!
+{first_name},
 
-Over the next week, we will be organizing internally by assigning more Spice members to your team, gathering assets from you, and taking time to understand your business in a more comprehensive way, building on our initial calls together.
+Welcome to Spice. To get moving we need your platform logins and payment info by Friday. Everything else follows from those two.
 
-In order to streamline this process, I'd like to introduce you to {cs_lead_name} (copied), Spice's onboarding lead, to coordinate the following:
+{cs_lead_name} (copied) runs onboarding and is your day to day from here. This week:
 
-- Scheduling Kick-off call: {kickoff_date}
-- Setting up shared Slack / WhatsApp for communications
-- Gathering your platform login credentials & brand assets: {onboarding_form_link}
-- Collecting payment info: {stripe_payment_link}
-  - Once payment info is added, save this link for client portal access: {client_portal_link}
+- Logins and brand assets: {onboarding_form_link}
+- Payment: {stripe_payment_link}
+- Kickoff call: {kickoff_date}
+- Shared Slack or WhatsApp, whichever your team actually checks
 
-Please be sure to set some time aside to prep this info for us.
+Once payment is in, your client portal lives here: {client_portal_link}
 
-Thank you!
+{human_line}
 
 // maxx freedman | managing partner | Spice
 ```
 
+`{human_line}` is a required merge slot, not decoration. One sentence naming something
+specific from the sales conversation: a store that is struggling, a number they quoted,
+a problem they said keeps them up. A static template cannot write it, which is exactly
+why it is a slot. Do not send this email with the slot unfilled.
+
 ### Notes
 
+- These are static templates, so the governor at `references/client-comms-pass.md` runs
+  over this file when a template changes rather than on every send. Both templates above
+  were checked against it and against `references/client-comms-style.md`.
 - CC {cs_lead_email} on the email
 - After this email, the Client Services Lead takes over all client communication
 - Maxx's next touchpoint is the kickoff call itself (handoff moment)
@@ -56,15 +63,18 @@ For clients purchasing only Advisory services, Maxx remains the primary contact.
 ```
 Subject: Onboarding: {restaurant_name} <> Spice
 
-{first_name} — allow me to formally welcome you to Spice 🌶. We're excited to get started with {restaurant_name}.
+{first_name},
 
-I'll be your direct point of contact for our advisory engagement. Here's what's next:
+Welcome to Spice. One thing to start: payment info at {stripe_payment_link} this week.
 
-- Scheduling our recurring call: {kickoff_date}
-- Collecting payment info: {stripe_payment_link}
-- I'll be reaching out separately to gather docs and context for our first working session.
+I am your direct contact on this engagement, no handoff to anyone else. Our recurring
+call is {kickoff_date}, and I will follow up separately for the docs I need before the
+first working session.
 
-Looking forward to it.
+{human_line}
 
 // maxx freedman | managing partner | Spice
 ```
+
+Same rule on `{human_line}`: required, and only a person who sat through the sales
+conversation can write it.

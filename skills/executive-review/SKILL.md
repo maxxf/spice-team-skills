@@ -31,6 +31,17 @@ The Notion page is structured as follows (full template in `references/output-te
 
 Plus a **Slack-ready short summary** (3-5 sentences) the GM can paste into the client channel when sharing the doc.
 
+That summary is client-facing prose, so it is governed. Write it against
+`references/client-comms-style.md`, then run `references/client-comms-pass.md`
+over it before the GM sees it, and hand the receipt along with the text. It runs
+in the governor's Slack-only lane, so the email-shaped checks are skipped and
+everything else applies. Format details are in `references/slack-template.md`.
+
+**Scope, precisely: the Slack summary only.** The Notion doc is an artifact, not
+a message. It is what the summary links to, it is meant to be long and complete,
+and the canon's word ceiling on a ten-section review would be nonsense. The governor
+does not touch it.
+
 ## When to use
 
 Use this skill whenever the Spice GM, Service Lead, or Maxx asks to produce a strategic review of client engagement. Common triggers:

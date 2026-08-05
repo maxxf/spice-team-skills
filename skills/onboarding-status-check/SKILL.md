@@ -80,6 +80,15 @@ Run an onboarding status check for all Spice clients. Here is exactly what to do
    "Hey [Client POC first name], quick follow-up on [specific item needed]. We're ready to move forward on [next step] as soon as we have [the thing]. Can you send that over this week?"
    These are DRAFTS only -- team lead reviews and sends.
 
+   **These nudges are governed.** Write them against `references/client-comms-style.md` and
+   check them with `references/client-comms-pass.md` before the draft goes into the channel.
+   Slack-only lane: no subject line, no greeting line beyond the name, no sign-off, so those
+   checks are skipped. Everything else applies as written, including the ask in the first
+   three lines, the dash rule, and the one line of specific human attention. On a nudge that
+   line is usually the thing you are actually waiting on and why it is blocking, named exactly.
+   "quick follow-up on the onboarding form" is a template. "the Uber logins are the last thing
+   holding up your kickoff on the 28th" is the line.
+
 7. Post client-specific updates to each client's internal Slack channel (#int-[client-name]). IMPORTANT: Search for channels using slack_search_channels with channel_types "public_channel,private_channel" since #int- channels may be private. Format:
 
 *📋 [Client Name] Onboarding Update -- [Date]*
@@ -120,7 +129,10 @@ Then list each client with a one-line summary of their status. Link to details i
 
 If there are zero overdue or at-risk tasks across all clients, still post a short confirmation to #new-client-onboarding: "✅ All onboarding tasks on track as of [Date]."
 
-**IMPORTANT: Slack formatting rules.** Never use em dashes in Slack messages. Use double hyphens (--) instead. Em dashes cause "invalid_blocks" errors in the Slack API.
+**IMPORTANT: Slack formatting rules.** No em dashes in Slack messages. Use double hyphens (--)
+instead. Two reasons that point the same way: the canon bans em dashes outright, which is where
+that rule lives now (`references/client-comms-style.md`), and the Slack API separately throws
+"invalid_blocks" errors on them. One rule, two motives, no second source of truth.
 
 ---
 

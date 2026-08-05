@@ -198,7 +198,13 @@ Include [Image: description] placeholders for screenshots.
 
 - Detailed scoring methodology: `references/scoring-rubric.md`
 - Gold standard comparison: `references/gold-standard-comparison.md`
-- Lead magnet email sequences: `references/email-sequences.md`
+- Lead magnet email sequences: `references/email-sequences.md`. Prospect-facing
+  copy, governed by `references/client-comms-style.md` and
+  `references/client-comms-pass.md` under the governor's prospect and sales
+  outreach rule. These are static templates, so the governor runs over the file
+  **when the templates change, not on every send**. Per send, one check still
+  falls to whoever is sending: the line of specific human attention, which lives
+  in the merge fields and which the template can only hold a slot for.
 
 ## Scripts
 

@@ -191,6 +191,21 @@ Bottom line: [the one-sentence strategic call — usually reallocation before ne
 Neutral, data-first; account lead adds interpretive "why" lines. No report duplication — that's the
 point of a flash. Scale the receipts table to what changed; if nothing's moving, say so.
 
+**The flash is a client-read Slack message, so it is governed.** Write it against
+`references/client-comms-style.md` and check it with
+`references/client-comms-pass.md` before it goes to the channel. Slack-only lane:
+no subject line, no greeting, no sign-off, those are skipped. Length, the ask in
+the first three lines, a link behind the cited numbers, the banned-pattern table,
+the dash rule, voice, and the one line of specific human attention all apply.
+Neither file is restated here.
+
+**The split, so nobody reads this as an override.** The canon governs the words.
+The house rules below govern the rendering. They do not compete, because they
+answer different questions: the canon decides what the flash says and how it is
+shaped as a message, the rendering rules decide how Slack draws it. Code-block
+tables, `*single-asterisk*` bold, bullet characters, and the no-italics rule are
+all still in force and the canon has no opinion on any of them.
+
 **Slack rendering (important):** Slack does NOT render Markdown pipe tables — put the receipts in a
 ``` code block ``` so columns stay aligned. Use `*single-asterisk*` bold (not `**`), bold lines
 instead of `#` headers, and `•`/`-` bullets. Note the code block side-scrolls on mobile; if the

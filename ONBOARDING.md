@@ -129,6 +129,24 @@ Commit messages: `vX.Y.Z <skill-name>: <what changed>`. See the git log for the 
 
 ---
 
+## The client comms standard (read before you touch a client-facing skill)
+
+Every email and client Slack message Spice sends answers to one standard, and it lives in this repo.
+
+- `references/client-comms-style.md` is the canon. Five-slot skeleton, the 150-word ceiling, the ask-in-the-first-three-lines rule, the banned-pattern table, and six before/after pairs from real Spice threads. Every rule in it came out of 31 emails Spice actually sent, so each one cites the email that failed it.
+- `references/client-comms-pass.md` is the governor. It both drafts and checks, and it fires on any client email or client Slack message no matter which path produced it, asked for or not. Drafting side: one sentence of intent in, everything else inferred, a canon-shaped draft in the teammate's own Gmail drafts (chat copy-paste when there's no Gmail connector). Checking side: mechanical pass/fail on length, ask position, link presence, banned patterns, and dashes, then the voice check, then the one line of specific human attention. It never sends. There is no separate skill to invoke, which is the point.
+- `references/maxx-freedman-voice-guide.md` still governs how a Spice sentence sounds. The canon governs what shape the email is. Both apply, neither replaces the other.
+
+The four skills that emit client-facing copy (`post-client-meeting`, `ratings-reply`, `client-onboarding`, `email-template-designer`) run through the governor before they emit anything, and so does anything a teammate or Spicy Nugget writes to a client directly. `sales-follow-up` lives in HQ rather than in this plugin, so it is covered by the mirrored HQ policy `spice-client-comms-brief-exec-shaped` instead.
+
+**Your rule as maintainer: reference the canon, never restate it.** New skill that produces client-facing copy? Point it at `references/client-comms-style.md` and `references/client-comms-pass.md`. Copying the rules into a SKILL.md creates a second source of truth, and the day the ceiling changes you have drift across five files. Canon rules duplicated inside a skill is a bug worth its own commit.
+
+One thing to get right when you explain this to anyone. The standard did not come from a client complaining about our writing. A client did say "These are VERY AI looking," but he was looking at three ad creatives in a Figma prototype, not at the prose. The case for the standard is structural: that same email was the longest in the sample, buried its only ask 300 words down, and retyped an analysis it had already linked. The canon says all of this out loud in its final section. Keep it that way.
+
+**Owner: Maxx Freedman. Next review: 2026-09-08.** That is when sent mail gets sampled again and the follow-on audit project either opens or does not. The rollout announcement drafted for that launch is kept at `references/client-comms-rollout-announcement.md`.
+
+---
+
 ## The per-function plugin migration (decision pending)
 
 In June 2026 someone added four sibling plugins to the marketplace alongside the monolith:
@@ -210,6 +228,7 @@ Skills that post to Slack on a teammate's behalf should ALWAYS use `slack_send_m
 
 ### Where things go
 
+- **Client email / client Slack rules** → `references/client-comms-style.md` and `references/client-comms-pass.md`. Skills reference them, never copy them.
 - **Per-client config** → Notion (each client has a Wiki page with platform credentials, tracker URL, voice notes, etc.)
 - **Org-wide context** → `CLAUDE.md` in this repo
 - **Skill-specific reference data** → that skill's `references/` directory

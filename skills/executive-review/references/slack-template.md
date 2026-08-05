@@ -2,6 +2,12 @@
 
 When the doc is published, generate a 3-5 sentence Slack summary the GM can paste into the client channel.
 
+The client channel version is governed. Draft it against
+`references/client-comms-style.md` and check it with
+`references/client-comms-pass.md` before handing it to the GM, in the governor's
+Slack-only lane. The internal version at the bottom of this file is not governed:
+it goes to the team, not the client.
+
 ## Format
 
 ```
@@ -62,12 +68,14 @@ would love your reaction whenever you've got a few min
 
 ## Voice rules for the Slack summary
 
+The dash rule, the banned patterns, the one-real-question close, and the one-ask
+discipline all come from the canon. Read it there rather than here.
+
+What is specific to this surface:
+
 - Lowercase casual (mirrors how Maxx writes on Slack)
-- No em-dashes
 - Skip greetings beyond the name
 - "let me know" / "happy to walk through" rather than formal closings
-- Skip "looking forward to your feedback" / "please review at your earliest convenience"
-- One ask max: don't pile
 
 ## When the summary is for an INTERNAL Slack channel (#int-[client] or #team-spice)
 

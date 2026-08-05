@@ -95,6 +95,15 @@ python3 scripts/scorecard-export.py \
 
 Outputs a self-contained, brand-colored HTML file. Email it to the client, or upload to their Notion portal.
 
+**The email that carries it is governed, and this skill does not compose it for
+you today, which is exactly the problem.** Left alone it gets written freehand
+every week, which is how a scorecard note drifts into a 300-word restatement of
+the scorecard. Draft the send note against `references/client-comms-style.md` and
+run `references/client-comms-pass.md` over it before it goes out. The scorecard
+is the artifact, so the note points at it rather than repeating it: the one
+number that moved, the one thing you need back, the link. Neither file is
+restated here.
+
 **Brand colors** are baked in for `fresh_kitchen` and `goop_kitchen`. For other clients, the script falls back to neutral colors. Add brand presets to the script's `BRAND_PRESETS` dict as new clients onboard.
 
 ---
