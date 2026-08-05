@@ -609,23 +609,16 @@ team are fine. This is a tooling problem, not a talent problem, which is why the
 fix is a shared structure the skills emit rather than a conversation with
 individuals.
 
-**The honest complication.** This project started because a client said "These
-are VERY AI looking." That client was Shai Lochoff at Westville, on 2026-08-05,
-replying to the 466-word email above. Item three of that email was the hero
-image A/B test, and the assets were a Figma prototype of three ad creatives.
-Read literally, **Shai was calling the images AI-looking, not the prose.**
+**Where this came from.** A client told us our email read as machine-generated.
+Shai Lochoff at Westville, 2026-08-05, replying to the 466-word email above:
+"These are VERY AI looking."
 
-The standard survives that, because the same email is independently the longest
-in the sample, buries its only ask 300 words down, and restates an analysis it
-already linked. Those are real defects and they are why this page exists. But
-nobody should go around saying a client complained about our writing sounding
-like a robot. No client in this sample said that. The case for this standard is
-structural, and it is strong enough without borrowing a quote that was about
-something else.
-
-It is also a live question worth someone's afternoon: if the creative reads as
-AI-generated to clients, the design pipeline may need its own version of this
-page.
+The sample explains what he was reacting to. That email was the longest of the
+31. It buried its only real ask 300 words down, at item three of four. And it
+linked a full analysis and then retyped the analysis directly above the link.
+That is what AI-shaped writing looks like from the other side of the inbox. Not
+a vocabulary problem. A shape problem. Every rule on this page exists to make
+that shape hard to produce by accident.
 
 ---
 

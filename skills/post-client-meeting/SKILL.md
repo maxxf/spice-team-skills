@@ -64,7 +64,9 @@ The prep doc contains internal sections that must be stripped before sharing wit
 
 ### 4. Draft the Client Email — PASTE IN CHAT (do NOT create a Gmail draft)
 
-Write the recap against `references/client-comms-style.md`, then check it with `references/client-comms-pass.md` before you paste anything. The canon owns the shape (skeleton, word ceiling, banned patterns, the human-attention line). The pass owns the checking. Neither is restated here, so tuning the voice happens in one place. If this file and the canon ever disagree, the canon wins and this file is the bug.
+Write the recap against `references/client-comms-style.md`, then run `references/client-comms-pass.md` on it before you paste anything. The canon owns the shape (skeleton, word ceiling, banned patterns, the human-attention line). The governor owns the drafting machinery and the checks. Neither is restated here, so tuning the voice happens in one place. If this file and the canon ever disagree, the canon wins and this file is the bug.
+
+One deliberate exception to the governor: its default output path is a Gmail draft, and this skill pastes in chat instead, for the reason below. Everything else about it applies unchanged.
 
 The client-facing copy in this skill is the subject line and email body below. The Slack post in Step 5 is internal, goes to the Spice team, and does not run through the pass.
 

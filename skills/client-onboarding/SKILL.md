@@ -352,7 +352,7 @@ _Departed — never assign: Cesar (Head of Client Services through early 2026), 
 - Task templates by service: `references/onboarding-tasks.md`
 - Kickoff email templates: `references/kickoff-email-template.md`
 - Client email canon (owns voice, shape, and length): `references/client-comms-style.md`
-- The check to run before presenting a draft: `references/client-comms-pass.md`
+- The governor on client comms, run before presenting a draft: `references/client-comms-pass.md`
 - Storefront audit skill: `storefront-audit` (in the `spice-marketplaces` plugin)
 - Optimized menu sheet skill: `optimized-menu-sheet` (in the `spice-marketplaces` plugin)
 

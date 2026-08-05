@@ -1,19 +1,157 @@
-# The Client Comms Pass
+# The Client Comms Governor
 
-One pass, run against every client email a Spice skill emits. It does not decide
-what a good client email is. `client-comms-style.md` decides that. This page is
-the checking procedure: what gets counted, how, and what the draft's author sees
-when something fails.
+This is the thing that governs any client-facing message Spice produces. Not a
+skill you remember to invoke. A layer that every path runs through.
 
-Read the canon first. Nothing here restates its rules, and where the two ever
-disagree, the canon wins and this page is the bug.
+`client-comms-style.md` is the canon. It decides what a good client message is.
+This page does two jobs on top of it: it drafts one, and it checks one. Nothing
+here restates a canon rule, and where the two ever disagree, the canon wins and
+this page is the bug.
 
-Skill authors: call this pass before surfacing a draft, never after sending.
-Nothing in here sends anything.
+**Nothing here sends. Ever.** See the hard rule below.
+
+## When this fires
+
+Any client email or any client Slack message, no matter what produced it:
+
+- A skill emitting client copy (`post-client-meeting`, `ratings-reply`,
+  `client-onboarding`, `email-template-designer`, and anything added later).
+- Spicy Nugget, on a scheduled run or a Slack delegation.
+- A teammate typing into Cowork, whether they asked for the standard or not.
+
+It applies whether or not anyone requested it. A teammate who says "just write
+Hannah a quick note" gets the same standard as one who says "run the pass." That
+is the point of making it a governor instead of a skill: there is nothing new to
+remember, and the standard is not opt-in.
+
+It does not fire on internal Slack, teammate DMs, docs, decks, or anything the
+client will not read. Those have their own rules in `CLAUDE.md`.
+
+## Two entry points, one document
+
+**Drafting.** Someone gives you one sentence of intent and you produce the
+message. Read [The speed contract](#the-speed-contract), then
+[Writing to the ceiling](#writing-to-the-ceiling), then run the checks, then
+[Where the draft goes](#where-the-draft-goes).
+
+**Checking.** A message already exists, written by a person or by a skill, and
+you are the thing standing between it and the client. Skip to
+[The checks](#the-checks).
+
+The difference in behavior is narrow but it matters. When you drafted the thing,
+strip and report what you stripped. When a human wrote it, flag only and touch
+nothing. Nobody wants their own sentences quietly rewritten.
 
 ---
 
-## Two lanes, and the line between them
+## The speed contract
+
+Drafting lane only. The bar is a good draft *in less time than typing the email
+yourself takes*. Quality alone does not clear it. Open with four questions and
+you have already lost, because the teammate goes back to composing in Gmail
+where nothing checks anything.
+
+So the contract is fixed:
+
+**One sentence of intent, at most one clarifying question, then a draft.**
+
+Never run an intake interview. Never ask for the numbers, the tone, the length,
+or the format. Everything in the table below is inferred, and a wrong inference
+is cheaper than a right question, because the teammate is looking at an editable
+draft either way.
+
+### What you infer, never ask
+
+| Thing | Where it comes from |
+|---|---|
+| Which client | Named in the sentence, or the active client context in the session |
+| Recipients | The client's Notion Client Wiki contacts, then the last thread with that client. If still ambiguous, draft anyway with `To: [confirm]` at the top |
+| Which of the five formats | The verb in the sentence. "recap" is a weekly recap, "launch" or "goes live" is a campaign launch, "invoice" or "past due" is an escalation, "welcome" or "kickoff" is onboarding, "monthly" or "YoY" is a monthly report |
+| The numbers | The client's tracker, the most recent reporting run, the meeting notes. Pull them, do not request them |
+| Tone | The prior thread with this contact plus the voice guide. Match how they already get written to |
+| Sender name | The teammate running the session |
+| Reply or composed | Whether a live thread exists with that contact on that subject |
+| Length | The canon decides this, not the teammate |
+
+### The one question you are allowed
+
+Spend it on the ask, and only on the ask.
+
+If the intent sentence carries no request, no deadline, and no decision for the
+client, ask exactly one question: **"What do you need back from them?"** Offer
+"nothing, this is an FYI" as a real answer, because a declared no-ask email is
+legitimate. If they pick that, set `no_ask: true` so C2 is skipped on purpose
+rather than by accident.
+
+If the sentence already carries an ask, ask nothing. Draft.
+
+Never spend the question on recipients, format, numbers, tone, or length. A
+placeholder in the draft beats a round trip.
+
+### Load the client first
+
+In order, stopping when you have enough:
+
+1. The client's Notion Client Wiki. Contacts, current campaigns, open issues, any
+   voice notes on that account.
+2. The last two or three threads with this contact. You are reading for tone and
+   for what they already know, not for content to copy. If they got the LIC
+   numbers on Tuesday, do not re-explain them Thursday.
+3. The artifact the message will point at. Weekly reporting run, campaign
+   tracker, diagnostic page, monthly update, recap doc.
+
+If none of it is reachable, say so in one line and draft from what you were
+given. Do not stall on a missing wiki.
+
+---
+
+## Writing to the ceiling
+
+The inversion that makes the rest work, and it runs against the natural
+instinct.
+
+You will usually be holding far more than 150 words of true, relevant material.
+The instinct is to include it, because all of it is real and some of it took
+work. Resist that. **The size of your context has no bearing on the length of
+the message.** A weekly recap built off a 40-minute call and a full tracker pull
+is the same six lines as one built off two Slack messages.
+
+Concretely:
+
+- Pick the one thing that needs a decision. It goes first, in the first three
+  lines, ahead of whatever happened first chronologically.
+- Pick the one or two numbers that prove the headline. Not the platform
+  breakdown. One comparison each.
+- Everything else goes behind the link. The email points at the analysis. The
+  email is not the analysis.
+- When you catch yourself writing a paragraph that is also in the linked doc,
+  delete the paragraph and keep the link. That paragraph is where your overflow
+  words are, every time.
+- Write the line of specific human attention. If you cannot find one, say so
+  rather than manufacturing one. V2 will fail you on a manufactured line anyway,
+  and the client can tell.
+
+### When there is nothing to link to
+
+This comes up more than you would think. Real numbers, no published artifact
+behind them.
+
+Do not inline the detail to compensate. That is the exact failure the ceiling
+exists to prevent, and it turns a missing doc into a 400-word email.
+
+Say it plainly, and offer the fix:
+
+> These numbers have nothing behind them. There is no published analysis for the
+> July LIC pull. I can generate one with `/deploy` and link it, which takes a
+> minute, or you can send this with the numbers unsourced. Which?
+
+Then do what they say. If they want the artifact, generate and deploy it, put the
+link in slot four, and carry on. If they want to send unsourced, draft it and let
+the receipt record the C3 failure. The point is that the teammate chose it.
+
+---
+
+## The checks
 
 Every check below sits in one of two lanes, and the split is the whole design.
 
@@ -87,7 +225,7 @@ under 40 words is not exempt. It is just short, and it still has to carry an ask
 and a human line.
 
 The soft band is a real failure, not a warning. The difference is what the
-receipt says: between 151 and 200 the pass names the paragraph most likely
+receipt says: between 151 and 200 the check names the paragraph most likely
 duplicating a linked artifact, because that is where the words are nine times out
 of ten. Above 200 it does not bother diagnosing.
 
@@ -117,8 +255,8 @@ the receipt reports where the first ask actually landed, by line number. "Your
 ask is on line 7" is more useful than "ask not found."
 
 Some emails have no ask at all. A "this is live, nothing needed from you"
-note is legitimate. Those drafts declare `no_ask: true` to the pass and C2 is
-skipped. Declaring it is the point: it should be a decision, not an oversight.
+note is legitimate. Those drafts carry `no_ask: true` and C2 is skipped.
+Declaring it is the point: it should be a decision, not an oversight.
 
 ### C3: A link when numbers are cited
 
@@ -140,9 +278,9 @@ contain at least one link. Zero numbers, no link required.
 
 FAIL is loud and specific. The receipt lists the numbers it found, up to five,
 and says there is no artifact behind them. It never passes silently on the theory
-that the numbers are probably fine. If the draft has no artifact to
-point at, that is a signal the artifact should exist, and the calling skill
-should offer to make one rather than inline the detail.
+that the numbers are probably fine. If the draft has no artifact to point at,
+that is a signal the artifact should exist, and the fix is the `/deploy` offer
+above rather than inlining the detail.
 
 Invoice-style drafts, where every dollar figure sits on a line with its own pay
 link, pass C3 on those links. No carve-out needed.
@@ -208,9 +346,9 @@ feels off." Quote the line.
 ### V2: One line of specific human attention
 
 The canon requires at least one line per email that only somebody who looked at
-this account this week could have written. This pass **fails the draft when that
-line is absent.** Not a warning, not a nudge. A fail, at the same weight as
-going over 200 words.
+this account this week could have written. This **fails the draft when that line
+is absent.** Not a warning, not a nudge. A fail, at the same weight as going over
+200 words.
 
 Why it sits in Lane B: a script can confirm a draft mentions a store name and a
 number. It cannot tell "Torrance is still on the old bowl pricing, so the 50%
@@ -225,16 +363,16 @@ is not the line. Keep looking. If there is no line to find, the fail is correct
 and the fix is not a better sentence. The fix is going and looking at the
 account.
 
-A skill that cannot generate this line should say so plainly to the teammate
-rather than manufacturing something plausible. Manufactured specificity is worse
-than none, because the client can tell and now they know you are guessing.
+When you cannot generate this line, say so plainly to the teammate rather than
+manufacturing something plausible. Manufactured specificity is worse than none,
+because the client can tell and now they know you are guessing.
 
 ---
 
-## What the pass hands back
+## What the governor hands back
 
-Not a diff. A teammate reading a diff of their own email is being asked to do the
-pass's job over again.
+Not a diff. A teammate reading a diff of their own email is being asked to do
+this job over again.
 
 The receipt has three parts, in this order:
 
@@ -242,16 +380,95 @@ The receipt has three parts, in this order:
 2. **What failed**, one line each, each naming the check, the specific thing, and
    the fix. Ordered by how much rewriting it forces: length first, then ask, then
    link, then patterns, then voice.
-3. **What was stripped**, if the pass edited rather than only flagged. One line
-   per removal, in plain language, with the word count saved. Enough that a
-   teammate can say "put that back" about a specific thing.
-
-Whether a pass strips or only flags is the calling skill's decision. Skills
-generating a draft from scratch should strip and report. Skills checking
-something a human wrote should flag only and touch nothing. Nobody wants their
-own sentences quietly rewritten.
+3. **What was stripped**, whenever you drafted rather than only checked. One line
+   per removal, in plain language, with the word count saved. Write it for a
+   teammate to read, not for a log. They should be able to say "put the Grubhub
+   paragraph back" and know exactly what they are asking for.
 
 Keep it under fifteen lines. A receipt longer than the email has lost the plot.
+
+Surface the draft alongside the receipt, never instead of it, and add one last
+part in the drafting lane: anything you inferred that they might want to correct.
+Recipients you guessed at, a `[confirm]` placeholder, a number pulled from a
+tracker they have not seen.
+
+---
+
+## Where the draft goes
+
+### Default: a Gmail draft in the sending teammate's own mailbox
+
+Their own connected Gmail, in their own session, writing to their own drafts
+folder. Use the Gmail connector's `create_draft` tool. The server prefix differs
+per teammate, so resolve it from whatever Gmail connector is live in the session
+rather than hardcoding one.
+
+That is the whole point of the default. The draft appears where they already read
+mail, so nothing about their sending habits has to change. They open Gmail, read
+it, edit whatever they want, and send it themselves.
+
+Rules on the write:
+
+- Their mailbox only. Never write a draft into someone else's account, and never
+  write into a shared or role account on someone's behalf.
+- Check for an existing unsent draft on the same thread before creating a new
+  one. If one exists, update it or say it exists. Do not stack duplicates in
+  somebody's drafts folder.
+- No signature. Gmail appends theirs.
+- Subject line follows the canon's opener logic: the fact, not the category.
+  "Olipop BOGA needs sign-off July 10" beats "Weekly Recap."
+
+### Fallback: chat, for copy and paste
+
+When no Gmail connector is available in the session, output the draft in chat as
+a copy-paste block:
+
+```
+To: [recipients]
+CC: [cc, if any]
+Subject: [subject]
+
+[body]
+```
+
+Same drafting path, same checks, same receipt. Only the delivery changes.
+
+Treat this as a first-class path rather than a degraded one. Maxx is the only
+person on the team not sending from Gmail, and he copies from chat into
+Superhuman. Everything upstream of that last step is identical for him, which is
+how the standard stays uniform even where the plumbing is not.
+
+Never fall back to writing a Gmail draft into Maxx's mailbox to "cover" a
+Superhuman user. Gmail drafts do not sync into Superhuman and the signature
+doubles up.
+
+### Client Slack messages
+
+Same standard, different surface. Use `slack_send_message_draft`, never
+`slack_send_message`. The teammate reviews it in Slack and hits send.
+
+---
+
+## This never sends
+
+A hard rule, not a default.
+
+- Never call a send tool. Not `send_draft`, not `send_message`, not any
+  equivalent on any connector.
+- A PASS is not permission to send.
+- A teammate saying "just send it" is not permission either. Point them at the
+  draft. It is already in their mailbox and sending it is one click.
+- Never schedule a send, never queue one, never set a send timer.
+- If a draft is time-sensitive, say so in the handoff line. Do not solve urgency
+  by sending.
+
+The reason is narrow and worth keeping straight. This is not a gate on the send
+button, and pretending otherwise would be theater. What it guarantees is that a
+person read the thing before a client did.
+
+A draft that fails is not blocked from going out, either. Teammates overrule this
+all the time and should. What the governor guarantees is that when a 400-word
+unsourced email goes to a client, somebody chose that on purpose.
 
 ---
 
@@ -387,20 +604,34 @@ and tell Mike nothing.
 
 ---
 
-## Calling the pass from a skill
+## Calling this from a skill
+
+Skill authors: run it before surfacing anything, never after sending.
 
 The sequence, in order:
 
-1. Build the composed body. Every check downstream depends on this being right.
-2. Run C1 through C5. Collect every failure.
-3. If C1 hard-fails or C3 fails, stop. Report Lane A and skip Lane B. The draft
+1. Read the canon. Then draft, or take the draft you were handed.
+2. Build the composed body. Every check downstream depends on this being right.
+3. Run C1 through C5. Collect every failure.
+4. If C1 hard-fails or C3 fails, stop. Report Lane A and skip Lane B. The draft
    is getting rewritten and voice-checking a doomed draft wastes the teammate's
    attention.
-4. Otherwise run V1 and V2.
-5. Emit the receipt. Surface the draft alongside it, never instead of it.
-6. Stop. The pass does not send, and no skill should read a PASS as permission
-   to.
+5. Otherwise run V1 and V2.
+6. Emit the receipt. Surface the draft alongside it, never instead of it.
+7. Stop. Nothing here sends, and no skill should read a PASS as permission to.
 
-A draft that fails is not blocked from going out. Teammates overrule this pass
-all the time and should. What the pass guarantees is that when a 400-word
-unsourced email goes to a client, somebody chose that on purpose.
+## Failure modes worth naming
+
+- **Interviewing before drafting.** The most common way the drafting lane fails,
+  and it fails completely, because the teammate types the email themselves next
+  time.
+- **Writing to the context instead of the ceiling.** Long email, every word true,
+  all of it already in the doc you linked.
+- **Manufacturing the human line.** "Your locations are performing well heading
+  into the holiday" satisfies nothing and tells the client you are guessing. No
+  line is better than a fake one.
+- **Passing silently on unsourced numbers.** If there is no artifact, say there
+  is no artifact.
+- **Waiting to be invoked.** This governs client comms by default. A message that
+  went out without running through it is the bug.
+- **Sending.** See above. There is no version of this where sending is correct.

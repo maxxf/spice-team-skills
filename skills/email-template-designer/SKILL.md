@@ -40,7 +40,7 @@ For every campaign, the skill outputs:
 
 This skill emits templates, not one-off emails, and the reader at the far end is the client's customer rather than the client. So the standard applies in part, and the split is worth being precise about.
 
-**The words that go through the pass:** subject lines, preview text, headlines, body copy, and CTA labels in both variants. Run `references/client-comms-pass.md` on them before you hand the files over. What you are catching is the anti-AI-tell half of `references/client-comms-style.md`: the banned-pattern table, em and en dashes, hedge stacking, throat-clearing openers, and three soft exits where one line would do. That half is surface-independent and this file restates none of it.
+**The words that go through the pass:** subject lines, preview text, headlines, body copy, and CTA labels in both variants. Run `references/client-comms-pass.md` on them in checking mode before you hand the files over (its drafting lane is built for a person writing to a named account, so it does not apply here). What you are catching is the anti-AI-tell half of `references/client-comms-style.md`: the banned-pattern table, em and en dashes, hedge stacking, throat-clearing openers, and three soft exits where one line would do. That half is surface-independent and this file restates none of it.
 
 **The parts that do not apply:** the canon's skeleton, its word ceiling, its ask-in-the-first-three-lines rule, and its one-line-of-human-attention rule are all built for a person writing to a named account. A promo email has a CTA, not an ask, and a broadcast to twelve thousand customers cannot carry a line proving somebody looked at one of them. Do not force those checks and do not fake passing them.
 
@@ -360,4 +360,4 @@ For the Retention Specialist + Designer doing 5-10 emails/week:
 | `references/asset-suggestions.md` | How to search for and surface existing client photography, placeholder enhancement format |
 | `references/figma-import-guide.md` | html.to.design workflow, post-import checklist, file naming conventions |
 | `references/client-comms-style.md` | The client email canon. Banned patterns and voice rules that apply to template copy |
-| `references/client-comms-pass.md` | The check to run on subject lines, headlines, body copy, and CTA labels |
+| `references/client-comms-pass.md` | The governor on client comms. Here it runs in checking mode only, scoped to subject lines, headlines, body copy, and CTA labels |

@@ -4,8 +4,8 @@
 > Maxx to read, edit, and send himself from his own Slack. No skill or agent should
 > post it.
 
-- **Target channel:** `#team-spice` (the whole client-facing team). Bugs and questions about the skill go to `#ai-things`.
-- **Drafted:** 2026-08-05, against plugin 1.30.1.
+- **Target channel:** `#team-spice` (the whole client-facing team). Bugs and questions about the standard go to `#ai-things`.
+- **Drafted:** 2026-08-05, against plugin 1.31.0.
 - **Owner of the follow-on audit:** Maxx Freedman. Review date: 2026-09-08.
 - **Sources:** the 31-email baseline in `companies/spice/projects/client-email-anti-ai-protocol/references.md` and the canon at `references/client-comms-style.md`.
 - **Deliberately not in the draft:** any teammate's name. The baseline attributes patterns by sender because it has to. The announcement does not, because it does not have to.
@@ -20,11 +20,11 @@ Start with the email that kicked this off. Shai at Westville replied to one of o
 
 > "3. These are VERY AI looking. Is there a way to make that a little more subtle"
 
-Be accurate about what he meant. Item 3 in that email was the hero image A/B test, and the assets were three ad creatives sitting in a Figma prototype. He was talking about the images. Nobody has complained about how we write, and I am not going to pretend otherwise.
+A paying client told us our email reads like a machine wrote it. Sit with that for a second before we move on.
 
-The email around those images is a different conversation.
+Here is what he was reacting to. That email was the longest of the 31. 466 words. The only thing we actually needed back from him, approval to launch a test, sat at item three of four, roughly 300 words down. And it linked a full analysis, then retyped the analysis directly above the link.
 
-It was the longest of the 31. 466 words. The only thing we actually needed back from him, approval to launch that test, sat at item three of four, roughly 300 words down. And it linked a full analysis, then retyped the analysis directly above the link.
+That is what AI-shaped writing looks like from the other side of the inbox. Not a vocabulary problem. A shape problem.
 
 That is the pattern across the whole sample. The longer our emails get, the further down the ask slides. Nine emails in the audit ran long. Exactly one of them put the ask in the first three lines.
 
@@ -78,10 +78,12 @@ A short email with nothing specific in it does not read as respect for someone's
 
 If you cannot write that line, you are not ready to send the email. Go look at the account first.
 
-The fast path is `@skill client-email`. Give it one sentence ("recap for Fresh Kitchen on the Olipop launch") and it drafts the whole thing into your own Gmail drafts, already checked against the standard. It pulls the numbers, picks the format, and tells you what it stripped and why. It never sends. You send.
+There is no skill to remember here. The standard applies to client comms on its own, whether you ask for it or not. Write a client an email in Cowork and it comes out shaped this way. Paste one you already wrote and it gets checked before it goes anywhere.
 
-To get it, paste `update spice skills` into Cowork. That pulls plugin 1.30.1, which carries both the standard and the new skill. `post-client-meeting`, `ratings-reply`, `client-onboarding`, and `email-template-designer` all run through the same check now, so recaps and onboarding emails come out the right shape whether or not you think about it.
+You can also just ask for the draft. One sentence ("recap for Fresh Kitchen on the Olipop launch") and it writes the whole thing into your own Gmail drafts, already checked. It pulls the numbers, picks the format, and tells you what it stripped and why. It never sends. You send.
+
+To get it, paste `update spice skills` into Cowork. That pulls plugin 1.31.0. `post-client-meeting`, `ratings-reply`, `client-onboarding`, and `email-template-designer` run through the same standard now, so recaps and onboarding emails come out the right shape whether or not you think about it.
 
 The full standard is in `references/client-comms-style.md`: the skeleton, the banned-phrase table, and six before/after pairs pulled from our own threads.
 
-I am re-sampling sent mail on September 8 to see whether any of this moved. That one is on me. Anything broken or annoying about the skill, put it in `#ai-things`.
+I am re-sampling sent mail on September 8 to see whether any of this moved. That one is on me. Anything broken or annoying about how it drafts, put it in `#ai-things`.

@@ -155,6 +155,8 @@ Client knowledge lives in **HQ** (the shared brain) and in each client's **Notio
 ### Client Emails
 **Canon: `references/client-comms-style.md`. Read it before writing any client email.** It carries the skeleton, the 150-word ceiling, the banned-pattern table, and before/after pairs from real Spice threads.
 
+**Governor: `references/client-comms-pass.md`.** It runs on every client email and client Slack message, whichever path produced it and whether or not anyone asked. It drafts (one sentence of intent in, everything else inferred, draft lands in the sender's own Gmail drafts or in chat to copy) and it checks (length, ask position, link, banned patterns, dashes, then voice and the human-attention line). It never sends.
+
 The short version: name opener, then immediately why they're reading this. The ask lands in the first three lines. Specific metrics, but link the analysis instead of retyping it. 150 words max on a composed email (replies under 40 are exempt, over 200 is a fail). One line of specific human attention per email, a detail proving a person looked at the account. Close with one real question ("Sound good?"), not three soft exits.
 
 Note: "Happy to jump on a call to talk through any of this!" used to be the house closer. The baseline audit found it working as padding in real sent mail, so it's now on the banned list. Use "Want to talk it through?" or cut it.
@@ -258,6 +260,7 @@ Spicy Nugget is the AI employee running 24/7 on the Mac Mini. When a task is ope
 
 ## Key References in This Workspace
 - `references/client-comms-style.md`: The client email standard (read before writing to any client)
+- `references/client-comms-pass.md`: The governor on client comms. Drafts and checks every client email and client Slack message. Never sends.
 - `spice-cowork-audit.md`: Full operational audit of skills, agents, plugins, and gaps
 - `maxx-freedman-voice-guide.md`: Complete writing voice guide (read before any branded output)
 
