@@ -33,6 +33,9 @@ KEY_PATH = os.path.expanduser(
     os.environ.get("SPICE_SHEETS_KEY", "~/.config/spice/google-sheets-writer.json")
 )
 NOTION_TOKEN_PATH = os.path.expanduser("~/.config/spice/notion-token")
+# Kept in sync with notion_campaigns_read.CAMPAIGN_PLANNING_DB — imported there rather
+# than re-declared so the two can't drift.
+from notion_campaigns_read import CAMPAIGN_PLANNING_DB  # noqa: E402
 SHEET_MIME = "application/vnd.google-apps.spreadsheet"
 FOLDER_MIME = "application/vnd.google-apps.folder"
 SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/spreadsheets"]
@@ -141,11 +144,39 @@ def check_notion(rep: Report):
         with urllib.request.urlopen(req, timeout=15) as r:
             body = json.loads(r.read())
         who = body.get("bot", {}).get("owner", {}).get("type") or body.get("name") or "bot"
-        rep.add("env", "notion token", OK, f"{source} — authenticates as {who}")
     except Exception as e:  # noqa: BLE001 — any failure here is a real, reportable failure
         rep.add(
             "env", "notion token", FAIL, f"{source} — {type(e).__name__}: {str(e)[:160]}",
             "token is present but rejected or unreachable; re-issue it and store in HQ secrets",
+        )
+        return
+
+    # Authenticating is not the same as being able to read the campaign DB. A Notion
+    # integration that was never granted access to the Campaign Planning database passes
+    # /users/me and then 404s on every query — which reads as "token fine, no campaigns"
+    # and sends you debugging the wrong thing. Probe the actual database.
+    try:
+        import urllib.request
+
+        req = urllib.request.Request(
+            f"https://api.notion.com/v1/databases/{CAMPAIGN_PLANNING_DB}/query",
+            data=json.dumps({"page_size": 1}).encode(),
+            headers={"Authorization": f"Bearer {tok}", "Notion-Version": "2022-06-28",
+                     "Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=20):
+            pass
+        rep.add("env", "notion token", OK,
+                f"{source} — authenticates as {who}, can read Campaign Planning DB")
+    except Exception as e:  # noqa: BLE001
+        rep.add(
+            "env", "notion campaign DB access", FAIL,
+            f"{source} — authenticates as {who} but cannot read the Campaign Planning DB "
+            f"({type(e).__name__}: {str(e)[:80]})",
+            "this integration was never shared on that database. Share the DB with it in "
+            "Notion, or use a token that already has access "
+            "(SHARED/NOTION_CAMPAIGN_PLAN)",
         )
 
 

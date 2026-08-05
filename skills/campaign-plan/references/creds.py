@@ -105,7 +105,12 @@ def available() -> bool:
 # ---------------------------------------------------------------- Notion
 
 NOTION_TOKEN_PATH = "~/.config/spice/notion-token"
-NOTION_HQ_SECRET_ENV = "SHARED/NOTION_SPICY"
+# SHARED/NOTION_CAMPAIGN_PLAN is the integration that can actually read the Campaign
+# Planning DB. SHARED/NOTION_SPICY is a different integration: it authenticates fine, so
+# a token check passes, but every DB query 404s. Prefer the one that works, and keep the
+# other as a fallback rather than a trap.
+NOTION_HQ_SECRET_ENVS = ["SHARED/NOTION_CAMPAIGN_PLAN", "SHARED/NOTION_SPICY"]
+NOTION_HQ_SECRET_ENV = NOTION_HQ_SECRET_ENVS[0]
 NOTION_TOKEN_ENV = "NOTION_TOKEN"
 
 
@@ -125,7 +130,7 @@ def _clean_notion(raw: str) -> str:
 def resolve_notion(env: dict | None = None) -> tuple[str, str]:
     """(source, detail) for the Notion token. Same precedence rule as the Google key."""
     env = os.environ if env is None else env
-    for name in (NOTION_TOKEN_ENV, NOTION_HQ_SECRET_ENV):
+    for name in [NOTION_TOKEN_ENV] + NOTION_HQ_SECRET_ENVS:
         if (env.get(name) or "").strip():
             return "env", name
     path = os.path.expanduser(NOTION_TOKEN_PATH)

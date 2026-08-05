@@ -64,14 +64,14 @@ read access once, then prefix any run with `hq secrets exec`:
 ```bash
 hq secrets exec --company spice \
   --only SHARED/GOOGLE_SHEETS_WRITER \
-  --only SHARED/NOTION_SPICY \
+  --only SHARED/NOTION_CAMPAIGN_PLAN \
   -- ./run_local.sh <client>
 ```
 
 | Credential | HQ path | What it powers |
 |---|---|---|
 | Google service-account key | `SHARED/GOOGLE_SHEETS_WRITER` | Reading Drive inputs and writing the client Sheet |
-| Notion token | `SHARED/NOTION_SPICY` | Pulling planned campaigns from the Campaign Planning DB |
+| Notion token | `SHARED/NOTION_CAMPAIGN_PLAN` | Pulling planned campaigns from the Campaign Planning DB |
 
 The Google robot is the same for every client (`spice-sheets-writer@…`) — there is no
 per-client key. If a run says the credential is missing, you don't have the grant yet; ask
