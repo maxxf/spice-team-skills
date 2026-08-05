@@ -179,14 +179,10 @@ def _service():
     """
     global _SVC_CACHE
     if _SVC_CACHE is None:
-        if not os.path.exists(KEY):
-            raise FileNotFoundError(
-                f"service-account key missing at {KEY}. See references/google-service-account-setup.md."
-            )
-        from google.oauth2 import service_account
         from googleapiclient.discovery import build
-        creds = service_account.Credentials.from_service_account_file(KEY, scopes=SCOPES)
-        _SVC_CACHE = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        import creds as _creds
+        _SVC_CACHE = build("sheets", "v4", credentials=_creds.credentials(SCOPES),
+                           cache_discovery=False)
     if _WRITE_MODE.get("dry_run"):
         return _DryRunGuard(_SVC_CACHE)
     return _SVC_CACHE

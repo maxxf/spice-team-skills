@@ -47,12 +47,9 @@ _LOCAL = threading.local()
 
 
 def _credentials():
-    if not os.path.exists(KEY):
-        raise FileNotFoundError(
-            f"service-account key missing at {KEY}; see references/google-service-account-setup.md."
-        )
-    from google.oauth2 import service_account
-    return service_account.Credentials.from_service_account_file(KEY, scopes=SCOPES)
+    """Resolved via creds.py: HQ secrets injection first, key file second."""
+    import creds
+    return creds.credentials(SCOPES)
 
 
 def _drive():

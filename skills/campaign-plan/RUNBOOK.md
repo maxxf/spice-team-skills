@@ -56,21 +56,32 @@ by exporting `SPICE_PY=/path/to/venv/bin/python`. That variable is how the skill
 that has what it needs, so if you use a venv, put the export in your shell profile — otherwise
 every run needs it set by hand.
 
-**3. Two credentials, from Maxx, transferred securely.** Password manager or another secure
-channel. Never Slack, never email, never committed to a repo.
+**3. Two credentials — from HQ secrets. Nothing to install, nothing to hand over.**
 
-| Credential | Save it at | What it powers |
+Both live in HQ and get injected for the length of a single command. Ask Maxx to grant you
+read access once, then prefix any run with `hq secrets exec`:
+
+```bash
+hq secrets exec --company spice \
+  --only SHARED/GOOGLE_SHEETS_WRITER \
+  --only SHARED/NOTION_SPICY \
+  -- ./run_local.sh <client>
+```
+
+| Credential | HQ path | What it powers |
 |---|---|---|
-| Google service-account key | `~/.config/spice/google-sheets-writer.json` | Reading Drive inputs and writing the client Sheet |
-| Notion token | `~/.config/spice/notion-token` | Pulling planned campaigns from the Campaign Planning DB |
+| Google service-account key | `SHARED/GOOGLE_SHEETS_WRITER` | Reading Drive inputs and writing the client Sheet |
+| Notion token | `SHARED/NOTION_SPICY` | Pulling planned campaigns from the Campaign Planning DB |
 
-`chmod 600` both. The Google robot is the same for every client
-(`spice-sheets-writer@…`) — there is no per-client key.
+The Google robot is the same for every client (`spice-sheets-writer@…`) — there is no
+per-client key. If a run says the credential is missing, you don't have the grant yet; ask
+Maxx rather than hunting for a key file.
 
-> **Moving to HQ secrets:** distributing these by hand is the last manual step in the setup, and
-> it's tracked as US-001 on the campaign-reporting-team-wide project. When that lands, the keys get
-> injected per run from HQ secrets and steps 3's file paths go away. Until then, the local files
-> above are the real mechanism — don't wait for the change.
+**Key files still work as a fallback.** If you already keep the key at
+`~/.config/spice/google-sheets-writer.json` and the token at `~/.config/spice/notion-token`,
+those are still read, and `chmod 600` both. HQ secrets take priority when present, so an
+injected credential always beats a stale local copy. Never put either in Slack, in email, or
+in a commit.
 
 **4. Verify before you trust it.** Don't discover a broken setup halfway through a client refresh:
 
@@ -298,9 +309,10 @@ gated, but the snapshots are the seatbelt.
 
 | Symptom | What's actually wrong |
 |---|---|
-| `CAN'T WRITE THE LIVE SHEET — key not on this machine` | You're in Cowork, or the key isn't at `~/.config/spice/google-sheets-writer.json`. Run on your Mac. |
+| `CAN'T WRITE THE LIVE SHEET — key not on this machine` | You're in Cowork, or you have no credential. Run on your Mac, under `hq secrets exec` (setup step 3). |
 | `No module named 'google...'` | The Python being used doesn't have the deps. Install them, or set `SPICE_PY` to one that does. |
-| `service-account key missing at …` | Setup step 3. |
+| `No Google service-account credential` | You don't have the HQ grant yet, or you forgot the `hq secrets exec` prefix. Setup step 3. |
+| `429 ... Quota exceeded ... Read requests per minute` | You ran several clients back to back and hit Google's 60-reads-per-minute cap. Wait a minute and re-run — nothing is broken and nothing was half-written. |
 | Refresh refuses to publish, lists inputs | The input gate. Read what it names — usually a missing export or the UE by-location file instead of Campaign Summary. Fix the file in Drive and re-run; `--force-inputs` only if the gate is genuinely wrong. |
 | `no 'Campaign Plan Inputs / <date>/' folder yet` | Ops hasn't dropped this week's files, or the weekstart date is wrong. It's the **Monday** of the reporting week. |
 | Campaign missing from the Sheet | It's not in the Notion DB, or has the wrong Entry Type / Client. Fix it in Notion. |

@@ -64,24 +64,23 @@ class Report:
 def check_env(rep: Report):
     """Credentials, deps, and config resolution — the things that block every client."""
     # Google credential. HQ secrets first, since that is where this is heading.
-    cred_source = None
-    if os.environ.get("GOOGLE_SHEETS_WRITER_JSON"):
-        cred_source = "env (HQ secrets injected)"
-        rep.add("env", "google credential", OK, cred_source)
-    elif os.path.exists(KEY_PATH):
-        cred_source = f"file {KEY_PATH}"
-        mode = oct(os.stat(KEY_PATH).st_mode & 0o777)
-        rep.add("env", "google credential", OK, cred_source)
+    import creds as _creds
+    source, detail = _creds.resolve()
+    if source == "env":
+        rep.add("env", "google credential", OK, f"injected from HQ secrets (${detail})")
+    elif source == "file":
+        rep.add("env", "google credential", OK, f"file {detail}")
+        mode = oct(os.stat(detail).st_mode & 0o777)
         if mode != "0o600":
             rep.add(
                 "env", "google credential permissions", WARN, f"mode {mode}",
-                f"chmod 600 {KEY_PATH}",
+                f"chmod 600 {detail}",
             )
     else:
         rep.add(
             "env", "google credential", FAIL, "not found",
-            "hq secrets exec --only GOOGLE_SHEETS_WRITER_JSON -- <cmd>, "
-            f"or place the key at {KEY_PATH}",
+            f"hq secrets exec --company spice --only {_creds.HQ_SECRET_ENV} -- <cmd>, "
+            f"or place the key at {detail}",
         )
 
     # Python deps
@@ -115,13 +114,12 @@ def check_env(rep: Report):
 
 
 def notion_token():
-    tok = os.environ.get("NOTION_TOKEN")
-    if tok:
-        return tok.strip(), "env (HQ secrets injected)"
-    if os.path.exists(NOTION_TOKEN_PATH):
-        with open(NOTION_TOKEN_PATH) as f:
-            return f.read().strip(), f"file {NOTION_TOKEN_PATH}"
-    return None, None
+    import creds as _creds
+    source, detail = _creds.resolve_notion()
+    if source == "missing":
+        return None, None
+    label = f"injected from HQ secrets (${detail})" if source == "env" else f"file {detail}"
+    return _creds.notion_token(), label
 
 
 def check_notion(rep: Report):
@@ -129,7 +127,8 @@ def check_notion(rep: Report):
     if not tok:
         rep.add(
             "env", "notion token", WARN, "not found",
-            "campaign pulls will fail; hq secrets exec --only NOTION_TOKEN -- <cmd>",
+            "campaign pulls will fail; hq secrets exec --company spice "
+            "--only SHARED/NOTION_SPICY -- <cmd>",
         )
         return
     try:
@@ -157,12 +156,8 @@ def google_clients():
     from google.oauth2 import service_account
     from googleapiclient.discovery import build
 
-    raw = os.environ.get("GOOGLE_SHEETS_WRITER_JSON")
-    if raw:
-        creds = service_account.Credentials.from_service_account_info(json.loads(raw), scopes=SCOPES)
-    else:
-        creds = service_account.Credentials.from_service_account_file(KEY_PATH, scopes=SCOPES)
-    return build("drive", "v3", credentials=creds, cache_discovery=False)
+    import creds as _creds
+    return build("drive", "v3", credentials=_creds.credentials(SCOPES), cache_discovery=False)
 
 
 # ---------------------------------------------------------------- per client

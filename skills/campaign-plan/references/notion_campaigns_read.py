@@ -34,17 +34,9 @@ TOKEN_FILE = os.path.expanduser("~/.config/spice/notion-token")
 
 
 def _load_token():
-    tok = os.environ.get("NOTION_TOKEN")
-    if not tok and os.path.exists(TOKEN_FILE):
-        raw = open(TOKEN_FILE).read().strip()
-        if raw.startswith("{"):
-            try:
-                j = json.loads(raw)
-                raw = j.get("token") or j.get("notion_token") or j.get("NOTION_TOKEN") or raw
-            except Exception:
-                pass
-        tok = raw
-    return tok
+    """NOTION_TOKEN, then the HQ-injected SHARED/NOTION_SPICY, then the token file."""
+    import creds
+    return creds.notion_token()
 
 
 # ── Notion property extractors ──────────────────────────────────────────────

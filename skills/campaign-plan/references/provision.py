@@ -81,17 +81,13 @@ _SHEETS = None
 def _clients():
     global _DRIVE, _SHEETS
     if _DRIVE is None:
-        from google.oauth2 import service_account
         from googleapiclient.discovery import build
+        import creds as _creds
 
-        raw = os.environ.get("GOOGLE_SHEETS_WRITER_JSON")
-        if raw:
-            creds = service_account.Credentials.from_service_account_info(
-                json.loads(raw), scopes=SCOPES)
-        elif os.path.exists(KEY):
-            creds = service_account.Credentials.from_service_account_file(KEY, scopes=SCOPES)
-        else:
-            sys.exit(f"no Google credential — set GOOGLE_SHEETS_WRITER_JSON or place the key at {KEY}")
+        try:
+            creds = _creds.credentials(SCOPES)
+        except (FileNotFoundError, ValueError) as e:
+            sys.exit(str(e))
         _DRIVE = build("drive", "v3", credentials=creds, cache_discovery=False)
         _SHEETS = build("sheets", "v4", credentials=creds, cache_discovery=False)
     return _DRIVE, _SHEETS

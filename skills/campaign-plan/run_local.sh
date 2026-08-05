@@ -10,9 +10,15 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KEY="${SPICE_SHEETS_KEY:-$HOME/.config/spice/google-sheets-writer.json}"
 PY="${SPICE_PY:-python3}"
 
-if [ ! -f "$KEY" ]; then
-  echo "❌ Google service-account key not found at: $KEY"
-  echo "   Get it from Maxx/Santi, save it there (or set SPICE_SHEETS_KEY=/path/to/key.json)."
+# The credential can arrive two ways: injected by HQ secrets, or as a local key file.
+# Ask creds.py rather than testing for the file here, so the wrapper can never disagree
+# with what the Python actually accepts.
+if ! "${SPICE_PY:-python3}" -c "import sys;sys.path.insert(0,'$HERE/references');import creds;sys.exit(0 if creds.available() else 1)" 2>/dev/null; then
+  echo "❌ No Google service-account credential."
+  echo "   Either run it through HQ secrets:"
+  echo "     hq secrets exec --company spice --only SHARED/GOOGLE_SHEETS_WRITER --only SHARED/NOTION_SPICY -- ./run_local.sh $CLIENT"
+  echo "   or put the key file at: $KEY"
+  echo "   Setup is in RUNBOOK.md."
   exit 1
 fi
 if ! "$PY" -c "import googleapiclient, google.oauth2.service_account" 2>/dev/null; then
