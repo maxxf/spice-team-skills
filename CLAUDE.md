@@ -16,6 +16,8 @@ Self-critique every response internally: rate 1-10, fix weaknesses, iterate. I o
 ## How I Write
 Full voice guide lives at: `maxx-freedman-voice-guide.md` in this workspace. Read it before writing anything under my name or the Spice brand.
 
+Client email has its own standard on top of the voice guide: `references/client-comms-style.md`. Voice guide = how a sentence sounds. Client comms standard = what shape the email is. Read both before sending anything to a client.
+
 The short version: I write like I talk. Direct, specific, a little spicy. Point in the first sentence. Numbers to back it up. Clear next step to close. If a sentence doesn't advance the message, cut it. The vibe is "smart friend who works in the industry and is being straight with you."
 
 Key rules:
@@ -151,7 +153,11 @@ Client knowledge lives in **HQ** (the shared brain) and in each client's **Notio
 ## Communication Defaults
 
 ### Client Emails
-Professional but warm. Name opener, then immediately why they're reading this. Include specific metrics. Always reference next steps and timeline. Close with "Happy to jump on a call to talk through any of this!" or "Sound good?"
+**Canon: `references/client-comms-style.md`. Read it before writing any client email.** It carries the skeleton, the 150-word ceiling, the banned-pattern table, and before/after pairs from real Spice threads.
+
+The short version: name opener, then immediately why they're reading this. The ask lands in the first three lines. Specific metrics, but link the analysis instead of retyping it. 150 words max on a composed email (replies under 40 are exempt, over 200 is a fail). One line of specific human attention per email, a detail proving a person looked at the account. Close with one real question ("Sound good?"), not three soft exits.
+
+Note: "Happy to jump on a call to talk through any of this!" used to be the house closer. The baseline audit found it working as padding in real sent mail, so it's now on the banned list. Use "Want to talk it through?" or cut it.
 
 ### Cold Outreach
 Three sentences. Link to the deck. Link to book a call. Done. No essay.
@@ -251,6 +257,7 @@ Spicy Nugget is the AI employee running 24/7 on the Mac Mini. When a task is ope
 ```
 
 ## Key References in This Workspace
+- `references/client-comms-style.md`: The client email standard (read before writing to any client)
 - `spice-cowork-audit.md`: Full operational audit of skills, agents, plugins, and gaps
 - `maxx-freedman-voice-guide.md`: Complete writing voice guide (read before any branded output)
 
