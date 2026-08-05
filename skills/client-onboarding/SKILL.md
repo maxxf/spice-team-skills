@@ -237,7 +237,14 @@ When DM service is selected, the "Run Diagnostics on 3P" task should reference t
 
 ### Step 6: Draft Kickoff Email
 
-See `references/kickoff-email-template.md` for the full template.
+The kickoff email is the client's first written contact with Spice, and it is the single most audited email in the standard: seven of the twenty rows in the canon's banned-pattern table came out of past onboarding emails. Treat it accordingly.
+
+1. Read `references/client-comms-style.md`. It owns the shape, the word ceiling, the banned patterns, and the human-attention line. This file restates none of it.
+2. Read `references/kickoff-email-template.md` for the structure and the links that have to be in there.
+3. Draft. Where the template and the canon disagree, the canon wins.
+4. Run `references/client-comms-pass.md` against the draft before anyone sees it. Fix what the receipt names, then present.
+
+The client-facing copy in this skill is the kickoff email in this step and the same body echoed in the Step 7 summary. Everything else the skill produces (Notion tasks, the Stripe checklist, the manual-steps list) is internal and does not run through the pass.
 
 **For multi-service or DM clients:** Draft email introducing the Client Services Lead. Include onboarding form link, payment link (if available), and client portal link.
 
@@ -260,7 +267,7 @@ After all automation completes, output:
 
 ## Kickoff Email
 
-[Draft email content here, ready to copy/paste or send via Gmail]
+[Draft email content here, ready to copy/paste or send via Gmail. Pass receipt from Step 6 goes directly under it.]
 
 **To:** [client POC email]
 **CC:** [client services lead email]
@@ -344,6 +351,8 @@ _Departed — never assign: Cesar (Head of Client Services through early 2026), 
 
 - Task templates by service: `references/onboarding-tasks.md`
 - Kickoff email templates: `references/kickoff-email-template.md`
+- Client email canon (owns voice, shape, and length): `references/client-comms-style.md`
+- The check to run before presenting a draft: `references/client-comms-pass.md`
 - Storefront audit skill: `storefront-audit` (in the `spice-marketplaces` plugin)
 - Optimized menu sheet skill: `optimized-menu-sheet` (in the `spice-marketplaces` plugin)
 

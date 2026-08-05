@@ -213,11 +213,13 @@ This guide includes portal navigation directions, how to set up DoorDash Saved R
    - Toggle "Publish to web" on
    - Copy the published URL
 
-4. **Share with the client** via email or #ext-{client}-spice:
+4. **Share with the client** via email or #ext-{client}-spice. This is client-facing copy, so run it through the pass before it goes out. Starting point:
 
-   > "Here's the review reply guide we put together for your team. It walks through where to find reviews in DoorDash, how to set up saved reply templates so it takes 30 seconds per review, and the template text for every star rating. The key thing: every review gets a reply with a $5 credit, regardless of the rating. Let us know if you have questions!"
+   > "Here's the review reply guide for your team. It covers where to find reviews in DoorDash, how to set up saved replies so each one takes about 30 seconds, and the template text for every star rating. Every review gets a reply with a $5 credit, whatever the rating. Who on your side is owning it?"
    >
    > [published Notion link]
+
+   Swap the closing question for whatever you actually need from them. The point is that it is a question, not an open door.
 
 5. **Log in #int-{client}:** "DD review reply guide published and shared with client. Date: {date}."
 
@@ -249,6 +251,14 @@ For Path B clients, these escalation rules are already included in the shared No
 - $5 credit applies to ALL reviews regardless of star rating
 - Credit is single-use, no minimum order, 30-day expiration (recommended)
 - Every review gets a reply with credit attached. No exceptions by rating.
+
+## What runs through the client comms pass, and what does not
+
+This skill emits two different kinds of copy and they are held to different bars.
+
+**Messages to the client** run the full pass. That means the handoff note in Step B1.4, any email or `#ext-{client}-spice` message announcing that auto-reply is live, and anything you write to the client about reply coverage. Draft against `references/client-comms-style.md`, then check with `references/client-comms-pass.md` before sending. Neither is restated here.
+
+**Public review replies** are not emails. They go to a stranger who left two stars, they are two or three sentences long, and the pass's email-shaped checks (word ceiling, ask in the first three lines, link when numbers are cited) do not apply to them. What does carry over from the canon is the voice: no banned patterns from its table, no em dashes, and one specific detail instead of a template line. Same standard, different surface. Where this file and the canon disagree on voice, the canon wins.
 
 ## Reply Tone Guidelines
 

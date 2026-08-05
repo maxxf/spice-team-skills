@@ -64,38 +64,41 @@ The prep doc contains internal sections that must be stripped before sharing wit
 
 ### 4. Draft the Client Email — PASTE IN CHAT (do NOT create a Gmail draft)
 
-Create a concise, friendly recap email. The email goes directly in the chat for the user to copy and send — **do NOT use Gmail MCP to create a draft**, because Gmail drafts can't be cleanly updated/deleted via MCP and they pile up in the user's drafts folder.
+Write the recap against `references/client-comms-style.md`, then check it with `references/client-comms-pass.md` before you paste anything. The canon owns the shape (skeleton, word ceiling, banned patterns, the human-attention line). The pass owns the checking. Neither is restated here, so tuning the voice happens in one place. If this file and the canon ever disagree, the canon wins and this file is the bug.
+
+The client-facing copy in this skill is the subject line and email body below. The Slack post in Step 5 is internal, goes to the Spice team, and does not run through the pass.
+
+The email goes directly in the chat for the user to copy and send — **do NOT use Gmail MCP to create a draft**, because Gmail drafts can't be cleanly updated/deleted via MCP and they pile up in the user's drafts folder.
 
 **Subject line:** `[Client Name] Meeting Recap — [Date]`
 
 **Email body:**
 
+The slots below are the canon's skeleton applied to a recap. Read the canon for what each slot is doing and why the order matters.
+
 ```
-Hi [Client Contact],
+[Client Contact],
 
-Great connecting today. Here's a quick recap:
+[Headline outcome of the meeting. One sentence.]
 
-[3-5 TLDR bullet points summarizing key takeaways, decisions, or highlights from the meeting]
+[The one thing the client owns, with a date. It lands here, not at the bottom.]
+
+[The one or two numbers that carry the point. Not the whole table.]
 
 **Action Items:**
-- [ ] **[Owner Name]:** [Task description] — Due: [Date]
-- [ ] **[Owner Name]:** [Task description] — Due: [Date]
-- [ ] **[Owner Name]:** [Task description] — Due: [Date]
+- [ ] **[Owner Name]:** [Task description] (due [Date])
+- [ ] **[Owner Name]:** [Task description] (due [Date])
+- [ ] **[Owner Name]:** [Task description] (due [Date])
 
 Full meeting notes: [Link to Notion doc]
 
-[Brief next step or closing — 1 sentence]
+[One line only somebody who sat in this meeting and looked at this account could write.]
 
 Best,
 [Your Name]
 ```
 
-**Tone guidelines:**
-- Direct and friendly, not overly formal
-- Conversational but professional
-- Action-oriented and clear
-- Use first names when appropriate
-- Keep it concise — aim for under 150 words total
+**Voice and length:** the canon sets both. Do not carry a word target in your head from this file. Draft it, run the pass, fix what the receipt names.
 
 **Delivery format (paste this directly in chat as a copy-paste-ready block):**
 
@@ -208,6 +211,7 @@ Before handing off to the user, verify the following:
 - [ ] New action items listed with owners + due dates
 - [ ] Link to the week's full weekly report embedded in the doc
 - [ ] Page title dropped "Call Prep" prefix (now "Meeting Recap — [Date]" or similar)
+- [ ] Recap email run through `references/client-comms-pass.md`, passing or knowingly overruled
 - [ ] Email draft pasted in chat (NOT created as Gmail draft)
 - [ ] Spice-internal action items posted as draft to `#int-[client]` Slack channel (Step 5) — OR confirmed there were none
 - [ ] Notion doc URL provided to the user
@@ -222,50 +226,9 @@ The user sends both the email and the Slack post at their discretion.
 
 ## Email Examples
 
-**Example 1 -- Weekly sync:**
-```
-Hi Sarah,
+The examples live in the canon, not here. `references/client-comms-style.md` carries the weekly recap format worked end to end, plus six before-and-after pairs from real Spice threads where the original is quoted verbatim. Read those instead of a made-up sample, and read the passing draft in `references/client-comms-pass.md` for what a clean receipt looks like.
 
-Great sync today. Quick recap:
-
-- DoorDash ROAS holding steady at 6.3 despite slight CPO improvement
-- Organic sales surged 32% week-over-week -- investigating drivers
-- Tier 3 locations getting Uber co-funding while we fix ops issues
-
-**Action Items:**
-- [ ] **Ro:** Finalize tier-based budget structure -- Due: Feb 7
-- [ ] **Yuriy:** Schedule bi-weekly ops meeting -- Due: Feb 7
-- [ ] **Team:** Plan March Madness BOGO campaign -- Due: Feb 28
-
-Full meeting notes: [link]
-
-Let's touch base next week on the organic surge findings.
-
-Best,
-Maxx
-```
-
-**Example 2 -- Strategy session:**
-```
-Hi David,
-
-Productive session on Q2 planning. Key decisions:
-
-- Moving forward with the 3-tier location strategy
-- Pausing spend on underperforming locations until ops improve
-- Testing keyword campaigns on Uber once baseline is established
-
-**Action Items:**
-- [ ] **Jason:** Implement menu optimization via Deliverect -- Due: Feb 21
-- [ ] **Maxx:** Coordinate menu photo shoot with fiber bowl rebrand -- TBD
-
-Full meeting notes: [link]
-
-Excited to see these improvements roll out.
-
-Best,
-Maxx
-```
+Two earlier examples used to sit in this section. Both opened with a throat-clearing line and closed with a soft exit, and the canon's banned table now names both patterns, so keeping them here would have taught the opposite of the standard.
 
 ## Tips
 

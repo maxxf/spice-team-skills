@@ -36,6 +36,18 @@ For every campaign, the skill outputs:
 4. Save HTML files (Figma-importable via html.to.design plugin)
 5. Log the work to Campaign Planning DB with performance tracking fields
 
+## Which words here go through the client comms pass
+
+This skill emits templates, not one-off emails, and the reader at the far end is the client's customer rather than the client. So the standard applies in part, and the split is worth being precise about.
+
+**The words that go through the pass:** subject lines, preview text, headlines, body copy, and CTA labels in both variants. Run `references/client-comms-pass.md` on them before you hand the files over. What you are catching is the anti-AI-tell half of `references/client-comms-style.md`: the banned-pattern table, em and en dashes, hedge stacking, throat-clearing openers, and three soft exits where one line would do. That half is surface-independent and this file restates none of it.
+
+**The parts that do not apply:** the canon's skeleton, its word ceiling, its ask-in-the-first-three-lines rule, and its one-line-of-human-attention rule are all built for a person writing to a named account. A promo email has a CTA, not an ask, and a broadcast to twelve thousand customers cannot carry a line proving somebody looked at one of them. Do not force those checks and do not fake passing them.
+
+**Voice is the client's, not Spice's.** The brand brief in Step 1 sets tone, and it outranks Spice house voice inside the template. The canon is doing structural anti-slop work here, not making a Health Nut email sound like Maxx.
+
+The note you write to the operator or the client when you hand off the files is ordinary client copy and runs the full pass.
+
 ---
 
 ## Step 1: Pull Client Brand Context from Notion (MANDATORY)
@@ -245,6 +257,8 @@ Save to the workspace output folder:
 - `[ClientName] - [EmailType] - [Date] - Variant B.html`
 - `[ClientName] - [EmailType] - [Date] - Mobile.html`
 
+Before you output the copy, run `references/client-comms-pass.md` over the subject lines, preview text, headlines, body copy, and CTA labels, scoped as described above. Report the receipt with the files.
+
 Also provide in the response:
 - 3 subject line options
 - 2 preview text options
@@ -345,3 +359,5 @@ For the Retention Specialist + Designer doing 5-10 emails/week:
 | `references/performance-tracking.md` | What to log, what to pull, pattern detection, quarterly review process |
 | `references/asset-suggestions.md` | How to search for and surface existing client photography, placeholder enhancement format |
 | `references/figma-import-guide.md` | html.to.design workflow, post-import checklist, file naming conventions |
+| `references/client-comms-style.md` | The client email canon. Banned patterns and voice rules that apply to template copy |
+| `references/client-comms-pass.md` | The check to run on subject lines, headlines, body copy, and CTA labels |
