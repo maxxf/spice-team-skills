@@ -192,13 +192,33 @@ Try `firstname@brand.com`, `firstname.lastname@brand.com`, `flastname@brand.com`
 
 ## Step 6: Draft the Cold Email (LEAD WITH PROOF, NOT PROBLEM)
 
-Voice rules — apply Maxx's voice. Pull from `~/Desktop/Cowork/maxx-freedman-voice-guide.md` and run through `humanizer` skill before posting:
-- Concise. Subject line under 50 chars.
+This is prospect-facing prose, so it is governed. Draft against the canon,
+`references/client-comms-style.md`, then run the governor,
+`references/client-comms-pass.md`, over the finished draft before it goes
+anywhere near Slack. Read the governor's "Prospect and sales outreach" section:
+a cold email is not one of the canon's five client formats, so it keeps the
+canon's voice, banned patterns, ceiling, ask placement, and human-attention line,
+and takes its shape from the Cold Outreach rule in `CLAUDE.md`. Neither file is
+restated here.
+
+**What the governor infers for a cold prospect.** Its inference table assumes a
+relationship: prior threads, a Notion Client Wiki entry, the tone this contact
+already gets written to. None of that exists here, so the table does not resolve
+and you must not fabricate around it. Substitute:
+
+| Thing | Where it comes from on a cold send |
+|---|---|
+| Recipient | The owner or operator record this pipeline already built in Step 4, with its confidence label attached. If confidence is `guessed`, say so in the Slack post rather than sending on a guess |
+| Tone | The voice guide alone. There is no prior thread to match, so do not invent a shared history |
+| The numbers | The audit you just ran and public industry benchmarks. Never a Spice client's figures, per the confidentiality boundaries above |
+| The human-attention line | The audit. It is the only account-specific thing you have, and it is the whole reason a stranger reads line two |
+| Anything still missing | Ask in the Slack post. On a cold send the governor's usual "draft anyway, a wrong inference is cheap" tradeoff flips, because a wrong guess to a stranger is the whole first impression |
+
+Skill-specific rules the canon does not cover:
+- Subject line under 50 chars.
 - Lead with social proof + relevance. Don't open with their problem.
-- One specific number/benchmark in the first 3 lines.
-- No corporate boilerplate. No "delve", "landscape", "it's worth noting", emdashes, or AI slurry.
-- Max one exclamation mark. Vary sentence tempo: one word. Then five. Then two.
-- Sign as "Maxx" (not "Maxx Freedman, Founder" — too corporate for cold).
+- Max one exclamation mark.
+- Sign as "Maxx", not "Maxx Freedman, Founder". Too corporate for cold.
 
 ### Default template — "Storefront Audit + Mockup Cold"
 
@@ -235,7 +255,9 @@ Maxx
 
 Findings should follow the format: `<observation about prospect> vs <public industry benchmark>`. NEVER cite Spice client metrics.
 
-Run the final draft through the `humanizer` skill to strip AI patterns before posting to Slack.
+Run the final draft through the `humanizer` skill, then through the governor.
+Post the governor's receipt with the draft in Step 7 so Maxx sees what passed and
+what got overruled before he reacts.
 
 ---
 
@@ -269,6 +291,20 @@ Wait for Maxx's reaction or reply.
 ---
 
 ## Step 8: Send via Superhuman MCP
+
+**Who is sending, and who is not.** The governor never sends. It drafted this
+email and checked it, and then it handed the result to a human, which is where
+its job ended. This step is a different actor. The skill sends, and only because
+Maxx read this specific message and reacted ✅ to it. That is an explicit
+per-message human approval and nothing weaker substitutes for it:
+
+- Never send automatically, on a schedule, or on a governor PASS. A PASS is a
+  quality verdict, not consent.
+- Never send a message the governor has not already passed. Order is fixed:
+  draft, check, receipt, Maxx reads, Maxx approves, then send.
+- One ✅ covers one email. Five drafts need five reactions. Do not read an
+  approval on draft #1 as approval for the rest of the day's batch.
+- No response is not approval. The 24h path is escalation, never a default send.
 
 On approval, send via Superhuman MCP (NOT raw SMTP). Tools:
 - `mcp__superhuman__create_or_update_draft` — compose
@@ -401,12 +437,12 @@ Maxx can manage via:
 - Source prospects, verify presence, run audits
 - Generate hero mockups via Replicate
 - Find owner contact (scrape, Hunter, guess)
-- Draft emails (always run through humanizer skill)
+- Draft emails (always run through the humanizer skill, then the governor at `references/client-comms-pass.md`)
 - Post drafts to Slack for approval
 - Update Notion Sales Pipeline (status, scores, links)
 
 ### You NEED Maxx's approval to:
-- Send any email from maxx@spicedigital.co
+- Send any email from maxx@spicedigital.co. Per message, explicitly, after the governor has passed the draft. Never on a standing yes or a batch
 - Skip a prospect Maxx queued manually
 
 ### You CANNOT:

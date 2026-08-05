@@ -70,94 +70,84 @@ For each flagged deal, pull the most recent Superhuman thread with that contact 
 
 ## Email Drafting
 
-### Voice Rules
-Read `maxx-freedman-voice-guide.md` before drafting. That file is the source of truth. The rules below are the must-hits, not the full picture.
+### Where the rules live
+
+Prospect email is governed, same as client email. Two files own it and this one
+restates neither:
+
+- **Canon: `references/client-comms-style.md`.** The shape, the word ceiling, the
+  ask placement, the banned-pattern table, the dash rule, and the line of
+  specific human attention. Read it before you draft.
+- **Governor: `references/client-comms-pass.md`.** Read its "Prospect and sales
+  outreach" section, which is the part that applies here. A sales follow-up is
+  not one of the canon's five client formats, so it takes the canon's voice,
+  bans, ceiling, ask placement, and human line, and takes its shape from the Cold
+  Outreach rule in `CLAUDE.md` instead: three sentences, link the deck, link to
+  book, no essay.
+
+Draft against the canon, then run the governor over the draft before it reaches
+Superhuman. Fix what the receipt names, or overrule it knowingly and say so in
+the Slack summary. If this file and the canon ever disagree, the canon wins and
+this file is the bug.
+
+The voice guide still sits underneath both, the way it always has. It decides how
+a sentence sounds. The canon decides what shape the email is.
+
+### What is specific to this skill
+
+The canon covers the standard. These are the parts only sales follow-up does.
 
 **The vibe.** Smart friend who works in the industry being straight with the prospect. Direct, specific, a little spicy. Not corporate. Not consultant-speak. Maxx writes like he talks.
 
-**Structural rules (every email):**
-
-- Open with first name + em dash + space. Maxx's signature pattern: `Name — message`. Examples: "Michel — asked about the audit two weeks back." / "Andrea — picking this thread back up." Em dash for the greeting, not commas. (Mid-sentence em dashes inside prose are still fine if they fit the rhythm; the AI tell is using them as filler, not the dash itself.)
-- Then immediately the point. No "Hope you're well." No warm-up. No "I wanted to reach out."
 - **Each paragraph is a single beat. Separate beats with blank lines.** Paragraphs of 1-3 sentences max. Never run multiple thoughts together as a wall of text. Beat 1: name the silence or state the situation. Beat 2: the offer or the question. Beat 3: the close or kill option.
-- Reference something concrete from the last touch. The deal value. A name they mentioned. A date they committed to. The specific thing they said. Generic = delete and rewrite.
-- Vary sentence length like a drummer. Short. Then a longer sentence with a real piece of context inside it. Then short again. AI's tell is uniform paragraph length. Don't sound like AI.
+- Reference something concrete from the last touch. The deal value. A name they mentioned. A date they committed to. The specific thing they said. That reference is also how the canon's human-attention line gets satisfied here, so it is load-bearing, and a merge field does not count.
 - Do the math for the reader when pricing or scope is in play. "$11,380/mo across 26 locations" not "competitive pricing."
-- For stale re-engagement specifically, use the **either/or with kill button** pattern Maxx actually writes (see real examples below). Name the silence, state the binary, name one specific tactic, hand them the kill option, end with "Either answer works." or equivalent.
+- For stale re-engagement specifically, use the **either/or with kill button** pattern Maxx actually writes (see real examples below). Name the silence, state the binary, name one specific tactic, hand them the kill option, end with "Either answer works."
 - One moment of personality per email if it fits. Not forced. Not edgy for the sake of it.
-- End on a forward push or a clean question. Not a summary of what you just said.
 - Read it back in your head as if Maxx were saying it on a call. If it sounds like a press release, rewrite.
 
 **The stale re-engagement template (use this exact shape):**
 
 ```
-{Name} — {name the silence with specifics}. Either {option A: timing/fit not right} or {option B: priorities shifted/got buried}.
+{Name}, {name the silence with specifics}. Either {option A: timing/fit not right} or {option B: priorities shifted/got buried}.
 
 Want {one specific tactical play with location count or detail}, or {kill option: "close this out" / "put this one down" / "put this one on ice"}?
 
 Either answer works.
 ```
 
-Real examples Maxx sent on 2026-04-28:
+Real examples Maxx sent on 2026-04-28. Model the shape, not the punctuation; the
+greeting form and the dash rule come from the canon.
+
 - "Jack, three follow-ups, no response. Either the audit's not useful or now's not the time. Want me to put this one on ice, or do you want a quick look at the menu consolidation play across the 50 locations? Either answer works."
 - "Manny, sent the audit and pricing back in March, bumped a couple times since. Either the timing's not right or this one's not landing. Want to take a real look at the category consolidation, or close this out? Either answer works."
 - "Chuck, two weeks back I asked yes or no on the audit. Silence is fine, just making sure it didn't get lost. Want a quick call to walk through Marlton and Edgewater, or should I put this one down?"
 
-**Hard bans (zero tolerance, every time):**
+**Bans, closers, openers, and the pre-send check:** all four live in the canon and
+the governor, not here. The banned-pattern table is in
+`references/client-comms-style.md`. The voice guide's kill list sits on top of it.
+Closers are covered by the canon's one-real-question rule. The old house closer
+this skill used to approve is now row 17 of the banned table, so read the table
+before you reach for a familiar sign-off. Openers follow the canon's
+direct-opener rule.
+The pre-send check is the governor's receipt: run
+`references/client-comms-pass.md` and fix what it names.
 
-- AI-style em dashes used as filler inside sentences (e.g., "this is — frankly — overdue"). Em dashes are fine for the `Name — ` greeting and for genuine asides; not as connector tics.
-- "Genuinely" / "Straightforward" / "Here's the kicker"
-- "It's not about X, it's about Y"
-- "At the end of the day" / "In today's [anything]" / "Let's dive in" / "Without further ado"
-- "Game-changer" / "Cutting-edge" / "Synergy" / "Holistic" / "Paradigm" / "Best practices" / "Low-hanging fruit"
-- "Leverage" (verb) / "Unlock" (metaphor) / "Landscape" / "Navigate" / "Elevate" / "Foster" / "Robust" / "Seamless" / "Ecosystem"
-- "I wanted to reach out" / "I hope this finds you well" / "Just circling back" / "Per our conversation" / "As per my last email"
-- "Excited to announce" / "Thrilled to share"
-- "Moving forward" / "Going forward" (use "from here" or just state the next step)
-- Watery qualifiers: "somewhat", "relatively", "fairly", "quite", "rather"
-- Filler transitions: "Moreover", "Furthermore", "Additionally", "In addition" — start the next sentence
-- Sycophantic openers: "Great question!", "That's a fantastic point!" — delete entirely
-- Hedge stacking ("might potentially be somewhat useful") — commit to the position
-- More than one exclamation mark per email. Earn it.
-- More than 1-2 bolded phrases per section. Bold is for emphasis, not decoration.
+Two things about this skill that the canon does not cover, and that still hold:
 
-**Approved Maxx closers** (pick what fits):
-
-- "Talk soon," (post-discovery, warm follow-up)
-- "Sound good?" (after action items or proposals)
-- "Let me know how you'd like to proceed" (handing decision back)
-- "Happy to jump on a call to talk through any of this" (substantive emails)
-- "When ready, feel free to book some time to chat here" (with cal.com link, prospects)
-- "Thank you," (escalations, hard messages, payment chases)
-
-**Opener patterns Maxx actually uses (model these — note em dash, not comma):**
-
-- "Simon — deck attached. USD pricing and case studies inside."
-- "Andrea — picking this thread back up."
-- "Michel — asked about the audit two weeks back, no answer."
-- "Matan — appreciate your kind note about the podcast."
-- "Tom — asked you three months back if Matt had reviewed."
-- "Elena — the latest invoice is a couple weeks past due."
-- "James — please contact Michael (copied) to discuss migrating the account."
-- "Yo — " (internal team, casual)
-
-**Self-check before saving the draft:**
-
-1. First sentence carries the point (no warm-up lap)
-2. At least one specific number, name, date, or detail (no vague claims)
-3. Sentence length varies (not three same-shaped sentences in a row)
-4. Zero em dashes, zero banned phrases
-5. Max one exclamation mark
-6. Ends with a push forward or a clean question, not a summary
-7. Would Maxx actually say this out loud?
+- Max one exclamation mark per email. Earn it.
+- Max 1-2 bolded phrases per section. Bold is emphasis, not decoration.
 
 ### Email Templates by Situation
+
+Every template below is a starting shape, not finished copy. The governor runs
+over the filled-in draft, not over the template.
 
 #### Post-Discovery Follow-Up (commitment: deck + audit)
 **Subject:** Spice <> {restaurant_name}
 
 ```
-{first_name} — {one-line specific reference to the call or what was promised}.
+{first_name}, {one-line specific reference to the call or what was promised}.
 
 {Customized 1-2 sentence reference to their specific situation: footprint, gap they flagged, number they shared. This is the body, not the opener.}
 
@@ -167,7 +157,7 @@ Real examples Maxx sent on 2026-04-28:
 {Forward push: "I'll come back on X in the next two weeks." or "Cal.com if you want to dig in sooner."}
 ```
 
-Note: em dash after first name, not comma. Each beat (opener / body / links / push) is its own paragraph with blank lines between. Customize body to reference something specific. Don't ship the template as-is.
+Greeting form follows the canon. Each beat (opener / body / links / push) is its own paragraph with blank lines between. Customize the body to reference something specific. Don't ship the template as-is.
 
 If the audit hasn't been created yet but was promised:
 1. Invoke the `storefront-audit` skill for the restaurant (use the restaurant name and any location details from the meeting notes)
@@ -190,11 +180,13 @@ Do NOT use a template. Write a short, natural email that:
 - Offers a clear next step
 - 3-5 sentences max
 
-**Example patterns from real Maxx emails (em dash openers, paragraph breaks between beats):**
-- "Hey guys — I figure you have your hands full with {context}. I'm here in case you have follow up questions or want to discuss next steps."
-- "{first_name} — bumping this up so we can plan accordingly."
-- "{first_name} — checking in on this. Happy to jump on a quick call if it'd help."
-- "{first_name} — picking this thread back up. Last we talked, {specific_thing}. Where did that land?"
+**Example patterns from real Maxx emails.** Model the shape and the paragraph
+breaks between beats. Greeting punctuation and closers follow the canon.
+
+- "Hey guys, I figure you have your hands full with {context}. I'm here in case you have follow up questions or want to discuss next steps."
+- "{first_name}, bumping this up so we can plan accordingly."
+- "{first_name}, checking in on this. Want to talk it through?"
+- "{first_name}, picking this thread back up. Last we talked, {specific_thing}. Where did that land?"
 
 For stale 14+ day re-engagements, use the either/or kill-button template above instead of these gentler bumps.
 
@@ -231,6 +223,12 @@ End the body on the last line of copy (e.g., "Talk soon," or the final sentence)
 ### Superhuman Drafts (the only path)
 All drafts go through the Superhuman MCP `create_or_update_draft` tool. Never fall back to Gmail. Gmail-created drafts don't sync into Superhuman where Maxx ships from, and Superhuman auto-appends Maxx's signature, so drafts must NOT include one.
 
+Run `references/client-comms-pass.md` over each finished draft before you call
+`create_or_update_draft`, and again over any copy you paste into the Slack
+summary. Same words, same standard, whichever surface they land on. Report the
+verdict alongside the draft in the Slack summary so Maxx can see what passed and
+what got overruled.
+
 For each follow-up:
 - `type: "reply"` for existing threads, with `thread_id` resolved via `query_email_and_calendar` or `list_threads`. Confirm the thread before drafting so you don't reply to the wrong conversation.
 - `type: "new"` for fresh outreach (no prior thread).
@@ -242,7 +240,7 @@ For each follow-up:
 
 Example HTML body structure for stale re-engagement:
 ```html
-<p>Name — name the silence with specifics. Either option A or option B.</p>
+<p>Name, name the silence with specifics. Either option A or option B.</p>
 <p>Want one specific tactical play, or kill option?</p>
 <p>Either answer works.</p>
 ```
@@ -290,5 +288,5 @@ Render the Slack body with the same paragraph beats as the email so Maxx can eye
 - Do not follow up on Ice Box deals unless 30+ days and there's a reason to re-engage.
 - Do not create duplicate drafts. Call `list_splits` against the thread or recipient before every `create_or_update_draft`. If an unsent draft exists, update it in place via its `draft_id`, never spawn a second one.
 - Do not include a signature block. Superhuman appends Maxx's footer on send.
-- Do not use any phrase from the Kill List in the voice guide. Zero tolerance.
+- Do not ship a draft the governor has not seen. `references/client-comms-pass.md` runs on every one, and the canon's banned patterns plus the voice guide's kill list are what it checks against. Zero tolerance.
 - Do not draft generic emails. Every email must reference something specific from the conversation, their business, or the deal context. If you don't have enough context, flag it instead of guessing.

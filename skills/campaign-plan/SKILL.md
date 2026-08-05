@@ -236,7 +236,7 @@ The sheet holds **reporting** (Dashboard/Active Campaigns/Ads/Offers/History/Exp
 1. **PLAN (GM, ongoing)** — Notion DB is the source of truth. Every campaign logged with current Status, Segment, Locations, Start/End Date, ROAS Target. Set **Client Review Since** when items enter client review. If it's not in the DB, it's not in the plan.
 2. **PULL (Ops, when fresh data is available)** — drop platform exports into the client's **`Campaign Plan Inputs / <weekstart>/`** Drive folder. Typically Sun night or Mon AM after weekly-reporting runs.
 3. **RUN (GM, when warranted)** — regenerate the live Sheet in place + **produce a Slack draft** in Ro's format. **⚠ Writing the live Sheet needs the Google service-account key at `~/.config/spice/google-sheets-writer.json`, which the Cowork sandbox does NOT have** — a Cowork run now fails fast with instructions instead of erroring silently. Run where the key + open network live: **`./run_local.sh <client>`** on your own Mac (one-time setup in RUN-LOCALLY.md), or Slack **`@Spicy publish the <client> campaign sheet`** to run it on the always-on Mac Mini. Either way the skill pulls the Drive folder + Notion DB, then writes the Sheet.
-4. **COMMUNICATE (GM, Monday)** — review the Slack draft, edit, send to `#ext-[client]-spice`. The Sheet link is stable; the note explains what moved.
+4. **COMMUNICATE (GM, Monday)** — review the Slack draft, edit, send to `#ext-[client]-spice`. The Sheet link is stable; the note explains what moved. Run the governor over the script's draft before any of that; see below.
 
 ### The Monday Slack note (GM-authored from a draft the skill provides)
 
@@ -252,6 +252,32 @@ Team sharing campaign updates
 ```
 
 4 bullets max. Bold lead-in = the headline; sentence after = numbers + context; ends with an active-voice verb (hold, shift, pause, approve, review). Strategist voice, not data dump. Reference: Ro's W22 update (Jun 1 — `$93.5K spend → ~$1M sales, 10.9x blended ROAS …`).
+
+#### The script's draft is an input, not a message
+
+`references/slack_draft.py` writes the first version of this note. It is a Python
+subprocess, so it cannot read the canon, cannot run the governor, and does not
+know what a banned pattern is. Do not try to fix that inside the script. A
+reference-based standard cannot reach into a subprocess, and a script that
+half-enforces the canon becomes the second source of truth the whole design
+exists to avoid.
+
+The check happens where the model handles the script's output, which is here.
+
+**Treat `slack_draft.py`'s output as raw material handed to the governor, not as
+a finished message.** Read `references/client-comms-style.md`, then run
+`references/client-comms-pass.md` over the script's four bullets yourself, before
+the GM ever sees them. Fix what the receipt names, then hand the GM the corrected
+draft plus the receipt. The GM should never be the first reader of unchecked
+script output.
+
+Slack-only lane: no subject line, no greeting, no sign-off, so those checks are
+skipped. Length, ask placement, the link behind the numbers, banned patterns,
+dashes, voice, and the human-attention line all apply. The last one is the one
+the script structurally cannot produce, since it emits aggregates and the human
+line is by definition the thing an aggregate does not know. If the numbers do not
+hand you one, go look at the account, and say so plainly if there is nothing to
+find.
 
 Monthly Store-Ops Leaderboard runs the first Monday of the month (separate cadence).
 
@@ -612,7 +638,7 @@ The .xlsx can't be pushed to Drive via MCP (binary upload limit). Two paths:
 1. **Manual (today):** the file lands in `/tmp/<client>_Campaign_Plan.xlsx`; copy to `~/Downloads/` and drag into the client's Drive folder. Opens in Sheets or Excel, formatting intact.
 2. **Scripted (target):** a local Drive-API upload script (Wk5 infra item) pushes the .xlsx directly, bypassing MCP. Until built, manual.
 
-Then post a one-line heads-up in the client Slack channel pointing at the updated workbook.
+Then post a one-line heads-up in the client Slack channel pointing at the updated workbook. That line is client-facing, so it goes through `references/client-comms-pass.md` like the Monday note does.
 
 ---
 

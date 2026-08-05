@@ -12,12 +12,26 @@ this page is the bug.
 
 ## When this fires
 
-Any client email or any client Slack message, no matter what produced it:
+Any client or prospect email, and any client-facing Slack message, no matter what
+produced it:
 
-- A skill emitting client copy (`post-client-meeting`, `ratings-reply`,
-  `client-onboarding`, `email-template-designer`, and anything added later).
 - Spicy Nugget, on a scheduled run or a Slack delegation.
 - A teammate typing into Cowork, whether they asked for the standard or not.
+- Any of the eleven skills below.
+
+| Skill | What it hands over | Lane |
+|---|---|---|
+| `post-client-meeting` | The recap email after a client call | Email |
+| `ratings-reply` | Messages to the client about reply coverage, not the public review replies | Email and client Slack |
+| `client-onboarding` | The kickoff email and every onboarding step message | Email |
+| `email-template-designer` | Subject lines, preview text, headlines, body copy, CTA labels | Checking mode only |
+| `sales-follow-up` | Prospect follow-up emails and the Superhuman drafts | Email, prospect rule |
+| `spice-prospect-pipeline` | The cold email drafted in the daily loop | Email, prospect rule |
+| `executive-review` | The short summary a GM pastes into the client channel | Slack only |
+| `onboarding-status-check` | The client nudge drafts posted into `#ext-[client]-spice` | Slack only |
+| `campaign-plan` | The weekly client Slack note, including the script's draft | Slack only |
+| `campaign-briefing` | The Phase 4 Mode A Spend-Pacing Flash | Slack only |
+| `storefront-audit` | The canned prospect sequences in `references/email-sequences.md` | Email, prospect rule, static |
 
 It applies whether or not anyone requested it. A teammate who says "just write
 Hannah a quick note" gets the same standard as one who says "run the pass." That
@@ -26,6 +40,81 @@ remember, and the standard is not opt-in.
 
 It does not fire on internal Slack, teammate DMs, docs, decks, or anything the
 client will not read. Those have their own rules in `CLAUDE.md`.
+
+### Prospect and sales outreach
+
+Cold email, post-discovery follow-up, gentle bumps, stale re-engagement, meeting
+confirmations, and audit-delivery sequences. All of it is governed, and it takes
+everything from the canon except the format.
+
+What carries over unchanged: the voice, the banned-pattern table, the word
+ceiling, the ask in the first three lines, and the one line of specific human
+attention. All five checks in Lane A and both in Lane B run exactly as written.
+
+What does not carry over is shape. The canon's five formats are weekly recap,
+campaign launch, escalation, onboarding step, and monthly report, and none of
+them is a sales email. **There is no sixth canon format and you should not invent
+one.** Prospect outreach takes its shape from the Cold Outreach rule in
+`CLAUDE.md` instead: three sentences, link the deck, link to book a call, no
+essay. That rule is the shape. The canon is still the standard.
+
+The human-attention line is where prospect email usually fails, and it is the
+check that matters most on a first touch. On a client email the line proves
+somebody read the account this week. On a cold email it proves somebody looked at
+this restaurant at all, which is the only reason a stranger reads past line one.
+A merge field is not the line. "I audited your Uber Eats storefront this morning
+and your hero image is a stock burrito" is.
+
+### The Slack-only lane
+
+Some of the governed paths never produce an email. A message going into
+`#ext-[client]-spice` is client-facing prose and gets the standard, but three of
+the checks are shaped around an email and are skipped there.
+
+**Skipped on a Slack message:** the subject-line logic in
+[Where the draft goes](#where-the-draft-goes), the greeting line, and the sign
+off. A Slack post has none of the three and inventing them makes it read like a
+forwarded email.
+
+**Still applies, in full:** C1 length, C2 the ask in the first three lines, C3 a
+link behind cited numbers, C4 the banned-pattern table, C5 no em or en dashes,
+V1 voice, and V2 the line of specific human attention. Word counting runs over
+the same composed body, minus the greeting step that has nothing to strip.
+
+A skill's own Slack rendering conventions survive this. Code blocks, bullet
+characters, single-asterisk bold, no italics: those decide how the message looks,
+and the canon decides what it says. The two never collide because they govern
+different things.
+
+### Static templates
+
+`storefront-audit` keeps its prospect sequences in a reference file. Those are
+written once and merged many times, so running the governor per send would check
+the same words a hundred times and check the merge fields never.
+
+So the rule is different there. **Run the governor over the template file when the
+templates change, not on every send.** A pass on the file is a pass on every
+message it produces, with one carve-out: V2 still has to land per send, because
+the human-attention line lives in the merge fields and the template can only hold
+the slot. Whoever fills the slot owns that check.
+
+### What this deliberately does not govern
+
+Three exclusions, all decided rather than overlooked.
+
+- **Copy written for the client's own diners or for the public.** The retention
+  skills (`retention-segments-subjects`, `retention-campaign-brief`,
+  `retention-flow-designer`, `campaign-brief-creator`, `ratings-flyer`) and the
+  public-review half of `ratings-reply`. Different audience entirely: a hungry
+  diner is not a restaurant operator, and a standard built to stop us sounding
+  like a machine to a client is the wrong instrument for a subject line built to
+  sell a bowl. That copy needs its own standard and does not have one yet.
+- **LinkedIn DMs to prospects** (`linkedin-lead-capture`). Out of stated scope for
+  now. The surface has its own length and etiquette constraints and nobody has
+  done the sample work to say what good looks like there.
+- **`monthly-update`.** It goes to investors and advisors, not clients. Different
+  reader, different obligations, and the 150-word ceiling would be actively wrong
+  for a document whose job is to be complete.
 
 ## Two entry points, one document
 
@@ -470,6 +559,30 @@ A draft that fails is not blocked from going out, either. Teammates overrule thi
 all the time and should. What the governor guarantees is that when a 400-word
 unsourced email goes to a client, somebody chose that on purpose.
 
+### When a skill sends, the governor still is not the sender
+
+Some skills do send. `spice-prospect-pipeline` posts a draft to `#spice-ai-ops`,
+waits for Maxx to react, and sends the approved email through Superhuman. That is
+allowed and it is not a hole in the rule above, because the rule is about this
+page and not about the whole pipeline. Keep the two roles apart:
+
+- **The governor drafts and checks, then hands the result to a human.** Its
+  output is a draft plus a receipt. It never calls a send tool, and it has no
+  send step to reach. Handing a draft to a person is where it stops, every time.
+- **A skill may send only on an explicit per-message human approval.** A person
+  looked at that specific message and said go. Not a policy set once, not a
+  standing yes, not a batch approval covering five drafts, and never a timer that
+  fires when nobody answers.
+- **Never automatically.** No scheduled send, no queued send, no send on a PASS.
+  A PASS is a quality result, not consent.
+- **Never before the governor has passed the draft.** The order is fixed: draft,
+  check, receipt, human reads it, human approves, then the skill sends. A skill
+  that sends something the governor never saw has skipped the standard, and that
+  is the bug this whole page exists to prevent.
+
+So the sentence to keep straight, if you keep one: the governor never sends, and
+when a message does go out, a person pressed the button on that message.
+
 ---
 
 ## Worked example A: the 400-word draft with no link
@@ -619,6 +732,9 @@ The sequence, in order:
 5. Otherwise run V1 and V2.
 6. Emit the receipt. Surface the draft alongside it, never instead of it.
 7. Stop. Nothing here sends, and no skill should read a PASS as permission to.
+   If your skill has a send step of its own, it sits after a human has read this
+   receipt and approved this specific message. See
+   [When a skill sends](#when-a-skill-sends-the-governor-still-is-not-the-sender).
 
 ## Failure modes worth naming
 
