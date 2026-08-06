@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import sys
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.chart import BarChart, Reference
@@ -441,6 +442,21 @@ def main():
     ap.add_argument("--strict-unmatched", action="store_true", help="Surface ALL unmatched perf rows incl. Ad-type. Default suppresses Ad-type when ads_detail is provided (they live in Ad Performance, not Offer tracker).")
     ap.add_argument("--output", required=True)
     args = ap.parse_args()
+
+    # This builds a standalone .xlsx. It does NOT touch the client's live Google Sheet —
+    # refresh.py is what does that. On 2026-08-06 a teammate ran the skill's phase-by-phase
+    # route, this got invoked by hand with its own --output, and the result was a throwaway
+    # workbook while the canonical Sheet went untouched. That reads as "the skill made a new
+    # sheet". Say so loudly when nobody upstream is going to publish the result.
+    if not os.environ.get("SPICE_REFRESH_PARENT"):
+        bar = "-" * 70
+        print(f"{bar}\n"
+              "⚠️  BUILDING A STANDALONE .xlsx — the client's live Google Sheet will NOT be\n"
+              "    updated by this command, and this file is not the canonical tracker.\n"
+              "    Do not send it to a client or treat it as the week's reporting.\n\n"
+              "    To update the real Sheet, use the one supported entrypoint:\n"
+              "      ./run_local.sh <client>            (add --dry-run to preview)\n"
+              f"{bar}", file=sys.stderr)
 
     rows = read_tracker_csv(args.tracker_csv)
     highlights = ["Performance highlights populated from this cycle's results."]

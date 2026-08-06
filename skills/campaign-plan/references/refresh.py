@@ -667,7 +667,9 @@ def main():
     if args.overwrite_perf:
         cmd += ["--overwrite-perf"]
     print("→ reporting: rendering workbook" + (" + performance" if perf else "") + (" + ads funnel" if ads else ""))
-    subprocess.run(cmd, check=True)
+    # Marks this as the supervised build — refresh publishes the result, so the builder's
+    # "this does not update the live Sheet" warning would be misleading here.
+    subprocess.run(cmd, check=True, env={**os.environ, "SPICE_REFRESH_PARENT": "1"})
 
     # Step 3 — PUBLISH: push the workbook into the client's Drive folder as a live Google Sheet
     # (in place, stable link). Auto-runs when the service-account key is present; --no-push skips.

@@ -2,9 +2,10 @@
 name: campaign-plan
 description: >
   Maintain a per-client campaign plan + performance tracker. Internal planning
-  lives in the Notion Campaign Planning DB; the client-facing deliverable is a
-  formatted Excel workbook (Dashboard + Campaign Tracker + Legend) that rolls up
-  performance overall, by platform, and ads vs offers. Triggers on "update
+  lives in the Notion Campaign Planning DB; the deliverable is the client's ONE
+  canonical live Google Sheet, updated in place by `./run_local.sh <slug>` so the
+  link never changes. It is not an Excel file — a standalone .xlsx means the
+  refresh did not run properly. Triggers on "update
   campaign plan for [client]", "refresh campaign tracker", "campaign performance
   for [client]", "pull campaign data for [client]", "build campaign plan for
   [client]", or when the user drops platform campaign exports and mentions the
@@ -29,9 +30,31 @@ When this skill triggers, resolve to one of three modes. **Route directly when t
 
 | Mode | What it does | Writes | Example triggers |
 |---|---|---|---|
-| **Update reporting sheet** | The automated weekly refresh (exports → Dashboard/Ads/Offers/History) — Phases 0–3 below | Sheet (reporting tabs) | "refresh campaign plan", "update campaign tracker", "pull campaign data" |
+| **Update reporting sheet** | The automated weekly refresh (exports → Dashboard/Ads/Offers/History) — **one command, see below** | Sheet (reporting tabs) | "refresh campaign plan", "update campaign tracker", "pull campaign data" |
 | **Plan campaigns** | Interactive tier → strategy → events → roadmap session — Phase S below | Notion strategy page · Q-plan tabs · Notion DB rows (`Not started`) · client config | "plan strategy for [client]", "build the roadmap", "tier strategy" |
 | **Run analysis** | Read-only Q&A over the live sheet + History (declines, incrementality, what's working) | none | "analyze [client]", "why did X drop" |
+
+### ⛔ Update reporting sheet = ONE command. Do not improvise a phase-by-phase route.
+
+```bash
+./run_local.sh <slug> --dry-run    # preview every change, write nothing
+./run_local.sh <slug>              # update the client's live Sheet in place
+```
+
+That is the whole mode. `run_local.sh` wraps `refresh.py`, which runs the planning bridge,
+the Drive pull, the preflight doctor, the input gate, the live-Sheet write and the Slack
+draft, in the right order, with the write guard active.
+
+**Never** run `db_to_tracker.py`, `build_campaign_plan_xlsx.py` or `push_to_sheet.py` by hand
+as a way of "doing the refresh", and never invent an `--output` path. Phases 0–3 below
+document what those steps do; they are **reference material, not a runbook**. Running them
+individually produces a standalone .xlsx and leaves the client's canonical Sheet untouched —
+which looks like the skill created a duplicate tracker. That is exactly what happened on
+2026-08-06: a teammate was offered a "full skill flow" and got two throwaway workbooks while
+neither live Sheet was written.
+
+If the user asks how they want reporting run, don't offer a phase-by-phase option. There is
+one supported path; offer `--dry-run` first or a live run, nothing else.
 
 **Run analysis is purely conversational:** run `strategy_read.py --client <slug>`, read History if the question needs trend, answer in chat citing playbook rules where relevant. No dedicated script, no writes, no artifacts. If the user asks for something that requires writing (a findings doc, a tier change), offer to switch modes.
 
@@ -164,7 +187,6 @@ runs GH; never silently omit a platform the client is on. Iterate until approved
 
 - `references/playbooks/what-works.md` — proven plays (data → action → result, with receipts).
 - `references/playbooks/marketplace-playbook.md` — the operating framework (foundations, attribution, incrementality, platform intel).
-- `references/playbooks/doordash-ads-portal.md` — the DoorDash ads portal: what it exposes, data-freshness and timezone gotchas, known defects, the metric set it unlocks, and which conclusions are established vs still hypothesis. **Read before any DoorDash pull.**
 
 These aren't reference reading; they're the **strategy filter**. When authoring the strategy summary, proposing new campaigns, or refreshing the plan, run the proposal through these rules:
 
@@ -235,8 +257,8 @@ The sheet holds **reporting** (Dashboard/Active Campaigns/Ads/Offers/History/Exp
 
 1. **PLAN (GM, ongoing)** — Notion DB is the source of truth. Every campaign logged with current Status, Segment, Locations, Start/End Date, ROAS Target. Set **Client Review Since** when items enter client review. If it's not in the DB, it's not in the plan.
 2. **PULL (Ops, when fresh data is available)** — drop platform exports into the client's **`Campaign Plan Inputs / <weekstart>/`** Drive folder. Typically Sun night or Mon AM after weekly-reporting runs.
-3. **RUN (GM or Ops, when warranted)** — regenerate the live Sheet in place + **produce a Slack draft** in Ro's format. **⚠ Writing the live Sheet needs the Google service-account key at `~/.config/spice/google-sheets-writer.json`, which the Cowork sandbox does NOT have** — a Cowork run fails fast with instructions instead of erroring silently. **The supported runner is Claude Code on your own Mac** — one-time setup in **[RUNBOOK.md](RUNBOOK.md)**, which is now the operating doc: **`./run_local.sh <client>`**. Run `--dry-run` first to see every change as a diff and write nothing. The Mac Mini is *not* a supported runner — it was announced as one twice (2026-07-01, 2026-07-07), never validated, and its weekly job failed every week from Apr 12 to Jul 21 until the job was killed. Treat it as an unsupported convenience; nothing here depends on it. The skill pulls the Drive folder + Notion DB, runs the preflight doctor, then writes the Sheet.
-4. **COMMUNICATE (GM, Monday)** — review the Slack draft, edit, send to `#ext-[client]-spice`. The Sheet link is stable; the note explains what moved. Run the governor over the script's draft before any of that; see below.
+3. **RUN (GM or Ops, when warranted)** — regenerate the live Sheet in place + **produce a Slack draft** in Ro's format. **⚠ Writing the live Sheet needs the Google service-account key at `~/.config/spice/google-sheets-writer.json`, which the Cowork sandbox does NOT have** — a Cowork run fails fast with instructions instead of erroring silently. **The supported runner is Claude Code on your own Mac** (one-time setup in RUNBOOK.md): **`./run_local.sh <client>`**. The Mac Mini is *not* a supported runner — it was announced as one twice (2026-07-01, 2026-07-07), never validated, and its weekly job failed every week from Apr 12 to Jul 21 until it was killed. Treat it as an unsupported convenience; nothing here depends on it. Either way the skill pulls the Drive folder + Notion DB, runs the preflight doctor, then writes the Sheet.
+4. **COMMUNICATE (GM, Monday)** — review the Slack draft, edit, send to `#ext-[client]-spice`. The Sheet link is stable; the note explains what moved. Run the client comms standard over the script's draft before any of that; see below.
 
 ### The Monday Slack note (GM-authored from a draft the skill provides)
 
@@ -256,28 +278,26 @@ Team sharing campaign updates
 #### The script's draft is an input, not a message
 
 `references/slack_draft.py` writes the first version of this note. It is a Python
-subprocess, so it cannot read the canon, cannot run the governor, and does not
-know what a banned pattern is. Do not try to fix that inside the script. A
+subprocess, so it cannot read the standard, cannot check itself, and does not know
+what a banned pattern is. Do not try to fix that inside the script. A
 reference-based standard cannot reach into a subprocess, and a script that
-half-enforces the canon becomes the second source of truth the whole design
-exists to avoid.
+half-enforces it becomes the second source of truth the whole design exists to
+avoid.
 
 The check happens where the model handles the script's output, which is here.
 
-**Treat `slack_draft.py`'s output as raw material handed to the governor, not as
-a finished message.** Read `references/client-comms-style.md`, then run
-`references/client-comms-pass.md` over the script's four bullets yourself, before
-the GM ever sees them. Fix what the receipt names, then hand the GM the corrected
-draft plus the receipt. The GM should never be the first reader of unchecked
-script output.
+**Treat `slack_draft.py`'s output as raw material, not as a finished message.**
+Read `/Users/maxx/hq/companies/spice/policies/spice-client-comms-brief-exec-shaped.md`,
+then run its checks over the script's four bullets yourself, before the GM ever
+sees them. Fix what fails, then hand the GM the corrected draft plus a note on what
+you changed. The GM should never be the first reader of unchecked script output.
 
-Slack-only lane: no subject line, no greeting, no sign-off, so those checks are
+Slack lane: no subject line, no greeting, no sign-off, so those checks are
 skipped. Length, ask placement, the link behind the numbers, banned patterns,
-dashes, voice, and the human-attention line all apply. The last one is the one
-the script structurally cannot produce, since it emits aggregates and the human
-line is by definition the thing an aggregate does not know. If the numbers do not
-hand you one, go look at the account, and say so plainly if there is nothing to
-find.
+dashes, voice, and the human-attention line all apply. The last one is the one the
+script structurally cannot produce, since it emits aggregates and the human line is
+by definition the thing an aggregate does not know. If the numbers do not hand you
+one, go look at the account, and say so plainly if there is nothing to find.
 
 Monthly Store-Ops Leaderboard runs the first Monday of the month (separate cadence).
 
@@ -301,27 +321,62 @@ The service account already has access via the "1. Active" share. The skill read
 
 ### One-command refresh (the repeatable update)
 
-Each client has a config at `clients/<slug>.json` (display name, data dir, input filenames, output path, Drive folder, Slack channel). Once the inputs are in the data dir, the whole update is:
+Each client has a config at `clients/<slug>.json` (display name, data dir, input filenames, output path, Drive folder, Slack channel). **Configs are resolved HQ-first** by `references/client_config.py`, in this order: `$SPICE_CAMPAIGN_CLIENTS` → `<hq_root>/companies/spice/skills/campaign-plan/clients/` → the plugin bundle's `clients/` (legacy fallback). Adding or editing a client is an edit in HQ — no commit to the plugin, no version bump.
+
+Once the inputs are in the data dir, the whole update is:
 
 ```bash
-cd <your installed campaign-plan skill folder>
+cd companies/spice/skills/campaign-plan
 python3 references/refresh.py --client <slug> [--as-of YYYY-MM-DD]
 ```
 
 `refresh.py` runs three steps: `db_to_tracker.py` (planning) → `build_campaign_plan_xlsx.py` (reporting) → `push_to_sheet.py` (publish). It skips any optional input (perf, ads) that isn't present. The Notion pull is now done by `notion_campaigns_read.py` (raw Notion REST — **not** the plan-gated MCP query) whenever a Notion token is present, so `refresh.py` runs fully headless with no Business plan. Without a token it falls back to whatever `<data_dir>/<campaigns_json>` already exists (the model can write that via the MCP — Phase 0 Step A). After that, one command, every time.
 
-**Publish to a live Google Sheet (in place).** When the service-account key is present at `~/.config/spice/google-sheets-writer.json`, `refresh.py` auto-pushes the workbook into the client's Drive folder as a **native Google Sheet** and records its `sheet_id` in `clients/<slug>.json`. The first run creates the Sheet; every later run updates that same file — stable link, same sharing, no manual drag. Pass `--no-push` to skip (produces the .xlsx only). Service-account setup is a one-time admin task: see `references/google-service-account-setup.md`. The robot (`spice-sheets-writer@…`) needs Editor on the client's Drive folder (sharing the parent "1. Active" folder once covers every client).
+### Preflight doctor (blocking gate — runs before every refresh)
 
-**Onboarding a new client** = one command (writes config, creates data folder, runs first refresh, creates the live Sheet, records sheet_id):
+`refresh.py` runs `references/doctor.py` before it touches anything, and aborts on any FAIL. The doctor checks the credential, Python deps, config resolution, that `sheet_id` points at a real **native** Sheet (not an .xlsx), that the robot can actually reach it, and the Notion token. Every failure names the exact fix. Run it standalone any time:
 
 ```bash
-python3 references/new_client.py \
-  --slug <slug> --display-name "<Display Name>" \
-  --drive-folder-id <client's Drive folder under 1. Active> \
-  --slack-channel '#ext-<client>-spice'
+python3 references/doctor.py                     # every resolvable client
+python3 references/doctor.py --client <slug>     # one client
+python3 references/doctor.py --json              # machine-readable
+python3 references/doctor.py --skip-notion       # skip the Notion probe
 ```
 
-After this runs, the client has a live Sheet in their Drive folder and shows up in the standard `refresh.py --client <slug>` flow. To go from empty to populated, the skill queries the Campaign Planning DB for the client's campaigns and writes them into `<data_dir>/<slug>_campaigns.json`.
+Exit codes: `0` all green · `1` at least one FAIL · `2` the doctor itself broke. `refresh.py --skip-doctor` bypasses the gate — debugging only. The gate exists because every failure that cost Santi time between 2026-06-16 and 2026-07-07 was silent or generic.
+
+### Write safety (why a blank write can't ship)
+
+`references/write_guard.py` sits at the one chokepoint every destructive write goes through and enforces three guarantees: **SNAPSHOT** (the region is read to local disk *before* it is cleared), **GATE** (a write that would empty a populated tab, or shrink it past the threshold, is refused *before* the clear), and **DRY RUN** (render the diff, write nothing). Snapshots are local, not in Drive — the robot is a Contributor with `canDelete: false`, so Drive-side snapshots would pile up in a trash it cannot empty. Google's version history stays the deep backstop.
+
+```bash
+python3 references/refresh.py --client <slug> --dry-run       # diff every tab, write nothing
+python3 references/refresh.py --client <slug> --force-shrink  # allow a real large shrink
+
+python3 references/write_guard.py list    --sheet-id <id> [--tab <tab>]
+python3 references/write_guard.py show    --sheet-id <id> --tab <tab> [--at <stamp>]
+python3 references/write_guard.py restore --sheet-id <id> --tab <tab> [--at <stamp>] [--yes]
+```
+
+**Always `--dry-run` before a client's first live write.**
+
+**Publish to a live Google Sheet (in place).** When the service-account key is present at `~/.config/spice/google-sheets-writer.json`, `refresh.py` auto-pushes the workbook into the client's Drive folder as a **native Google Sheet** and records its `sheet_id` in `clients/<slug>.json`. The first run creates the Sheet; every later run updates that same file — stable link, same sharing, no manual drag. Pass `--no-push` to skip (produces the .xlsx only). Service-account setup is a one-time admin task: see `references/google-service-account-setup.md`.
+
+**No Share step is needed.** Client folders live in **Shared Drive `0AD8QAM4kFYo3Uk9PVA`**, so a Sheet created inside a client folder is owned by the drive and the robot (`spice-sheets-writer@…`) reaches it through drive membership — there is nothing to grant. *If a Share step appears necessary, the file was created in the wrong place* (that was the pret / tiffs-treats / westville problem: hand-created in a personal My Drive). Two consequences for any code touching Drive: pass `supportsAllDrives=True` on every call (and `includeItemsFromAllDrives=True` when listing) or Shared Drive files return a misleading 404; and clean up with `files.update trashed=True`, never `files.delete` — the robot is a Contributor, `canDelete` is false, and a delete also returns 404 rather than 403.
+
+**Onboarding a new client** = one command. `references/provision.py` is the single provisioning path; `new_client.py` is a thin shim over it kept for muscle memory. It is **idempotent** — it adopts what already exists rather than duplicating it:
+
+```bash
+python3 references/provision.py --slug <slug> --check            # report state, change nothing
+python3 references/provision.py \
+  --slug <slug> --display-name "<Display Name>" \
+  --drive-folder-id <client's Drive folder under 1. Active> \
+  [--slack-channel '#ext-<client>-spice'] [--notion-page-id <id>]
+```
+
+It validates the Drive folder is reachable and writable, creates a **native** Sheet (never an .xlsx) if one isn't there, ensures the 11 canonical tabs, ensures the `Campaign Plan Inputs` folder, finds the client's weekly tracker Sheet and **reads its actual tab names off the live file** (goop uses `By Location 2.0`, Tiff's uses `By Location` — never assume the convention), writes the config into the HQ clients directory, and finishes by running the preflight doctor. **Run `--check` before every provision** — resolution goes by recorded config id first and folder scan only as fallback, and a scan-only read of a Sheet stored elsewhere reports "missing", which would create a duplicate and orphan live data.
+
+After this runs, the client shows up in the standard `refresh.py --client <slug>` flow. To go from empty to populated, the skill queries the Campaign Planning DB for the client's campaigns and writes them into `<data_dir>/<slug>_campaigns.json`.
 
 ---
 
@@ -459,82 +514,29 @@ When you say *"update the campaign plan for [client]"*, the skill walks you thro
 
 ### 🔴 DoorDash
 
-> **Portal moved (2026-07).** DoorDash marketing now lives at **`ads.doordash.com/portal/business/<business_id>/`**
-> with four tabs: **Performance**, **Customer insights** (route is `/customer/insights`, not `/customer-insights`),
-> **Campaigns**, **Reports**. The old `mxportal.doordash.com` → Marketing path still resolves but is the legacy
-> surface and does not expose customer economics. **Use `ads.doordash.com` for all pulls below.**
->
-> **The portal degrades on large multi-location accounts.** On a 20-store business the Campaigns tab timed out
-> on every attempt, and after a handful of interactions the Performance tab and the `/portal` root stopped
-> responding too. This is whole-SPA instability, not one broken tab.
-> **Working practice:** capture everything early in the session and in as few interactions as possible;
-> prefer **Reports** exports over live browsing; don't retry a wedged page more than twice.
->
-> Full portal reference (data-freshness and timezone gotchas, known defects, established vs hypothesis):
-> `references/playbooks/doordash-ads-portal.md`.
+**A. DD Sponsored Listings performance**
+*Feeds: Ads Reporting + Active Campaigns ad rows*
 
-**A. DD Campaign performance (ads + promos in one export)** — *primary pull, replaces A and B below on new portal*
-*Feeds: Ads Reporting + Offers Reporting + Active Campaigns rows*
-
-- **Where:** `ads.doordash.com` → **Reports** → **Create report** → Type `Campaign performance`
-- **View by:** `Day, Store` (always). Add a second pull at `Day, Ad group` when you need creative/ad-group detail.
+- **Where:** `mxportal.doordash.com` → **Marketing** → **Sponsored Listings** → **Export**
 - **Date range:** trailing 7 days
-- **Save as:** `inputs/dd_campaigns_<weekstart>.csv`
-- **DD does NOT expose Impressions/Clicks/CTR for Sponsored Listings** — mark those `n/a`. Correct, not missing.
-- **Report naming — REQUIRED.** Name the report in the portal
-  `{client}-dd-{granularity}-{YYYYMMDD}-{YYYYMMDD}` (e.g. `goop-dd-daystore-20260720-20260726`).
-  Ad-hoc names ("report", "report 2", "90 day") make the report list unusable and cause duplicate
-  re-pulls of windows we already have. Check the existing report list before creating a new one.
+- **Required columns:** `Campaign Name`, `Location`, `Spend`, `Orders`, `Attributed Sales`
+- **DD does NOT expose Impressions/Clicks/CTR for SLs** — Ads Reporting marks those `n/a` for DD rows. That's correct, not missing data.
+- **Save as:** `inputs/dd_ads_<weekstart>.csv`
 
-**B. DD Customer insights** — *new surface, pull every week*
-*Feeds: Customer Economics block (see below) + reactivation planning*
+**B. DD Promotions performance**
+*Feeds: Offers Reporting + Active Campaigns offer rows*
 
-- **Where:** `ads.doordash.com` → **Customer insights**. Screenshot or transcribe; there is no CSV export yet.
-- **Capture all three modules:**
-  1. **Customer breakdown** — toggle **Customers from ads** *and* **Overall customers**. Record total / new / lapsed / existing for each.
-  2. **Customer purchase trends** — active customer count and the four recency buckets (<45d, 45–90d, 90d–6mo, 6mo–1y). This sizes the lapsed pool.
-  3. **Customer long-term value over 90 days** — record **New** and **Lapsed** tabs: average customer value, average ticket, average order rate.
-- **Known bug (as of 2026-07-27):** the **Overall customers** toggle inside the *long-term value* module hangs the page. Pull the **Customers from ads** view; note the gap rather than retrying.
-- **Save as:** `inputs/dd_customer_insights_<weekstart>.md`
+- **Where:** DD Portal → **Marketing** → **Promotions** → **All Promotions** → **Export**
+- **Date range:** trailing 7 days
+- **Required columns:** `Promotion Name`, `Location(s)`, `Promo Type`, `Threshold`, `Discount`, `Redemptions`, `Promo Spend`, `Attributed Sales`, `New Customers`, `% New`
+- **Save as:** `inputs/dd_offers_<weekstart>.csv`
+- **Watch for:** `$0.99` flat fee = offer redemption fee, NOT ad spend.
 
-**C. DD Performance tab aggregates**
-*Feeds: Dashboard KPIs + the blended-ROAS line*
-
-- **Where:** `ads.doordash.com` → **Performance**
-- **Capture:** Ads summary (sales / orders / spend / ROAS), Promotions summary (same four), total sales split by **Organic / Ads / Promo / Ads+Promo**, and **Average category share** vs submarket competitors.
-- **Always compute blended ROAS** = (ads sales + promo sales) ÷ (ads spend + promo spend). The tab shows ads-only and promo-only ROAS side by side; quoting either alone overstates performance. See "Blended ROAS is the headline" below.
-
-**D. DD Financial Transactions** *(optional if weekly-reporting already ran)*
+**C. DD Financial Transactions** *(optional if weekly-reporting already ran)*
 *Feeds: Location Tier "Platform Sales WTD" column for DD*
 
-- **Where:** DD Merchant Portal → **Financials** → **Statements** → 7d → Simplified CSV
+- **Where:** DD Portal → **Financials** → **Statements** → 7d → Simplified CSV
 - **Or:** weekly-reporting `OUTPUT/by_location.csv`.
-
-### Customer economics — derive these every week (all platforms, DD first)
-
-The DoorDash portal now publishes the inputs for real unit economics. Compute and carry these in the tracker:
-
-| Metric | Formula | Note |
-|---|---|---|
-| **CAC (low)** | ads spend ÷ ad-attributed new customers | Best case — assumes promo spend acquired nobody |
-| **CAC (high)** | total marketing spend ÷ ad-attributed new customers | Conservative bound. Always report the range, never a single number. |
-| **LTV90** | portal: Customer long-term value → New customers | Measured, not modelled |
-| **LTV:CAC** | LTV90 ÷ CAC | Report the range. Inside 90 days — say so; it is not lifetime. |
-| **Payback (orders)** | CAC ÷ ad-driven new-customer ticket | "<1 order" is the strongest version of this story |
-| **Lapsed pool** | active customers × % in the 45d–1y buckets | The reactivation TAM |
-| **Recapture rate** | ad-attributed lapsed customers ÷ lapsed pool | Single best measure of retention work |
-| **Ticket gap** | ad-driven new-customer ticket − storefront average ticket | Negative = ads buy cheaper baskets → menu/upsell workstream, not an ads fix |
-
-**Blended ROAS is the headline.** Report blended first, then ads-only and promo-only underneath.
-Quoting ads-only ROAS to a client who can open the same portal and compute blended is a credibility loss
-we do not need to take.
-
-**Immediate ROAS is not the ranking metric for acquisition campaigns.** New-customer campaigns look worst
-on in-window ROAS and can be the best on 90-day value, because new customers reorder inside the window
-(portal gives the order rate directly). Before recommending a cut to any New-audience campaign, multiply
-its ROAS by the measured 90-day order rate. Conversely, Existing-customer campaigns post the highest
-in-window ROAS and are the most likely to be paying for orders that would have happened anyway —
-**never scale an Existing-audience campaign on ROAS alone without an incrementality read.**
 
 ### 🟦 Grubhub *(skip if client doesn't run GH paid placement)*
 
@@ -589,10 +591,16 @@ If only platform exports without the wizard's structure are available, the skill
 
 First-time setup (once per machine): `python3 -m pip install --user openpyxl google-auth google-api-python-client` (see `RUNBOOK.md`; run commands with plain `python3`). (The two google packages are only needed for the live-Sheet publish step; openpyxl alone suffices for file-only output.)
 
+> ⛔ **Reference only — do not run this to do a refresh.** `refresh.py` calls this for you.
+> Invoked by hand it writes a standalone .xlsx and does **not** update the client's live
+> Sheet, which is how a run ends up looking like it created a duplicate tracker. Use
+> `./run_local.sh <slug>`. The command below is documented so you can understand the step
+> and debug it, not so you can drive it.
+
 The render takes the Phase 0 tracker CSV and (optionally) the performance CSV:
 
 ```bash
-cd <your installed campaign-plan skill folder>
+cd companies/spice/skills/campaign-plan
 python3 references/build_campaign_plan_xlsx.py \
   --client "<display name>" \
   --tracker-csv /tmp/campaign-data-<client>/<client>_tracker.csv \
@@ -638,7 +646,7 @@ The .xlsx can't be pushed to Drive via MCP (binary upload limit). Two paths:
 1. **Manual (today):** the file lands in `/tmp/<client>_Campaign_Plan.xlsx`; copy to `~/Downloads/` and drag into the client's Drive folder. Opens in Sheets or Excel, formatting intact.
 2. **Scripted (target):** a local Drive-API upload script (Wk5 infra item) pushes the .xlsx directly, bypassing MCP. Until built, manual.
 
-Then post a one-line heads-up in the client Slack channel pointing at the updated workbook. That line is client-facing, so it goes through `references/client-comms-pass.md` like the Monday note does.
+Then post a one-line heads-up in the client Slack channel pointing at the updated workbook.
 
 ---
 
@@ -690,6 +698,20 @@ To kill link sprawl: link the campaign plan workbook and the weekly tracker to e
 ---
 
 ## Build status (v0.1.0)
+
+**Team-wide rollout (spi-proj-029, `companies/spice/projects/campaign-reporting-team-wide/`) — 5 of 11 stories shipped as of 2026-08-05.**
+
+- ✅ **US-000 Shared Drive finding (2026-08-05).** Empirical probe (`projects/campaign-reporting-team-wide/probe_self_grant.py`) overturned the premise: all client folders live in Shared Drive `0AD8QAM4kFYo3Uk9PVA`, so a Sheet created in a client folder needs **no permission call and no human Share step**. Robot is a Contributor — `canEdit`/`canShare`/`canTrash` true, `canDelete` **false** (a delete returns 404, not 403). All Drive calls must pass `supportsAllDrives=True`; cleanup must trash, never delete. Details in the project's `references.md`.
+- ✅ **US-002 write safety (2026-08-05).** Fixed the live clear-before-check bug in `sheets_writer.write_full_tab` — it cleared the tab *before* checking whether it had anything to write, which is how goop's Sheet went blank on 2026-06-16. New `references/write_guard.py` adds snapshot → sanity gate → dry-run diff → restore CLI; `sheets_writer` gained `set_write_mode` and a guarded `clear_range`. 16 regression tests in `tests/test_write_guard.py`, verified live.
+- ✅ **US-003 configs move to HQ (2026-08-05).** `references/client_config.py` resolves `$SPICE_CAMPAIGN_CLIENTS` → HQ `clients/` → plugin bundle. Adding a client is no longer a plugin release.
+- ✅ **US-004 preflight doctor (2026-08-05).** `references/doctor.py`, wired into `refresh.py` as a blocking gate (`--skip-doctor` to bypass).
+- ✅ **US-005 one-command provisioning (2026-08-05).** `references/provision.py` — idempotent, zero manual steps, `--check` mode; `new_client.py` is now a shim over it so there is one provisioning path.
+- 🚧 **US-001 credentials into HQ secrets.** Blocked until Ro / Manish / Dulari each confirm `hq secrets exec --company spice --only NOTION_TOKEN -- echo ok` — grants are per-person.
+- 🚧 **US-006 Drive input pull performance.** Santi bypassed the pull on 2026-07-06 for being too slow. Measure before optimizing.
+- 🚧 **US-007 onboard the remaining 10 clients.** `provision.py` create-branch is UNTESTED live — `--check` before every provision. goop migrates **LAST** (most history to lose).
+- 🚧 **US-008 write both Sheet links into each client's Notion page properties.**
+- ✅ **US-009 one runbook** — **[`RUNBOOK.md`](RUNBOOK.md) is the operating doc**: one-time setup, the weekly run, adding a client, troubleshooting. `references/SOP.md` and `RUN-LOCALLY.md` are retired pointers to it, and Santi's Desktop `run_campaign_refresh.sh` is explicitly retired (everything it did is in `run_local.sh` + `provision.py`). SKILL.md stays the architecture and playbook reference; RUNBOOK.md is how you run it. Still open: verifying a teammate can complete a live refresh from the runbook alone.
+- 🚧 **US-010 prove it** — two consecutive weeks of refreshes run by someone other than Maxx. This is the gate on Phase 2 (spi-proj-028, weekly-reporting).
 
 - ✅ **Polish pass (2026-06-05):** alignment convention (labels LEFT, metric columns RIGHT, auto-detected per column); campaign-focus refocus (Dashboard subtitle + Location Tier drops payout/profitability — those live in the weekly report); `validate` command + auto-QA gate at end of v2 refresh (catches off-by-one + header drift); `reporting_day` config (monday_flash vs tuesday_complete) for the DD-settlement timing choice. goop re-rendered + validated ✓.
 
