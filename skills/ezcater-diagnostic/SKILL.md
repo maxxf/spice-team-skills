@@ -7,8 +7,9 @@ description: >
   for [client]", "how is [client] doing on ezCater", or asks to assess a
   restaurant's catering-marketplace health. Catering analog of client-diagnostics:
   collects the four ezCater browser exports, builds one unified CSV, runs the
-  deterministic scorer, and returns a tiered action plan + (optionally) a Notion page.
-version: 0.2.0
+  deterministic scorer, returns a tiered action plan for the operator, and publishes a
+  branded client-facing version to HQ.
+version: 0.3.0
 ---
 
 # ezCater Catering Diagnostic
@@ -112,13 +113,49 @@ The runner prints a markdown action plan to stdout and (with `--json`) writes th
 result. Surface the **foundation-gate banner verbatim** — if it triggered, the plan leads
 with fixing fundamentals and visibility spend is HOLD.
 
-### Step 5 — Return the result
-Post back: the foundation-gate status, tier breakdown (N Green / Yellow / Red / New), the
-badge funnel line, the top `this_cycle` actions, the **Storefront visuals** section from
+### Step 5 — Report internally
+Post back to the operator: the foundation-gate status, tier breakdown (N Green / Yellow / Red /
+New), the badge funnel line, the top `this_cycle` actions, the **Storefront visuals** section from
 Step 2b (hero / photo coverage / categories / packaging), and the **buyer-side paid signals**
-(ezRewards / Sponsored / promo / ranking) folded into the paid-levers read, plus any Dilli
-brief routed. (Notion publishing — reusing the delivery orchestrator's `notion_assembly.py` + chart
-helpers — is the Phase 4 extension; not wired yet.)
+(ezRewards / Sponsored / promo / ranking) folded into the paid-levers read, plus any Dilli brief
+routed.
+
+This internal report is **not** the client deliverable. Keep the runner's vocabulary here and only
+here: foundation gate, severity floors, tier colours, radar axes marked `(pending)`, packaging
+scored 0–1, and any note about tooling or data gaps. Those belong in the operator report and in
+`DATA-PROVENANCE.md`, never in front of a client.
+
+### Step 6 — Publish the client-facing diagnostic to HQ
+
+Diagnostics are **hosted on HQ**, not delivered as a Notion page and not attached as a file
+(policy `spice-proposals-in-notion-diagnostics-on-hq`, hard). Proposals go to Notion; diagnostics
+go to `/deploy`.
+
+**Rewrite for the client first.** The operator report translates, it does not ship. Specifically:
+
+- Open with an **Executive summary**, never a foundation-gate banner. Where they stand, the two or
+  three things holding volume back, and where to start. A gate becomes an action with its reasoning
+  intact ("worth clearing before putting spend behind visibility, because spend amplifies whatever
+  the storefront already converts at").
+- Drop every internal score and label: `0.5`, "this cycle — foundation and high", tier colours.
+- Drop radar axes that read `(pending)`. Never present a limitation of our export as a gap in the
+  client's data. Show the measured dimensions only.
+- Never include a section that corrects an earlier internal read. The client sees one version.
+- Replace "Still open" with **"What we'd need from you"**, keeping only genuinely client-facing
+  asks (for ezCater that is ezManage access alongside the partner portal).
+- Zero em dashes. Numbers stated flat.
+
+**Then deploy it branded.** Convert the client-facing markdown to a single self-contained
+`index.html` styled from `companies/spice/knowledge/brand/tokens.json` (Design System V.1: Chili
+`#FF3B00`, Cream `#FCF3ED`, Espresso `#201916`, Geist + Geist Mono via CDN, 12px card radius) with
+the Spice mark from `Brand/Spice-Logos/` inlined as SVG and remapped to `currentColor`. Then
+`/deploy` it.
+
+**Use a random token in the app name** (`{client}-ezcater-{8-10 random chars}`), never a guessable
+`{client}-ezcater-diagnostic`. The page carries client revenue and ships without a password, so the
+unguessable URL is the control. Deploy public: no password gate on client artifacts.
+
+Hand back the hosted URL. It belongs in the proposal header and in the follow-up email.
 
 ## What this reproduces
 
@@ -142,4 +179,5 @@ See `tests/test_regression_tiffs.py`.
 - Don't guess `packaging_complete` or any metric that drives a finding — flag the gap instead.
 - Don't guess visual coverage or paid-lever status — read the live buyer-facing storefront (and ezManage when available), or flag it. Never invent a photo % or a bid rate.
 - Don't run weekly. Catering is a **monthly** service; weekly cadence breaks the capacity model.
+- Never ship the operator report to a client. Rewrite it per Step 6 first: exec summary in place of the foundation gate, no internal scores, no `(pending)` axes, no tooling caveats.
 - Don't treat "levers off" as a fire — it's the opportunity. The `levers_all_off` finding (high) carries the action; the tier reflects actual fulfillment health.
