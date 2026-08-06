@@ -1,0 +1,15 @@
+{
+  "client_slug": "menya-ultra",
+  "client_display_name": "Menya Ultra",
+  "data_dir": "/tmp/campaign-data-menya-ultra",
+  "campaigns_json": "menya-ultra_campaigns.json",
+  "campaign_perf_csv": "campaign_performance.csv",
+  "ads_detail_csv": "ads_detail.csv",
+  "drive_folder_id": "1NPsZiP1sWdY24a5d5ZA3lIHUkKvvEdB0",
+  "sheet_id": "1UBTWBV1X0ZluYbcXZKecVSFoSJdbSW_xz9Iyr-cgM0I",
+  "v2": true,
+  "notion_client_page_id": "1ddd3ff018e78039bd8ec1e659f952a6",
+  "net_sales_sheet_id": "19ZJ9yKSc3PKlUV-816lM35OB9MlCu1wtR7rtVDySy8A",
+  "net_sales_platform_tab": "Weekly Platform Overview",
+  "net_sales_location_tab": "By Location"
+}

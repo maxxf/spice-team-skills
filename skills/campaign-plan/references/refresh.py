@@ -68,6 +68,20 @@ def _resolve(data_dir: str, name: str | None) -> str | None:
     return None
 
 
+def _output_path(cfg: dict, slug: str, data_dir: str) -> str:
+    """Where the .xlsx goes.
+
+    Configs written on one machine carry that machine's paths — every HQ config points at
+    /Users/maxx/Downloads/, which does not exist on a teammate's Mac. Use the configured
+    path only when its directory actually exists here; otherwise fall back to the client's
+    own data dir so a teammate's run doesn't die on someone else's home directory.
+    """
+    configured = cfg.get("output")
+    if configured and os.path.isdir(os.path.dirname(configured)):
+        return configured
+    return os.path.join(data_dir, f"{slug}_Campaign_Plan.xlsx")
+
+
 def _monday_of(d: dt.date) -> dt.date:
     """Return the Monday of the week containing d (ISO weekday 1 = Mon)."""
     return d - dt.timedelta(days=d.weekday())
@@ -549,7 +563,8 @@ def main():
     # live Google Sheet directly and has no local-file fallback. If the service-account key
     # isn't on this machine (e.g. Cowork's sandbox), the write can't happen — say so now with
     # the fix, instead of erroring silently after a long run (Santi, goop W27).
-    if cfg.get("v2") and cfg.get("sheet_id") and not args.no_push and not os.path.exists(SHEETS_KEY_PATH):
+    import creds as _creds
+    if cfg.get("v2") and cfg.get("sheet_id") and not args.no_push and not _creds.available():
         sys.exit(_sheets_write_blocked_msg(args.client, "the Google service-account key is not on this machine"))
 
     data_dir = cfg["data_dir"]
@@ -640,8 +655,9 @@ def main():
         return
 
     # Step 2 — REPORTING (v0.1): render workbook + fold in performance + ads funnel
+    out_path = _output_path(cfg, args.client, data_dir)
     cmd = [py, os.path.join(HERE, "build_campaign_plan_xlsx.py"),
-           "--client", display, "--tracker-csv", tracker_csv, "--output", cfg["output"]]
+           "--client", display, "--tracker-csv", tracker_csv, "--output", out_path]
     perf = _resolve(data_dir, cfg.get("campaign_perf_csv"))
     ads = _resolve(data_dir, cfg.get("ads_detail_csv"))
     if perf:
@@ -655,12 +671,14 @@ def main():
 
     # Step 3 — PUBLISH: push the workbook into the client's Drive folder as a live Google Sheet
     # (in place, stable link). Auto-runs when the service-account key is present; --no-push skips.
-    key_path = os.path.expanduser("~/.config/spice/google-sheets-writer.json")
+    # Ask creds.py, not the filesystem: a credential injected by HQ secrets is just as valid
+    # as a key file, and testing for the file silently downgraded those runs to xlsx-only —
+    # which looks like "the skill made a new sheet" rather than "the push was skipped".
     sheet_url = None
-    if not args.no_push and os.path.exists(key_path):
+    if not args.no_push and _creds.available():
         print("→ publishing: pushing to the live Google Sheet")
         r = subprocess.run([py, os.path.join(HERE, "push_to_sheet.py"),
-                            "--client", args.client, "--xlsx", cfg["output"]],
+                            "--client", args.client, "--xlsx", out_path],
                            capture_output=True, text=True)
         sys.stdout.write(r.stdout)
         if r.returncode != 0:
@@ -670,11 +688,15 @@ def main():
                 if "https://" in line:
                     sheet_url = "https://" + line.split("https://", 1)[1].strip()
 
-    print(f"\n✅ {display} campaign plan refreshed → {cfg['output']}")
+    print(f"\n✅ {display} campaign plan refreshed → {out_path}")
     if sheet_url:
         print(f"   Live Sheet: {sheet_url}")
-    elif not os.path.exists(key_path):
-        print(f"   (No Sheets key found — file only. Drag into Drive folder {cfg.get('drive_folder_id','')} to share.)")
+    elif not _creds.available():
+        print("   ⚠️  No Google credential, so this is a FILE ONLY — the client's live Sheet was")
+        print("       NOT updated. This .xlsx is a throwaway, not the canonical sheet; do not")
+        print("       send it to anyone. Re-run under HQ secrets to update the real Sheet:")
+        print("         hq secrets exec --company spice --only SHARED/GOOGLE_SHEETS_WRITER \\")
+        print("           --only SHARED/NOTION_CAMPAIGN_PLAN -- ./run_local.sh <client>")
     if cfg.get("slack_channel"):
         print(f"   Post the Friday/Monday heads-up in {cfg['slack_channel']}.")
 

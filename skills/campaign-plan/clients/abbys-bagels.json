@@ -1,0 +1,14 @@
+{
+  "client_slug": "abbys-bagels",
+  "client_display_name": "Abby's Bagels",
+  "data_dir": "/tmp/campaign-data-abbys-bagels",
+  "campaigns_json": "abbys-bagels_campaigns.json",
+  "campaign_perf_csv": "campaign_performance.csv",
+  "ads_detail_csv": "ads_detail.csv",
+  "drive_folder_id": "1sJ_92cNvNSjfswegajypJSH4uM2qjKYO",
+  "sheet_id": "1r67cwCegaHy3EVnTTlXtt16-uoyK4aIi_prlWhqke4I",
+  "v2": true,
+  "notion_client_page_id": "2a9d3ff018e780b398a6c13a369696df",
+  "net_sales_sheet_id": "1nuMy8pfhuMXuSglm1iM9PFjTd8B3FwPcWMG54EdVFrM",
+  "net_sales_platform_tab": "Weekly Platform Overview"
+}

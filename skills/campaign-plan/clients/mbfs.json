@@ -1,0 +1,15 @@
+{
+  "client_slug": "mbfs",
+  "client_display_name": "MBFS (My Big Fat Shawarma)",
+  "data_dir": "/tmp/campaign-data-mbfs",
+  "campaigns_json": "mbfs_campaigns.json",
+  "campaign_perf_csv": "campaign_performance.csv",
+  "ads_detail_csv": "ads_detail.csv",
+  "drive_folder_id": "16bziBRkmwfiEfZNSwTexC8vN9sap1-x6",
+  "sheet_id": "1FNb2Tqj3_zs-dGLuvK1RCp8WICWhyObNx0Iscj1Sv5M",
+  "v2": true,
+  "notion_client_page_id": "29bd3ff018e7800b99a3f0351d1f97e2",
+  "net_sales_sheet_id": "1cPEitxfcTtI4jaUsIuTjVi-XZmw7_SDAZz3kFMMct10",
+  "net_sales_platform_tab": "Weekly Platform Overview",
+  "net_sales_location_tab": "By Location 2.0"
+}

@@ -419,6 +419,12 @@ def main():
               f"--client {args.slug} --dry-run")
     else:
         print(f"\n{args.slug} provisioned with problems — see the doctor output above.")
+
+    # A config that only exists in HQ does not exist for teammates: they install from the
+    # plugin and have no HQ checkout, so client_config falls back to the plugin snapshot.
+    print(f"\n⚠️  {args.slug} exists in HQ only. Until you publish the snapshot, nobody else "
+          "can run this client:")
+    print("      python3 references/publish_configs.py --check   # then drop --check, commit")
     return r.returncode
 
 

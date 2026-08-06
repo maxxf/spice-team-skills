@@ -1,14 +1,16 @@
 {
   "client_slug": "westville",
   "client_display_name": "Westville",
-  "notion_client_page_id": "326d3ff0-18e7-8040-be5a-ef6c701c497a",
+  "notion_client_page_id": "326d3ff018e78040be5aef6c701c497a",
   "data_dir": "/tmp/campaign-data-westville",
   "campaigns_json": "westville_campaigns.json",
   "campaign_perf_csv": "campaign_performance.csv",
   "ads_detail_csv": "ads_detail.csv",
-  "output": "/Users/maxx/Downloads/westville_Campaign_Plan.xlsx",
   "drive_folder_id": "1Cxr5NEkywj1WPfmGpjd1Q-uUimeX6nq4",
   "slack_channel": "#int-westville",
   "sheet_id": "19A7eb_CT0XxxOiI4xD-Rh5tyzQ5wbIOZBHnRkoEqquc",
-  "v2": true
+  "v2": true,
+  "net_sales_sheet_id": "1YrvnQg5sd9Hy0FzYH8iKZbBvxxBDBmGwCkwOz_6Y9D8",
+  "net_sales_platform_tab": "Weekly Platform Overview",
+  "net_sales_location_tab": "By Location 2.0"
 }

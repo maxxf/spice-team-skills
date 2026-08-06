@@ -1,0 +1,15 @@
+{
+  "client_slug": "capriottis",
+  "client_display_name": "Capriotti's",
+  "data_dir": "/tmp/campaign-data-capriottis",
+  "campaigns_json": "capriottis_campaigns.json",
+  "campaign_perf_csv": "campaign_performance.csv",
+  "ads_detail_csv": "ads_detail.csv",
+  "drive_folder_id": "1rsaiGXzyhawH1ov1We7cUHyZ6SqKOfAF",
+  "sheet_id": "1lr3TTCAOuuiwt-GDKgsKozB3qOT4bYP6IsXWGfmbDvY",
+  "v2": true,
+  "net_sales_sheet_id": "1S7SwW92F1Z17wAMTzYt1FnO54YkhMox77rYNLnD8zXs",
+  "net_sales_platform_tab": "Weekly Platform Overview 2.0",
+  "net_sales_location_tab": "By Location 2.0",
+  "notion_client_page_id": "1c8d3ff018e78068965fe7f4fdf82d19"
+}

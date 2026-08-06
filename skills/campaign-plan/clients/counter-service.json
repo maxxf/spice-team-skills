@@ -1,0 +1,14 @@
+{
+  "client_slug": "counter-service",
+  "client_display_name": "Counter Service",
+  "data_dir": "/tmp/campaign-data-counter-service",
+  "campaigns_json": "counter-service_campaigns.json",
+  "campaign_perf_csv": "campaign_performance.csv",
+  "ads_detail_csv": "ads_detail.csv",
+  "drive_folder_id": "1pY_dNTECTZ0xemujwvvLKZLG-Zmie4F9",
+  "sheet_id": "11FEBhkkZJ9XckrKNkjTFkqvDF0y76EjTMe01O4TZPsU",
+  "v2": true,
+  "notion_client_page_id": "1c8d3ff018e7800d9d2cc1226b4aa36b",
+  "net_sales_sheet_id": "1_N2-BZlYAp1wrZTEEo2oHKD-54YX9RUfP_Xv5BwIpxk",
+  "net_sales_platform_tab": "Weekly Platform Overview 2.0"
+}
