@@ -15,8 +15,21 @@ Four sections, in the order you'll need them: [one-time setup](#1-one-time-setup
 
 ## Where this runs, and where it doesn't
 
-Run it from **Claude Code on your own Mac**, or from a terminal on your own Mac. That's the
-supported path. There is one thing to know before you try anything else:
+Run it from **Claude Code on your own computer** — Mac or Windows — or from a terminal there.
+That's the supported path.
+
+**Windows works.** The pipeline is Python and runs the same on both. The one difference:
+`run_local.sh` is a bash script, so on Windows call the Python entrypoint directly instead —
+every `./run_local.sh <client>` in this document becomes:
+
+```
+python references/refresh.py --client <client>
+```
+
+Same flags, same behaviour, same safety gates. The wrapper only adds a credential and
+dependency pre-check that `refresh.py` also performs on its own.
+
+There is one thing to know before you try anything else:
 
 **Cowork cannot run this.** The refresh writes to a live Google Sheet, which needs a Google
 credential and an outbound network connection to Google's OAuth endpoint. Cowork's cloud sandbox
@@ -28,7 +41,7 @@ Sheet; it cannot write the Sheet.
 **The Mac Mini is not a supported path.** It was announced as a shared runner twice, on 2026-07-01
 and again on 2026-07-07, and was never validated. Its weekly job failed every single week from
 April 12 through July 21 before the job was killed. If someone tells you to "just Slack the Mini,"
-that is folklore, not a runbook step. Use your own Mac.
+that is folklore, not a runbook step. Use your own computer.
 
 **Santi's `run_campaign_refresh.sh` is retired.** For a stretch, the only reliably working path was
 a shell script on one person's Desktop, which meant nobody else could run a refresh and nobody
@@ -42,7 +55,7 @@ the HQ config move and the preflight gate, and running it will skip both.
 
 About five minutes, once per person.
 
-**1. Claude Code on your Mac.** Run `update spice skills` to make sure you're on the current
+**1. Claude Code on your computer** (Mac or Windows). Run `update spice skills` to make sure you're on the current
 version of the skill.
 
 **2. Python with the Google libraries.** The skill needs three packages:
@@ -309,7 +322,7 @@ gated, but the snapshots are the seatbelt.
 
 | Symptom | What's actually wrong |
 |---|---|
-| `CAN'T WRITE THE LIVE SHEET — key not on this machine` | You're in Cowork, or you have no credential. Run on your Mac, under `hq secrets exec` (setup step 3). |
+| `CAN'T WRITE THE LIVE SHEET — key not on this machine` | You're in Cowork, or you have no credential. Run on your own computer, under `hq secrets exec` (setup step 3). |
 | `No module named 'google...'` | The Python being used doesn't have the deps. Install them, or set `SPICE_PY` to one that does. |
 | `No Google service-account credential` | You don't have the HQ grant yet, or you forgot the `hq secrets exec` prefix. Setup step 3. |
 | `429 ... Quota exceeded ... Read requests per minute` | You ran several clients back to back and hit Google's 60-reads-per-minute cap. Wait a minute and re-run — nothing is broken and nothing was half-written. |

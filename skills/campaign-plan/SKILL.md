@@ -51,11 +51,18 @@ When this skill triggers, resolve to one of three modes. **Route directly when t
 | **Plan campaigns** | Interactive tier → strategy → events → roadmap session — Phase S below | Notion strategy page · Q-plan tabs · Notion DB rows (`Not started`) · client config | "plan strategy for [client]", "build the roadmap", "tier strategy" |
 | **Run analysis** | Read-only Q&A over the live sheet + History (declines, incrementality, what's working) | none | "analyze [client]", "why did X drop" |
 
-### ⛔ Update reporting sheet = ONE command, on your own Mac. Never in Cowork.
+### ⛔ Update reporting sheet = ONE command, on your own computer. Never in Cowork.
 
 ```bash
 ./run_local.sh <slug> --dry-run    # preview every change, write nothing
 ./run_local.sh <slug>              # update the client's live Sheet in place
+```
+
+On Windows `run_local.sh` is bash and won't run — use the identical Python entrypoint:
+
+```
+python references/refresh.py --client <slug> --dry-run
+python references/refresh.py --client <slug>
 ```
 
 That is the whole mode. `run_local.sh` wraps `refresh.py`, which runs the planning bridge,
@@ -274,7 +281,7 @@ The sheet holds **reporting** (Dashboard/Active Campaigns/Ads/Offers/History/Exp
 
 1. **PLAN (GM, ongoing)** — Notion DB is the source of truth. Every campaign logged with current Status, Segment, Locations, Start/End Date, ROAS Target. Set **Client Review Since** when items enter client review. If it's not in the DB, it's not in the plan.
 2. **PULL (Ops, when fresh data is available)** — drop platform exports into the client's **`Campaign Plan Inputs / <weekstart>/`** Drive folder. Typically Sun night or Mon AM after weekly-reporting runs.
-3. **RUN (GM or Ops, when warranted)** — regenerate the live Sheet in place + **produce a Slack draft** in Ro's format. **⚠ Writing the live Sheet needs the Google service-account key at `~/.config/spice/google-sheets-writer.json`, which the Cowork sandbox does NOT have** — a Cowork run fails fast with instructions instead of erroring silently. **The supported runner is Claude Code on your own Mac** (one-time setup in RUNBOOK.md): **`./run_local.sh <client>`**. The Mac Mini is *not* a supported runner — it was announced as one twice (2026-07-01, 2026-07-07), never validated, and its weekly job failed every week from Apr 12 to Jul 21 until it was killed. Treat it as an unsupported convenience; nothing here depends on it. Either way the skill pulls the Drive folder + Notion DB, runs the preflight doctor, then writes the Sheet.
+3. **RUN (GM or Ops, when warranted)** — regenerate the live Sheet in place + **produce a Slack draft** in Ro's format. **⚠ Writing the live Sheet needs the Google service-account key at `~/.config/spice/google-sheets-writer.json`, which the Cowork sandbox does NOT have** — a Cowork run fails fast with instructions instead of erroring silently. **The supported runner is Claude Code on your own computer, Mac or Windows** (one-time setup in RUNBOOK.md): **`./run_local.sh <client>`**, or on Windows **`python references/refresh.py --client <client>`** (`run_local.sh` is bash; the Python entrypoint is identical and cross-platform). The Mac Mini is *not* a supported runner — it was announced as one twice (2026-07-01, 2026-07-07), never validated, and its weekly job failed every week from Apr 12 to Jul 21 until it was killed. Treat it as an unsupported convenience; nothing here depends on it. Either way the skill pulls the Drive folder + Notion DB, runs the preflight doctor, then writes the Sheet.
 4. **COMMUNICATE (GM, Monday)** — review the Slack draft, edit, send to `#ext-[client]-spice`. The Sheet link is stable; the note explains what moved. Run the client comms standard over the script's draft before any of that; see below.
 
 ### The Monday Slack note (GM-authored from a draft the skill provides)
