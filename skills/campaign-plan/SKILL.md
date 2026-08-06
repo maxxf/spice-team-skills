@@ -24,6 +24,23 @@ The whole point: **the team pulls campaign data files, drops them into the skill
 
 ---
 
+## ⛔ Reporting cannot run in Cowork. Check where you are first.
+
+**If this session is Cowork, the "Update reporting sheet" mode cannot work — stop and say so.**
+Cowork's sandbox has no Google service-account credential and cannot reach Google's OAuth
+endpoint, so the client's live Sheet can never be written from there. Do not attempt the
+refresh, do not build a workbook as a substitute, and do not offer a "full skill flow". Tell
+the user plainly that reporting has to run from Claude Code on their own Mac, and point them
+at RUNBOOK.md.
+
+This is not theoretical: on 2026-08-06 a teammate ran this in Cowork, was offered a
+phase-by-phase flow, and came away with two standalone `.xlsx` files while neither client's
+live Sheet was touched. The files looked like fresh duplicate trackers. Nothing about the run
+said it had failed.
+
+Cowork *is* fine for **Plan campaigns** and **Run analysis** — Notion and read-only work.
+It is only the reporting write that is impossible.
+
 ## Mode router (START HERE)
 
 When this skill triggers, resolve to one of three modes. **Route directly when the trigger is explicit; otherwise ask the user to pick.**
@@ -34,7 +51,7 @@ When this skill triggers, resolve to one of three modes. **Route directly when t
 | **Plan campaigns** | Interactive tier → strategy → events → roadmap session — Phase S below | Notion strategy page · Q-plan tabs · Notion DB rows (`Not started`) · client config | "plan strategy for [client]", "build the roadmap", "tier strategy" |
 | **Run analysis** | Read-only Q&A over the live sheet + History (declines, incrementality, what's working) | none | "analyze [client]", "why did X drop" |
 
-### ⛔ Update reporting sheet = ONE command. Do not improvise a phase-by-phase route.
+### ⛔ Update reporting sheet = ONE command, on your own Mac. Never in Cowork.
 
 ```bash
 ./run_local.sh <slug> --dry-run    # preview every change, write nothing

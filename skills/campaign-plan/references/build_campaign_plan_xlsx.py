@@ -440,23 +440,42 @@ def main():
     ap.add_argument("--overwrite-perf", action="store_true", help="Overwrite existing performance cells. Default fills only empty cells.")
     ap.add_argument("--ads-detail-csv", default=None, help="Ads funnel CSV (ADS_INPUT_COLS: Campaign,Platform,Locations,Status,Impressions,Clicks,Spend,Orders,Attributed Sales). Builds the Ad Performance tab + dashboard funnel.")
     ap.add_argument("--strict-unmatched", action="store_true", help="Surface ALL unmatched perf rows incl. Ad-type. Default suppresses Ad-type when ads_detail is provided (they live in Ad Performance, not Offer tracker).")
+    ap.add_argument("--standalone", action="store_true",
+                    help="Build a throwaway workbook that is NOT the client's tracker and does "
+                         "not update their live Sheet. Required when running this by hand; "
+                         "refresh.py does not need it.")
     ap.add_argument("--output", required=True)
     args = ap.parse_args()
 
-    # This builds a standalone .xlsx. It does NOT touch the client's live Google Sheet —
-    # refresh.py is what does that. On 2026-08-06 a teammate ran the skill's phase-by-phase
-    # route, this got invoked by hand with its own --output, and the result was a throwaway
-    # workbook while the canonical Sheet went untouched. That reads as "the skill made a new
-    # sheet". Say so loudly when nobody upstream is going to publish the result.
-    if not os.environ.get("SPICE_REFRESH_PARENT"):
-        bar = "-" * 70
-        print(f"{bar}\n"
-              "⚠️  BUILDING A STANDALONE .xlsx — the client's live Google Sheet will NOT be\n"
-              "    updated by this command, and this file is not the canonical tracker.\n"
-              "    Do not send it to a client or treat it as the week's reporting.\n\n"
-              "    To update the real Sheet, use the one supported entrypoint:\n"
-              "      ./run_local.sh <client>            (add --dry-run to preview)\n"
-              f"{bar}", file=sys.stderr)
+    # This builds a standalone .xlsx and does NOT touch the client's live Google Sheet;
+    # refresh.py is what does that.
+    #
+    # On 2026-08-06 a teammate ran the skill in Cowork, was offered a "full skill flow", and
+    # this got invoked by hand. Cowork cannot reach Google, so no Sheet could ever have been
+    # written — but the run looked successful and produced two workbooks that read as new
+    # duplicate trackers. A warning is not enough there: the file itself is the problem,
+    # because someone will send it to a client believing it is the week's reporting.
+    #
+    # So refuse by default when nothing upstream is going to publish the result. --standalone
+    # is the deliberate escape hatch for genuine file-only work.
+    if not os.environ.get("SPICE_REFRESH_PARENT") and not args.standalone:
+        bar = "=" * 74
+        sys.exit(
+            f"\n{bar}\n"
+            "REFUSING TO BUILD — this would produce a throwaway .xlsx, not the client's sheet.\n\n"
+            "  The campaign plan lives in ONE canonical live Google Sheet per client, updated\n"
+            "  in place so the link never changes. This command cannot update it. A workbook\n"
+            "  built here is not the week's reporting and must not be sent to a client.\n\n"
+            "  Do the refresh with the one supported entrypoint, on your own Mac:\n"
+            "      ./run_local.sh <client> --dry-run     # preview, writes nothing\n"
+            "      ./run_local.sh <client>               # update the live Sheet\n\n"
+            "  In Cowork this cannot work at all — the sandbox has no Google credential and\n"
+            "  cannot reach Google's network. Run it from Claude Code on your Mac. See\n"
+            "  RUNBOOK.md, section 1.\n\n"
+            "  If you genuinely want a standalone workbook and understand it is not the\n"
+            "  client's tracker, pass --standalone.\n"
+            f"{bar}"
+        )
 
     rows = read_tracker_csv(args.tracker_csv)
     highlights = ["Performance highlights populated from this cycle's results."]
