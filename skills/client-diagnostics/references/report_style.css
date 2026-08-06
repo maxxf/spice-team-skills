@@ -8,7 +8,7 @@
 :root{
 --ink-0:#fff;--ink-50:#fafafa;--ink-100:#f4f4f4;--ink-200:#e8e8e8;--ink-300:#d4d4d4;
 --ink-400:#a3a3a3;--ink-500:#737373;--ink-600:#525252;--ink-700:#2a2a2a;--ink-900:#0a0a0a;
---spice:#fa4803;--spice-hover:#e33d00;--spice-tint:#fff1ec;--cream:#fcf5ec;
+--spice:#FF3B00;--spice-hover:#E03400;--spice-tint:#FFF0EA;--cream:#FCF3ED;
 --ok:#14532d;--warn:#7c2d12;--err:#991b1b;
 --ok-tint:#f0f7f1;--warn-tint:#fdf3ee;--err-tint:#fdf0ef;
 --font-sans:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif}

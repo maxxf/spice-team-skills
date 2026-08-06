@@ -130,10 +130,19 @@ Tracked live in the Notion Sales Pipeline CRM. Don't hardcode prospect names her
 
 ## Deliverable Formats (org standard — applies to every skill)
 
-Client-facing deliverables are **styled HTML / PDF** built on the Spice Design System (Geist, spice `#fa4803`, design tokens). The diagnostic report, audits, action plans, and any client report render through that system — never as flat documents.
+Client-facing deliverables render through the **Spice Design System V.1** (published 2026-07-06): Geist + Geist Mono, Chili `#FF3B00`, Cream `#FCF3ED`, Espresso `#201916`, 12px card radius. Tokens live in HQ at `companies/spice/knowledge/brand/tokens.json`. Never as flat documents.
 
-- **Never produce `.docx` / Word docs.** They're off-brand and flat. If you're tempted to make one, the content belongs in the HTML report, a Notion page, or a design brief instead.
-- **Notion** = internal data home + searchable record. Client gets the HTML/PDF, not the Notion link.
+> Chili is `#FF3B00`. Not `#fa4803` (early brief) and not `#FF4A1C` (tokens v1.0.0, April). The logo SVGs still carry `#FF4A1C` in their artwork pending reissue — remap the mark to `currentColor` and drive it from the accent token.
+
+Two client-facing shapes, and they are not interchangeable:
+
+- **Diagnostics, audits, reports → hosted on HQ via `/deploy`.** Styled HTML off the tokens above. Use a random token in the app name, never a guessable `{client}-{service}`. No password: these carry client revenue, so the unguessable URL is the control.
+- **Proposals → a Notion page**, copied from *TEMPLATE — Client Proposal* and created as a **child of the deal record** in the Sales Pipeline, then published to web. Never send the deal record URL itself; it holds pricing exceptions and fallback offers.
+
+Full rule: HQ policy `spice-proposals-in-notion-diagnostics-on-hq`.
+
+- **Never produce `.docx` / Word docs.** They're off-brand and flat. If you're tempted to make one, the content belongs in the hosted HTML report, a Notion page, or a design brief instead.
+- **The deal record and the internal diagnostic are internal.** Client gets the hosted diagnostic and the published proposal page, nothing else.
 - **Spreadsheets (`.xlsx` / Google Sheets)** only where a grid is the right tool: optimized menu sheets, trackers, scorecards.
 - **Design work for Dilli** (photos, flyers, hero images, email templates, landing pages) routes through the design-brief flow — a Campaign Planning DB entry + Slack ping to #design-campaigns. Not a Word brief.
 
@@ -186,7 +195,15 @@ Coach mode. Direct feedback, named owners, clear deadlines. First-principles thi
 - **Hiring**: open roles tracked internally — ask Maxx for the current list.
 
 ## Standard Pricing Reference
-[Pull from Notion Sales Pipeline and populate. Used by post-sale-proposal skill.]
+
+Source of truth is the **Notion Scope & Pricing Hub**. Read it before quoting; do not quote from memory or from a skill file.
+
+- *Two-Track Pricing Standard (July 2026)* — 5-location minimum, base covers first 5, Track A flat vs Track B performance, and the Track B eligibility gates
+- *Delivery Marketplaces Pricing* — Track A $2,750 base + $175/location beyond 5; Track B $1,750 + $100. **Loop is discontinued (Jul 2026)**, no pass-through on any quote
+- *ezCater Catering Pricing v2 (Aug 2026)* — prices on trailing ezCater revenue bands, not location count. $2,500 price floor, $35K/mo qualification floor, 8% of channel ceiling
+- *Retention Marketing Pricing*, *Advisory Pricing*, *Standard Contract Terms*
+
+Quoting outside these rules is a founder exception. Log it in the deal record's internal notes so it does not become silent precedent.
 
 ## When Maxx Says...
 
