@@ -2,9 +2,9 @@
 
 > **Canonical Spice org context, distributed via the `spice-team-skills` plugin.**
 > Import this file rather than duplicating it. Bulk tables (Slack channels, Notion IDs,
-> weekly cadence, skill-trigger routing, Spicy delegation, workspace layout, full comms
-> and pricing detail) live in `references/team-ops-reference.md` — read that when you need a
-> specific channel, ID, trigger, or delegation detail. This file carries only always-on essentials.
+> weekly cadence, Spicy delegation, workspace layout, full comms and pricing detail) live in
+> `references/team-ops-reference.md` — read that when you need a specific channel, ID, or
+> delegation detail. This file carries only always-on essentials (skill routing included).
 
 ## About Maxx (Spice founder)
 Maxx Freedman. Founder/CEO of Spice Digital. Email: maxx@spicedigital.co
@@ -105,13 +105,39 @@ beyond 5; Track B $1,750 + $100 (5-location minimum, base covers first 5). Loop 
 (Jul 2026). ezCater priced on trailing revenue bands, $2,500 floor. Quoting outside these rules
 is a founder exception — log it in the deal record's internal notes so it never becomes silent precedent.
 
-## Skill Routing, Slack, Notion, Cadence, Spicy Delegation
-The trigger→skill routing table, Slack channel architecture, Notion DB IDs, Maxx's weekly
-cadence, Spicy Nugget delegation rules, and the Cowork workspace layout all live in
-`references/team-ops-reference.md`. Read it when you need one of those specifics.
+## Skill Routing (trigger → skill)
+
+| Trigger | Skill |
+|---|---|
+| "prep for [client]" / "prepare for [client] meeting" | client-call-prep |
+| "wrap up [client] meeting" / "send meeting recap" | post-client-meeting |
+| "draft proposal for [client]" | post-sale-proposal |
+| "weekly prep" / "prep for the week" / "Sunday prep" | weekly-prep |
+| "onboarding status" / "who's behind on onboarding" | onboarding-status-check |
+| "revenue reconciliation" / "how much should I pay myself" | revenue-reconciliation |
+| "audit [restaurant]" / "grade their storefront" | storefront-audit |
+| "menu sheet for [client]" / "optimize menu" | optimized-menu-sheet |
+| "newsletter" / "spicy nuggets" / "what's happening in delivery" | spicy-nuggets-newsletter |
+| "mine content" / "what can we post" / "pull content" | content-mining |
+| "onboard [client]" / "set up [client] workspace" | client-onboarding |
+| "contractor agreement for [name]" | contractor-agreement |
+| "humanize" / "make this sound human" / "de-AI this" | humanizer |
+| "process weekly reports for [client]" | weekly-reporting |
+| "assign tasks from meetings" / "sync Circleback" | circleback-to-notion |
+| "load my context" / "catch me up" / "what am I working on" | context |
+| "trace [topic]" / "how did I get here" / "show me the evolution" | trace |
+| "connect [A] and [B]" / "bridge these ideas" | connect |
+| "ingest this" / "add to vault" / "capture this" / "process meeting" | ingest |
+| "what patterns" / "generate ideas" / "what am I missing" | ideas-from-vault |
+| "linkedin leads" / "check LinkedIn" / "who connected on LinkedIn" / "LinkedIn inbound" | linkedin-lead-capture |
+
+## Slack, Notion, Cadence, Spicy Delegation
+Slack channel architecture, Notion DB IDs, Maxx's weekly cadence, Spicy Nugget delegation
+rules, and the Cowork workspace layout live in `references/team-ops-reference.md`. Read it
+when you need one of those specifics.
 
 ## Key References
-- `references/team-ops-reference.md`: Slack/Notion/cadence/skill-routing/Spicy-delegation/workspace + full comms & pricing detail
+- `references/team-ops-reference.md`: Slack/Notion/cadence/Spicy-delegation/workspace + full comms & pricing detail
 - `references/client-comms-style.md`: client email standard (read before writing to any client)
 - `references/client-comms-pass.md`: governor on client comms — drafts and checks every client email and Slack message; never sends
 - `references/maxx-freedman-voice-guide.md`: complete writing voice guide (read before any branded output)

@@ -50,29 +50,8 @@ specific channel, database ID, cadence, skill trigger, or delegation detail.
 
 ## When Maxx Says... (skill routing)
 
-| Trigger | Skill |
-|---|---|
-| "prep for [client]" / "prepare for [client] meeting" | client-call-prep |
-| "wrap up [client] meeting" / "send meeting recap" | post-client-meeting |
-| "draft proposal for [client]" | post-sale-proposal |
-| "weekly prep" / "prep for the week" / "Sunday prep" | weekly-prep |
-| "onboarding status" / "who's behind on onboarding" | onboarding-status-check |
-| "revenue reconciliation" / "how much should I pay myself" | revenue-reconciliation |
-| "audit [restaurant]" / "grade their storefront" | storefront-audit |
-| "menu sheet for [client]" / "optimize menu" | optimized-menu-sheet |
-| "newsletter" / "spicy nuggets" / "what's happening in delivery" | spicy-nuggets-newsletter |
-| "mine content" / "what can we post" / "pull content" | content-mining |
-| "onboard [client]" / "set up [client] workspace" | client-onboarding |
-| "contractor agreement for [name]" | contractor-agreement |
-| "humanize" / "make this sound human" / "de-AI this" | humanizer |
-| "process weekly reports for [client]" | weekly-reporting |
-| "assign tasks from meetings" / "sync Circleback" | circleback-to-notion |
-| "load my context" / "catch me up" / "what am I working on" | context |
-| "trace [topic]" / "how did I get here" / "show me the evolution" | trace |
-| "connect [A] and [B]" / "bridge these ideas" | connect |
-| "ingest this" / "add to vault" / "capture this" / "process meeting" | ingest |
-| "what patterns" / "generate ideas" / "what am I missing" | ideas-from-vault |
-| "linkedin leads" / "check LinkedIn" / "who connected on LinkedIn" / "LinkedIn inbound" | linkedin-lead-capture |
+The trigger→skill routing table lives inline in `CLAUDE.md` (section "Skill Routing
+(trigger → skill)") so it rides every turn's context. It is intentionally not duplicated here.
 
 ## Delegating to Spicy Nugget
 
