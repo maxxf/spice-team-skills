@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   SPICE DELIVERY SCORECARD — fillable template. Brand-compliant per spice-brand.design.md
-  (Monocle-not-McKinsey editorial: off-white base, rich black, tan; ONE accent = Spice Orange #fa4803,
+  (Monocle-not-McKinsey editorial: off-white base, rich black, tan; ONE accent = Spice Chili #FF3B00,
    used scarce, NEVER as a background. Geist/Inter for words, mono for numbers. Max 3 colors.)
   Replace every {{TOKEN}}, open in a browser, screenshot the .card.
   Ring: RING_OFFSET = 527.8 * (1 - SCORE/100).  (score 78 -> 116.1)
@@ -18,7 +18,7 @@
 <title>Spice Delivery Scorecard — {{BRAND}}</title>
 <style>
   :root{
-    --orange:#fa4803;--off:#f5f0eb;--black:#1a1a1a;--tan:#e8ddd0;--warm:#6b6560;--red:#c0392b;
+    --orange:#FF3B00;--off:#f5f0eb;--black:#1a1a1a;--tan:#e8ddd0;--warm:#6b6560;--red:#c0392b;
     --sans:"Inter",-apple-system,"Helvetica Neue",Arial,sans-serif;
     --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   }
@@ -90,7 +90,7 @@
       <div class="score-ring">
         <svg width="180" height="180" viewBox="0 0 188 188">
           <circle cx="94" cy="94" r="84" fill="none" stroke="#e8ddd0" stroke-width="11"></circle>
-          <circle cx="94" cy="94" r="84" fill="none" stroke="#fa4803" stroke-width="11" stroke-dasharray="527.8" stroke-dashoffset="{{RING_OFFSET}}"></circle>
+          <circle cx="94" cy="94" r="84" fill="none" stroke="#FF3B00" stroke-width="11" stroke-dasharray="527.8" stroke-dashoffset="{{RING_OFFSET}}"></circle>
         </svg>
         <div class="score-center">
           <div class="score-num">{{SCORE}}</div>

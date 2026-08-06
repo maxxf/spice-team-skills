@@ -48,7 +48,7 @@ function loadPptxgen(runDir) {
 // hardcoded, so deck + report share one palette source.                     //
 // ----------------------------------------------------------------------- //
 function hex6(v) {
-  // "#fa4803" -> "FA4803"; "#fff" -> "FFFFFF"
+  // "#FF3B00" -> "FF3B00"; "#fff" -> "FFFFFF"
   let h = String(v).trim().replace(/^#/, "");
   if (h.length === 3) h = h.split("").map((c) => c + c).join("");
   return h.toUpperCase();

@@ -192,7 +192,7 @@ Include [Image: description] placeholders for screenshots.
    - `{{VERDICT}}` = one Geist sentence naming the biggest lever and the ceiling.
 3. Save the filled HTML, open in a browser, screenshot the `.card`. That image is the deliverable.
 
-**Brand rules (non-negotiable, per spice-brand.design.md):** off-white/black/tan base + Spice Orange #fa4803 as the ONLY accent, used scarce, never as a background. Bars monochrome with at most one red `alert`. Geist/Inter words, mono numbers. The pepper logo is inlined in the template — never recolor, stretch, or shrink below 32px. Keep dimensions exactly matching the audit rubric (never invent dimensions). The scorecard names the restaurant it grades. The percentile must be real or omitted.
+**Brand rules (non-negotiable, per Spice Design System V.1, tokens at companies/spice/knowledge/brand/tokens.json in HQ):** Cream #FCF3ED / Espresso #201916 base + Spice Chili #FF3B00 as the ONLY accent, used scarce, never as a background. Bars monochrome with at most one red `alert`. Geist/Inter words, mono numbers. The pepper logo is inlined in the template — never recolor, stretch, or shrink below 32px. Keep dimensions exactly matching the audit rubric (never invent dimensions). The scorecard names the restaurant it grades. The percentile must be real or omitted.
 
 ## References
 
